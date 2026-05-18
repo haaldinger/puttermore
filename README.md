@@ -80,12 +80,13 @@ Individual stat pages for every player with:
 - **Hole-by-hole accuracy** — bar chart showing performance by position
 - **Weekly performance** — visual chart of accuracy and win/loss per week
 
-### 👤 Players Leaderboard
-League-scoped sortable table of all players:
-- Accuracy ranking
-- Team affiliation
-- Putts made / attempted
-- Best hole
+### 👤 Players & Cross-League Leaderboards
+Individual putting statistics and comparative standings:
+- **Brewery Leaderboards** — Venue-scoped ranking of putters at the active brewery.
+- **Cross-League Leaderboards [NEW]** — A unified global leaderboard comparing all 54 active players across all 3 brewery leagues simultaneously!
+- **Visual Rank Accents [NEW]** — Custom visual trophies (`🥇`, `🥈`, `🥉`) for top 3 podium spots and gold stars (`★`) for the top 10 performers.
+- **Dynamic Venue Branding [NEW]** — Custom styled, color-coded badges indicating each player's brewery affiliation (Mobtown, Heavy Seas, 1623).
+- **Seamless Toggling [NEW]** — An integrated, highly responsive capsule toggle to instantly swap view scopes between current brewery and all breweries combined.
 
 ### 🔍 Match Detail
 Tap any completed match from the home page or schedule to see the full breakdown:
@@ -153,4 +154,3 @@ Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown
 - **Multi-season history** — carry stats across multiple 6-week seasons
 - **Backend integration** — cloud database so multiple captains can enter scores from their own phones
 - **Push notifications** — reminders for upcoming matches and score alerts
-- **Cross-league leaderboard** — compare top putters across all 3 breweries
