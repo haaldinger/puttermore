@@ -83,7 +83,7 @@ export function renderHome() {
         </div>
       </div>
     </section>
-    <div class="container">
+    <div class="container" style="margin-top: var(--space-6)">
       <div class="league-tabs animate-in">${leagueTabs}</div>
 
       <div class="league-venue-bar animate-in delay-1">
