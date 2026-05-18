@@ -82,7 +82,9 @@ main { display: block; }
   font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary);
   transition: color var(--duration-fast);
   padding: var(--space-2) 0;
+  cursor: pointer;
 }
+[data-nav] { cursor: pointer; }
 .navbar-links a:hover, .navbar-links a.active { color: var(--pink-400); }
 @media (max-width: 768px) { .navbar-links { display: none; } }
 
