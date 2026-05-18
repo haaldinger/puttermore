@@ -2,7 +2,8 @@ import './style.css'
 import { renderHome, setSelectedLeague, getHomeTickerText } from './pages/home.js'
 import { renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, renderPlayerProfile, renderMatchDetail, setPlayersViewMode } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer, getScorerTickerData } from './pages/scorer.js'
-import { getPlayer } from './data.js'
+import { getPlayer, getAllMatches } from './data.js'
+import { openReplayModal } from './pages/replay.js'
 
 const app = document.getElementById('app')
 
@@ -122,6 +123,16 @@ function navigate(path) {
 
 // ─── Event Delegation ───
 document.addEventListener('click', (e) => {
+  // Replay Simulator button
+  const playReplayBtn = e.target.closest('#play-replay-btn')
+  if (playReplayBtn && playReplayBtn.dataset.matchId) {
+    const match = getAllMatches().find(m => m.id === playReplayBtn.dataset.matchId)
+    if (match) {
+      openReplayModal(match)
+    }
+    return
+  }
+
   // League tab switching
   const leagueTab = e.target.closest('.league-tab')
   if (leagueTab && leagueTab.dataset.league) {
@@ -139,7 +150,13 @@ document.addEventListener('click', (e) => {
         default: content = renderHome()
       }
     } catch (err) { content = renderHome() }
-    app.innerHTML = NAV_HTML + '<main id="page-content">' + content + '</main>'
+    
+    // Non-destructive content update to keep global ticker running!
+    const pageContentEl = document.getElementById('page-content')
+    if (pageContentEl) {
+      pageContentEl.innerHTML = content
+    }
+    updateGlobalTicker(page)
     updateActiveNav(page)
     return
   }

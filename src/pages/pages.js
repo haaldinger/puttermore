@@ -512,6 +512,13 @@ export function renderMatchDetail(matchId) {
       <span class="badge badge-win" style="font-size:var(--text-sm);padding:var(--space-1) var(--space-4)">🏆 ${winner.name} Wins${match.overtime ? ' (OT)' : ''}</span>
     </div>` : ''}
 
+    ${isCompleted && match.turns && match.turns.length > 0 ? `
+    <div class="text-center animate-in delay-1" style="margin-bottom:var(--space-4)">
+      <button class="btn btn-secondary" id="play-replay-btn" data-match-id="${match.id}" style="border: 1px dashed var(--gold-400); color: var(--gold-400); background: rgba(251,191,36,0.06); font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(251,191,36,0.06); transition: all 0.2s ease">
+        🎬 Play Match Replay
+      </button>
+    </div>` : ''}
+
     <div class="stats-grid animate-in delay-1" style="margin-bottom:var(--space-6)">
       <div class="stat-card"><div class="stat-value">${totalTurns}</div><div class="stat-label">Turns</div></div>
       <div class="stat-card"><div class="stat-value text-gold">${homeBBs + awayBBs}</div><div class="stat-label">🔥 Ball Backs</div></div>
