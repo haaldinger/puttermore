@@ -441,6 +441,55 @@ export function renderMatchDetail(matchId) {
   const awayBBs = match.ballBacks?.[match.awayTeamId] || 0
   const winner = match.winnerId ? getTeam(match.winnerId) : null
 
+  // Dynamic ESPN8: The Ocho Commentary generator
+  let ochoCommentary = ''
+  if (isCompleted) {
+    const homeScore = match.finalScore.home
+    const awayScore = match.finalScore.away
+    const diff = Math.abs(homeScore - awayScore)
+    const winnerName = homeScore > awayScore ? homeTeam.name : awayTeam.name
+    const loserName = homeScore > awayScore ? awayTeam.name : homeTeam.name
+    const totalBBs = homeBBs + awayBBs
+    
+    let quote1 = ""
+    let quote2 = ""
+    
+    if (match.overtime) {
+      quote1 = `Cotton McKnight: "Welcome back to ESPN8: The Ocho, where we are witnessing absolute, seat-cushion-shredding drama! A nail-biting Overtime between the ${homeTeam.name} and ${awayTeam.name}!"`
+      quote2 = `Pepper Reddick: "That's right, Cotton! There is more raw friction in this brewery right now than a high-speed lawnmower race in Biloxi! Sinking those cups under this level of taproom pressure is legendary!"`
+    } else if (diff >= 4) {
+      quote1 = `Cotton McKnight: "Cotton McKnight here, and folks, we just witnessed a certified, grade-A clinic. The ${winnerName} didn't just win; they absolutely steamrolled the ${loserName} like a rogue Mr. Trash Wheel in a storm drain!"`
+      quote2 = `Pepper Reddick: "Ouch, Cotton! That was a complete physical and emotional dismantling! You could see the despair in their eyes, or maybe that was just the reflection of their empty pint glass."`
+    } else {
+      quote1 = `Cotton McKnight: "A thrilling, down-to-the-wire regulation finish, Pepper! The ${winnerName} managed to squeak out a victory over the ${loserName} by the thinnest of margins!"`
+      quote2 = `Pepper Reddick: "Unbelievable scenes, Cotton! A single cup was the difference between eternal glory and buying the next round of draft IPAs. Talk about high-stakes bar sports!"`
+    }
+    
+    let bbQuote = ""
+    if (totalBBs >= 3) {
+      bbQuote = `<div style="margin-top: var(--space-3); border-top: 1px dashed rgba(251,191,36,0.2); padding-top: var(--space-3); color: var(--gold-400)">
+        <strong>Cotton:</strong> "Pepper, the ball backs tonight were absolutely flying! A combined ${totalBBs} double-sinks!"<br/>
+        <strong>Pepper:</strong> "It was a double-sink explosion, Cotton! Bold strategy, and boy did it pay off! That's rarer than finding a free parking spot in Fells Point on a Friday!"
+      </div>`
+    }
+    
+    ochoCommentary = `
+      <section class="animate-in delay-2" style="margin-bottom:var(--space-6); max-width: 600px; margin-left: auto; margin-right: auto">
+        <div class="section-header"><h3>🎙️ ESPN8: The Ocho Broadcast Desk</h3></div>
+        <div class="card" style="border: 1px dashed rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.03); padding: var(--space-4); border-radius: var(--radius-xl); box-shadow: 0 4px 24px rgba(251, 191, 36, 0.03)">
+          <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.1em; margin-bottom: var(--space-3); display: flex; align-items: center; gap: 8px">
+            <span class="team-dot" style="background: var(--gold-400)"></span> LIVE FROM THE COUCH
+          </div>
+          <p style="font-style: italic; color: rgba(255,255,255,0.9); line-height: 1.6; font-size: var(--text-sm); margin: 0">
+            <strong>${quote1.split(': "')[0]}:</strong> "${quote1.split(': "')[1]}<br/><br/>
+            <strong>${quote2.split(': "')[0]}:</strong> "${quote2.split(': "')[1]}
+          </p>
+          ${bbQuote}
+        </div>
+      </section>
+    `
+  }
+
   return `<div class="page container">
     <div class="page-header animate-in">
       <h1>Match Detail</h1>
@@ -469,6 +518,8 @@ export function renderMatchDetail(matchId) {
       <div class="stat-card"><div class="stat-value">${match.date || ''}</div><div class="stat-label">${match.timeSlot}</div></div>
       <div class="stat-card"><div class="stat-value">${match.overtime ? '⚡' : '—'}</div><div class="stat-label">${match.overtime ? 'Overtime' : 'Regulation'}</div></div>
     </div>
+
+    ${ochoCommentary}
 
     ${boardHtml ? `<section class="animate-in delay-2" style="margin-bottom:var(--space-6)">
       <div class="section-header"><h3>Board</h3></div>

@@ -57,6 +57,20 @@ export function renderHome() {
       <div style="text-align:right"><div style="font-family:var(--font-display);font-weight:800;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%</div><div style="font-size:var(--text-xs);color:var(--text-muted)">accuracy</div></div>
     </div>`).join('')
 
+  const ochoQuotes = [
+    "Cotton McKnight: Bold strategy, Cotton. Let's see if it pays off for 'em.",
+    "Pepper Reddick: I haven't seen putts of this magnitude since the '98 lawnmower racing finals in Biloxi!",
+    "Cotton McKnight: Average putting accuracy is down 2% tonight. I blame the triple-hopped hazy IPAs, Pepper.",
+    "Pepper Reddick: Nothing says peak athletic excellence like a cold local stout and a 20-foot turf putt, Cotton!",
+    "Cotton McKnight: Mr. Trash Wheels is cleaning up the cup board like an absolute garbage vacuum tonight!",
+    "Pepper Reddick: A double-sink ball back! That's rarer than a sober sailor in Fells Point, Cotton!",
+    "Cotton McKnight: Bmore Squeegee Boys are applying massive corner pressure on the board tonight!",
+    "Pepper Reddick: Barksdale Putters are running this table like it's the West Side corner, Cotton!",
+    "Cotton McKnight: Average turns per game is hovering at 14. This is absolute, unadulterated high-octane bar-sports, Pepper!",
+    "Pepper Reddick: If you can dodge a wrench, Cotton, you can sink an F1 cup!"
+  ]
+  const randomQuote = ochoQuotes[Math.floor(Math.random() * ochoQuotes.length)]
+
   return `
     <section class="hero">
       <div class="hero-bg"><div class="hero-orb hero-orb-1"></div><div class="hero-orb hero-orb-2"></div><div class="hero-orb hero-orb-3"></div></div>
@@ -83,7 +97,11 @@ export function renderHome() {
         </div>
       </div>
     </section>
-    <div class="container" style="margin-top: var(--space-6)">
+    <div class="container" style="margin-top: var(--space-4)">
+      <div class="ocho-ticker animate-in delay-3" style="margin: 0 auto var(--space-6) auto; max-width: 680px; display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.08); border: 1px dashed rgba(251, 191, 36, 0.3); padding: var(--space-2) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.04)">
+        <span class="badge" style="background: var(--gold-400); color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3)">🎙️ ESPN8 THE OCHO</span>
+        <marquee scrollamount="3" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">"${randomQuote}"</marquee>
+      </div>
       <div class="league-tabs animate-in">${leagueTabs}</div>
 
       <div class="league-venue-bar animate-in delay-1">
