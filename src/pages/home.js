@@ -121,7 +121,7 @@ export function renderHome() {
     <div class="container" style="margin-top: var(--space-4)">
       <div class="ocho-ticker animate-in delay-3" style="margin: 0 auto var(--space-6) auto; max-width: 720px; display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.08); border: 1px dashed rgba(251, 191, 36, 0.3); padding: var(--space-2) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.04)">
         <span class="badge" style="background: var(--gold-400); color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3)">🎙️ LIVE OCHO TICKER</span>
-        <marquee scrollamount="3.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${tickerTapeText}</marquee>
+        <marquee scrollamount="5.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${tickerTapeText}</marquee>
       </div>
       <div class="league-tabs animate-in">${leagueTabs}</div>
 
