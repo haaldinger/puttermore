@@ -7,6 +7,144 @@ import { getSelectedLeague, setSelectedLeague } from './home.js'
 let scorerState = null
 let viewMode = 'side'
 
+function getScorerTickerData() {
+  const s = scorerState
+  if (!s) {
+    return {
+      text: "Waiting for game to start... ⚡ Keep your putters warm and your pints filled!",
+      badgeText: "🎙️ OCHO SCORER DESK",
+      badgeColor: "var(--gold-400)"
+    }
+  }
+  
+  if (s.gameOver) {
+    return {
+      text: `🏆 MATCH COMPLETE: ${s.winner.toUpperCase()} WINS! ⚡ Cotton: A historic bar putting performance! ⚡ Pepper: That's why they get the gold star!`,
+      badgeText: "🏆 GAME OVER",
+      badgeColor: "var(--pink-500)"
+    }
+  }
+
+  // Check state
+  const homeLeft = s.homeBoardOpen.size
+  const awayLeft = s.awayBoardOpen.size
+  const diff = Math.abs(homeLeft - awayLeft)
+  
+  if (s.phase === 'redemption') {
+    const quotes = [
+      "🚨 REDEMPTION WATCH: A cleared board has triggered the redemption clause! ⚡ Cotton: Can they run the table?",
+      "🚨 REDEMPTION WATCH: Pepper: Sinking these cups under this level of taproom pressure is legendary!",
+      "🚨 REDEMPTION WATCH: The board is cleared but they need to run the table now! Talk about a high-stakes rescue mission!",
+      "🚨 REDEMPTION WATCH: It's redemption time! Yo momma could bounce it off a bar stool, but can they sink it under pressure?"
+    ]
+    return {
+      text: quotes.join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; "),
+      badgeText: "🚨 REDEMPTION",
+      badgeColor: "var(--gold-400)"
+    }
+  }
+  
+  if (s.phase === 'overtime' || s.overtime) {
+    const quotes = [
+      "⚡ SUDDEN DEATH OVERTIME: Front 3 cups are reopen! Sudden death putting rules are in effect!",
+      "⚡ OVERTIME WATCH: My heart is pounding like a subwoofer in the back of a Dundalk civic!",
+      "⚡ OVERTIME WATCH: Front 3 cups are reopen and the pressure is at an absolute, boiling-point maximum!"
+    ]
+    return {
+      text: quotes.join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; "),
+      badgeText: "⚡ OVERTIME",
+      badgeColor: "var(--cyan-400)"
+    }
+  }
+  
+  if (homeLeft === 1 && awayLeft === 1) {
+    const quotes = [
+      "🎯 1v1 SHOOTOUT: Both teams are down to their final cup! ⚡ Cotton: One ball in, one ball out, and someone goes home a hero!",
+      "🎯 1v1 SHOOTOUT: Whoever sinks this next F1 cup secures immortality. Or at least free craft beer!",
+      "🎯 1v1 SHOOTOUT: A classic 1v1 shootout! Both teams are down to their final cup, Pepper!"
+    ]
+    return {
+      text: quotes.join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; "),
+      badgeText: "🎯 1v1 SHOOTOUT",
+      badgeColor: "var(--pink-400)"
+    }
+  }
+  
+  // Close game in regulation
+  const isClose = (homeLeft <= 3 && awayLeft <= 3) || (diff <= 1 && s.turns.length >= 6)
+  if (isClose) {
+    const quotes = [
+      `🎙️ CLOSE GAME: Tight matchup in progress! Score: ${homeLeft} vs ${awayLeft} cups left! ⚡ Cotton: One slip here and it's all over! ⚡ Pepper: Taproom pressure is boiling!`,
+      "🎙️ CLOSE GAME: Both teams are feeling the gravity in the room! Sinking these putts requires surgeon-level precision!",
+      "🎙️ CLOSE GAME: I haven't seen a tight bar putting match of this caliber since the national rock-paper-scissors tournament!"
+    ]
+    return {
+      text: quotes.join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; "),
+      badgeText: "🎙️ TENSE FINISH",
+      badgeColor: "var(--gold-400)"
+    }
+  }
+
+  // Hot streak
+  if (s.turns && s.turns.length > 0 && s.turns[s.turns.length - 1].ballBack) {
+    return {
+      text: "🔥 ON FIRE: A spectacular double-sink ball back in the last turn! ⚡ Cotton: The momentum has completely shifted! ⚡ Pepper: They are rolling like Mr. Trash Wheel in a high tide!",
+      badgeText: "🔥 HOT STREAK",
+      badgeColor: "var(--pink-400)"
+    }
+  }
+
+  // Standard play ticker (shuffled general quotes and Yo Momma jokes!)
+  const standardQuotes = [
+    "Cotton McKnight: That putt was so wide, Pepper, I think it went into the next county!",
+    "Pepper Reddick: I've seen better rolls on a stale Dundalk crab cake, Cotton!",
+    "Cotton McKnight: A stunning miss! It looks like they forgot their putting eyes at the bottom of their last pint!",
+    "Pepper Reddick: He's aiming for the cup but putting like he's trying to hit a Squeegee Boy on the corner, Cotton!",
+    "Cotton McKnight: Bold strategy, Cotton. Let's see if missing by three feet pays off for 'em!",
+    "Pepper Reddick: If I had a dollar for every missed putt tonight, Cotton, I could buy the entire Heavy Seas brewery!",
+    "Cotton McKnight: Barksdale Putters are looking more like Barksdale Benchwarmers on that turn!",
+    "Pepper Reddick: That putting stroke was stiffer than a Dundalk dirtbike's suspension, Cotton!",
+    "Cotton McKnight: Oh! A tragic rim-out! That ball spun around the cup like a tourist looking for parking in Fells Point!",
+    "Pepper Reddick: You can't get that close and not finish, Cotton! It's against the laws of nature and bar-putting!",
+    "Cotton McKnight: Pepper, is it just me, or is the turf moving faster than their reaction times tonight?",
+    "Pepper Reddick: That ball had so much spin, Cotton, it practically needed its own zip code!",
+    "Cotton McKnight: I haven't seen a choke like that since the great Biloxi lawnmower disaster of '96!",
+    "Pepper Reddick: That was a catastrophic mechanical failure of the putting arm, Cotton!",
+    "Cotton McKnight: Mr. Trash Wheel is crying tears of absolute sorrow watching that putt drift wide!",
+    "Pepper Reddick: That ball is trash, Cotton, but not the kind Mr. Trash Wheel likes to eat!",
+    "Cotton McKnight: The angle of departure on that putt was completely fictional, Pepper!",
+    "Pepper Reddick: He just invented a whole new branch of mathematics, Cotton: Putting Astrology!",
+    "Cotton McKnight: Dundee Strokers are looking like they've got butter on their fingers and bricks in their shoes tonight!",
+    "Pepper Reddick: They're playing like they're wearing virtual reality headsets tuned to a different game, Cotton!",
+    "Cotton McKnight: That was a textbook under-putt, Pepper. Didn't even reach the grass clippings!",
+    "Pepper Reddick: Staggering under-performance! My grandma could have sneezed the ball closer to the cup, Cotton!",
+    "Cotton McKnight: He's standing over the ball... the sweat is dripping... and... oh, he's hit the wall! Literally, the brick wall behind the table!",
+    "Pepper Reddick: That ball traveled in a completely non-Euclidean path, Cotton! Mind-bendingly bad!",
+    "Cotton McKnight: They are playing with the urgency of a snail on a coffee break, Pepper.",
+    "Pepper Reddick: I think their putter is actually a decorated broomstick, Cotton! That would explain the friction coefficient!",
+    "Pepper Reddick: Yo momma is so slow, Cotton, she makes the Dundalk dirtbike speed limit look like land-speed record velocity!",
+    "Cotton McKnight: Yo momma's putts are so crooked, she could bounce a golf ball off a round table and still hit the bartender!",
+    "Pepper Reddick: Yo momma is so short, Cotton, she uses the front cup (F1) as a hot tub!",
+    "Cotton McKnight: Yo momma is so heavy, when she stepped on the Mobtown turf, she triggered an artificial earthquake in East Baltimore!",
+    "Pepper Reddick: Yo momma is so bad at putting, she missed the entire brewery and accidentally registered for a bowling league!",
+    "Cotton McKnight: Yo momma's eyesight is so poor, Pepper, she mistook Mr. Trash Wheel for a giant floating putting cup!",
+    "Pepper Reddick: Yo momma is so old, she played putting games with George Washington at the historic Fells Point tavern, Cotton!",
+    "Cotton McKnight: Yo momma is so lazy, she expects a ball back even when she misses the board entirely!",
+    "Pepper Reddick: Yo momma's putting stroke is so shaky, Cotton, she looks like she's holding a paint mixer!",
+    "Cotton McKnight: Yo momma is so confusing, she tries to pay the Squeegee Boys with Monopoly money!",
+    "Pepper Reddick: Yo momma is so loud, when she sinks a cup, they can hear her screaming all the way in Salisbury, Cotton!",
+    "Cotton McKnight: Yo momma is so clumsy, she tripped over the side cushion and spilled three pitchers of craft IPA!"
+  ]
+  
+  // Shuffle standard quotes
+  const shuffled = standardQuotes.sort(() => Math.random() - 0.5).slice(0, 12)
+  return {
+    text: shuffled.map(q => `"${q}"`).join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; "),
+    badgeText: "🎙️ LIVE SCORER TICKER",
+    badgeColor: "var(--gold-400)"
+  }
+}
+
 export function initScorer() {
   scorerState = null
   // Clear any stale toast
@@ -147,6 +285,14 @@ export function renderScorer() {
       <button class="view-toggle-btn ${viewMode === 'focused' ? 'active' : ''}" data-view="focused">Focused</button>
       <button class="view-toggle-btn ${viewMode === 'stacked' ? 'active' : ''}" data-view="stacked">Stacked</button>
     </div>
+
+    ${(() => {
+      const ticker = getScorerTickerData()
+      return `<div class="ocho-ticker animate-in delay-1" style="margin: 0 auto var(--space-4) auto; max-width: 680px; display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.08); border: 1px dashed rgba(251, 191, 36, 0.3); padding: var(--space-2) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.04)">
+        <span class="badge" id="scorer-ticker-badge" style="background: ${ticker.badgeColor}; color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3); transition: all 0.3s ease">${ticker.badgeText}</span>
+        <marquee id="scorer-ticker-marquee" scrollamount="4.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${ticker.text}</marquee>
+      </div>`
+    })()}
 
     <div class="dual-boards ${viewClass} animate-in delay-1">${homeBoardHtml}${awayBoardHtml}</div>
 
