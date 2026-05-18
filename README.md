@@ -109,13 +109,13 @@ Tap any completed match from the home page or schedule to see the full breakdown
 ### The 27 Teams
 
 **Mobtown (Tuesdays)**
-Natty Bohs · Old Bay Bombers · Crab Cake Closers · Harbor Hustlers · Fells Point Putters · Federal Hill Flames · Canton Sinkers · Hampden Hons · Charm City Strokers
+Natty Bohs · Old Bay Bombers · Crab Cake Closers · Bmore Squeegee Boys · Omar's Whistlers · 12 O'Clock Boys · House of Cups · Hampden Hons · Mr. Trash Wheels
 
 **Heavy Seas (Wednesdays)**
-Loose Cannons · Powder Monkeys · Berger Cookie Crew · Dundalk Ringers · Locust Point Legends · Mt. Vernon Vipers · Pigtown Putters · Remington Rollers · Waverly Wreckers
+Loose Cannons · Powder Monkeys · Berger Cookie Crew · Dundalk Dirtbikes · Barksdale Putters · Slingin' Joes · Pigtown Putters · Lake Roland Rollers · Waverly Wreckers
 
 **1623 (Thursdays)**
-Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown Heat · Charles Village Champs · Woodberry Wolves · Riverside Ringers · Cross Street Crushers · Brewers Hill Ballers
+Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown Heat · The Wire Tappers · Woodberry Wolves · Riverside Ringers · Cross Street Crushers · Brewers Hill Ballers
 
 ---
 
