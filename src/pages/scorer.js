@@ -180,6 +180,27 @@ export function renderScorer() {
   </div>`
 }
 
+function checkCloseGameBanter() {
+  const s = scorerState
+  if (!s || s.gameOver) return
+
+  const homeLeft = s.homeBoardOpen.size
+  const awayLeft = s.awayBoardOpen.size
+  const diff = Math.abs(homeLeft - awayLeft)
+  
+  // A game is close if both have 3 or fewer cups left, or they are within 1 cup past turn 6, or in redemption/overtime
+  const isClose = (homeLeft <= 3 && awayLeft <= 3) || (diff <= 1 && s.turns.length >= 6) || s.phase === 'redemption' || s.phase === 'overtime' || s.overtime
+  
+  if (isClose) {
+    // 35% chance to automatically trigger Pepper/Cotton banter alert on turn completion
+    if (Math.random() < 0.35) {
+      setTimeout(() => {
+        triggerTrashTalk()
+      }, 1000)
+    }
+  }
+}
+
 function triggerTrashTalk() {
   const s = scorerState
   let selectedQuotes = []
@@ -428,6 +449,7 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
   } else {
     showToast('🔥 BALL BACK!')
   }
+  checkCloseGameBanter()
 }
 
 function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId) {
@@ -515,6 +537,7 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       showToast('🔥 BALL BACK!')
     }
     // Ball back = same team goes again, otherwise they still go (it's redemption)
+    checkCloseGameBanter()
   }
 }
 
