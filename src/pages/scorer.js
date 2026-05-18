@@ -97,16 +97,16 @@ export function renderScorer() {
     }
   }
 
-  // Render boards — invert top board when stacked so cups face each other
+  // Render boards — invert bottom board when stacked so cups face each other
   const isStacked = viewMode === 'stacked'
   const homeBoardHtml = renderSingleBoard(s.homeName, s.homeColor, s.homeBoardClaimed, s.awayColor, {
     interactive: !s.gameOver && targetBoardId === 'home',
-    active: !s.gameOver && targetBoardId === 'home', overtime: isOT, boardId: 'home',
-    inverted: isStacked
+    active: !s.gameOver && targetBoardId === 'home', overtime: isOT, boardId: 'home'
   })
   const awayBoardHtml = renderSingleBoard(s.awayName, s.awayColor, s.awayBoardClaimed, s.homeColor, {
     interactive: !s.gameOver && targetBoardId === 'away',
-    active: !s.gameOver && targetBoardId === 'away', overtime: isOT, boardId: 'away'
+    active: !s.gameOver && targetBoardId === 'away', overtime: isOT, boardId: 'away',
+    inverted: isStacked
   })
 
   const viewClass = viewMode === 'focused' ? 'focused' : viewMode === 'stacked' ? 'stacked' : ''
