@@ -124,3 +124,15 @@ window.addEventListener('DOMContentLoaded', render)
 
 // Initial render
 render()
+
+// ─── High-Performance Active Light-Follow Cards ───
+document.addEventListener('mousemove', (e) => {
+  const card = e.target.closest('.card, .stat-card, .match-pick-item');
+  if (card) {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+  }
+});
