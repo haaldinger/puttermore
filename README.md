@@ -12,7 +12,7 @@ The app runs 3 simultaneous leagues across 3 Baltimore breweries, each with 9 te
 
 ---
 
-## Features
+## Major Features & Recent Releases
 
 ### 🏠 Home Dashboard
 The landing page gives everyone the full picture at a glance:
@@ -24,23 +24,40 @@ The landing page gives everyone the full picture at a glance:
 - **Top putters** leaderboard ranked by accuracy
 - **Upcoming matches** for the next week
 
-### 🎯 Live Game Scorer
-The signature feature — a real-time scoring tool built for the Puttermore format:
+### 🎯 Live Game Scorer (Upgraded!)
+The signature feature — a real-time scoring tool built for the Puttermore format, recently overhauled for mobile responsiveness and bar-room usability:
 - **League-scoped match picker** — styled card-based UI grouped by week, with team color dots (replaces native dropdown)
 - **Dual interactive boards** — each team's 6 cups are shown separately, just like the real game (beer pong style)
-- **Tap to sink** — tap any open cup on the opponent's board to claim it
+- **Tap to sink** — tap any open cup on the opponent's board to claim it.
+- **Bulletproof Tap Targets [NEW]** — Added `pointer-events="none"` to the letters inside the cups and expanded the interactive circle bounds to a full `HOLE_RADIUS` of `22` (a **22% increase** in clickable area). Touch actions are immediately captured on mobile screens, and center-cup taps never get swallowed by labels!
+- **✅ Made It / ✕ Miss buttons [NEW]** — Includes a prominent quick-miss button and a contextual "Made It" button when the last cup is sunk, ensuring clean turn submissions for player statistics.
 - **Ball-back detection** — when both teammates make their putts, the app celebrates with a 🔥 Ball Back toast and gives them another turn
-- **✅ Made It button** — when the last cup is sunk and the 2nd putter has no cups to tap, a "Made It" button appears so they can still record a make for ball back
 - **Redemption round** — when a team clears all 6 cups (without ball back), the other team gets paired turns to match it; ball back during redemption = outright win
-- **Overtime** — if redemption ties it up, the front 3 cups reopen on both boards and play continues
+- **Overtime Visual Refinements [NEW]** — Sudden death starts with the back 3 cups (`B1`, `B2`, `B3`) **visually pre-filled** with opponent pucks. This clearly scopes play to the front 3 cups (`F1`, `M1`, `M2`), scores the game accurately, and standardizes the victory check to always be `6` total claimed cups on the board.
 - **Turn-by-turn log** — every putt is recorded with player name, hole, result, and phase tags (RDM / OT)
 - **3 view modes**:
-  - **Side by Side** — both boards visible at once
+  - **Side by Side** — both boards visible at once. *Optimized to stay side-by-side on mobile screens using compact responsive scaling!*
   - **Focused** — only the active board shown (clean mobile experience)
-  - **Stacked** — boards stacked vertically with the top board inverted so single cups face each other (beer pong table layout)
+  - **Stacked** — boards stacked vertically and **the top board is inverted (flipped Y)** so single cups face each other, mimicking a real putting table setup.
 - **Save to standings** — completed games are saved and immediately reflected in standings and stats
 
-### 📊 Season Standings
+### 🔥 Live Game Notifications [NEW]
+Dynamic bar-room arcade toasts to celebrate putting achievements:
+- **Made-Putt Streaks:** Tracks consecutive made putts per team across turns. Lands custom blazing fire-gradient notifications:
+  - **3 in a row:** `🔥 ON FIRE! 3 IN A ROW!`
+  - **4 in a row:** `⚡ UNSTOPPABLE! 4 IN A ROW!` (Double Ball-Back!)
+  - **5 in a row:** `🚨 IMPOSSIBLE! 5 IN A ROW!`
+  - **6 in a row:** `👑 PERFECT BOARD! 6 IN A ROW!`
+- **🏆 Winner Celebration Toast:** Instantly triggers a large, glowing green `🏆 [Team Name] WINS!` toast for 3.5 seconds when the match ends (Instant Win, Redemption, or Overtime), while cleanly suppressing stale ball-back alerts.
+
+### 📊 Advanced Team Analytics [NEW]
+The Team Profile page has been transformed into a comprehensive data console:
+- **Combined Team Accuracy:** Aggregates total attempted and made putts across all roster players.
+- **Hole-by-Hole Heatmap Chart:** A custom branded progress chart showing the team's accuracy percentage at each individual cup position (F1 to B3) using the team's official hex color.
+- **Weekly Trend Chart:** A week-by-week bar chart showing the team's putting accuracy and match outcome (`W`/`L`) to track team form.
+- **OT Record:** Tracks their exact win-loss record in overtime matches.
+
+### 👥 Teams Standings
 League-scoped standings table for all 9 teams featuring:
 - Win-loss record and win percentage
 - Hole differential (+/-)
@@ -54,13 +71,6 @@ Week-by-week view of the full 6-week season per league:
 - Completed matches show final scores with winner highlighted — tap any to see the **match detail page**
 - Upcoming matches show time slots and matchups
 - Overtime games tagged with ⚡
-
-### 👥 Teams
-Team cards ranked by standings with quick stats. League tabs to filter. Tap into any team to see:
-- **Full roster** with each player's accuracy percentage
-- **Captain badge** for the team captain
-- **Match history** — every result and upcoming game
-- **Team stats** — record, holes won, ball-back count
 
 ### 🏆 Player Profiles
 Individual stat pages for every player with:
@@ -117,15 +127,16 @@ Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown
 4. **Instant Win** — if both putters make it on the turn that clears the board (ball back + cleared), the team wins outright — no redemption, no OT
 5. **Redemption** — if only one putter sinks the last cup (no ball back), the other team gets redemption: paired turns, same ball-back rules apply
 6. During redemption: **ball back + board cleared = redemption team wins**. Board cleared without ball back = Overtime. Both miss = first team wins.
-7. **Overtime** — front 3 cups (F1, M1, M2) reopen on both boards. Same rules apply — first to clear wins, ball back still in play
+7. **Overtime** — front 3 cups (F1, M1, M2) reopen on both boards (with back 3 cups pre-filled). Same rules apply — first to clear wins, ball back still in play
 
 ---
 
-## Design
+## Design & Mobile Engineering
 
 - **Dark mode** interface built for the bar/brewery setting
 - **Hot pink and black** palette pulled directly from the Puttermore logo
 - **Mobile-first** layout with bottom tab navigation
+- **Window-Level Scrolling [NEW]** — Moving scrolling containers from nested containers to the body level to ensure buttery smooth, native inertia scrolling on iOS Safari without bottom page cropping!
 - **League-aware** — every page scopes to the selected brewery with color-branded tabs
 - **Smooth animations** and glassmorphism effects throughout
 - **Turf-green** SVG game boards with team-colored pucks
