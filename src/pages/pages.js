@@ -552,3 +552,186 @@ export function renderMatchDetail(matchId) {
     <div class="mt-4"><button class="btn btn-ghost" data-nav="schedule">← Schedule</button></div>
   </div>`
 }
+
+export function getCaddyAdvice(holeId) {
+  const data = {
+    'back-1': {
+      cotton: 'Cotton McKnight: "The left-back corner (B1) is highly technical, Pepper! You need a subtle wrist-hinge to navigate past the tavern stools and curl it in."',
+      pepper: 'Pepper Reddick: "Absolutely, Cotton! Sinking B1 makes you feel like an absolute social-putting legend. Miss it and you are definitely buying the next pitcher of IPA!"'
+    },
+    'back-2': {
+      cotton: 'Cotton McKnight: "The dead center of the back row (B2)! Sinking this requires perfect velocity control to avoid clanging off the rear bumper."',
+      pepper: 'Pepper Reddick: "That cup is a pure power play, Cotton! A straight line with maximum authority is the way to conquer this central peak!"'
+    },
+    'back-3': {
+      cotton: 'Cotton McKnight: "The right-back corner (B3), right next to the brewery taps. Perfect for right-handed putters who love a sweeping slice!"',
+      pepper: 'Pepper Reddick: "A bold corner pocket, Cotton! It is further away from the tee box than a cheap parking spot in Fells Point on a Friday night!"'
+    },
+    'middle-1': {
+      cotton: 'Cotton McKnight: "The left-middle cup (M1). Often overlooked, but crucial for claiming table control early in regulation turns."',
+      pepper: 'Pepper Reddick: "It is a stable anchor cup, Cotton! Smooth rhythm and a soft touch is all you need to slide it home!"'
+    },
+    'middle-2': {
+      cotton: 'Cotton McKnight: "The right-middle cup (M2). A solid putting path is needed here to avoid clipping the front-1 pin."',
+      pepper: 'Pepper Reddick: "Treat it with respect, Cotton! A gentle tap is always better than a wild slam when attacking the middle row!"'
+    },
+    'front-1': {
+      cotton: 'Cotton McKnight: "The front-1 pin (F1)! The entry point, the absolute gateway cup. If you miss this, Pepper, the entire taproom will let you hear it!"',
+      pepper: 'Pepper Reddick: "Oh yes, Cotton! Missing F1 is a certified taproom felony! Take a deep breath, center your focus, and gently guide the ball home!"'
+    }
+  }
+  return data[holeId] || {
+    cotton: 'Cotton McKnight: "Click or tap any cup on the board above to get elite putting advice from Cotton McKnight & Pepper Reddick!"',
+    pepper: 'Pepper Reddick: "We are standing by, folks! Pick your target!"'
+  }
+}
+
+export function renderHelpPage() {
+  return `<div class="page container">
+    <div class="page-header animate-in">
+      <h1>How to Play & Help Guide</h1>
+      <p>Official Rules, Interactive Putting Tips, and Captain FAQ</p>
+    </div>
+
+    <!-- Interactive Caddy Board Row -->
+    <div class="home-grid animate-in delay-1" style="margin-bottom: var(--space-8)">
+      <!-- Interactive SVG Board -->
+      <section class="home-section">
+        <div class="section-header"><h3>🎯 Interactive Putting Board</h3></div>
+        <div class="card" style="padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); justify-content: center">
+          <svg class="board-svg" viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; margin: 0 auto; display: block; filter: drop-shadow(0 0 12px rgba(251,191,36,0.08))">
+            <rect x="10" y="10" width="220" height="210" rx="14" fill="#0d1f0d" stroke="var(--gold-400)" stroke-width="2"/>
+            
+            <!-- Back Row -->
+            <circle cx="60" cy="50" r="22" fill="#1a1a1a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" style="cursor:pointer; transition: all 0.2s" class="help-cup" data-help-hole="back-1"/>
+            <text x="60" y="51" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.4)" font-size="9" font-weight="700" font-family="Inter" pointer-events="none">B1</text>
+            
+            <circle cx="120" cy="50" r="22" fill="#1a1a1a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" style="cursor:pointer; transition: all 0.2s" class="help-cup" data-help-hole="back-2"/>
+            <text x="120" y="51" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.4)" font-size="9" font-weight="700" font-family="Inter" pointer-events="none">B2</text>
+            
+            <circle cx="180" cy="50" r="22" fill="#1a1a1a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" style="cursor:pointer; transition: all 0.2s" class="help-cup" data-help-hole="back-3"/>
+            <text x="180" y="51" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.4)" font-size="9" font-weight="700" font-family="Inter" pointer-events="none">B3</text>
+            
+            <!-- Middle Row -->
+            <circle cx="90" cy="110" r="22" fill="#1a1a1a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" style="cursor:pointer; transition: all 0.2s" class="help-cup" data-help-hole="middle-1"/>
+            <text x="90" y="111" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.4)" font-size="9" font-weight="700" font-family="Inter" pointer-events="none">M1</text>
+            
+            <circle cx="150" cy="110" r="22" fill="#1a1a1a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" style="cursor:pointer; transition: all 0.2s" class="help-cup" data-help-hole="middle-2"/>
+            <text x="150" y="111" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.4)" font-size="9" font-weight="700" font-family="Inter" pointer-events="none">M2</text>
+            
+            <!-- Front Row -->
+            <circle cx="120" cy="170" r="22" fill="#1a1a1a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" style="cursor:pointer; transition: all 0.2s" class="help-cup" data-help-hole="front-1"/>
+            <text x="120" y="171" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.4)" font-size="9" font-weight="700" font-family="Inter" pointer-events="none">F1</text>
+          </svg>
+          <div style="font-size: var(--text-xs); color: var(--text-muted); text-align: center; font-style: italic">
+            Tap any cup on the vector board to load dynamic caddy tips!
+          </div>
+        </div>
+      </section>
+
+      <!-- Dynamic Banter Output -->
+      <section class="home-section" style="display: flex; flex-direction: column">
+        <div class="section-header"><h3>🎙️ Ocho Caddy Desk</h3></div>
+        <div class="card" style="border: 1px dashed rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.03); padding: var(--space-5); border-radius: var(--radius-xl); flex: 1; display: flex; flex-direction: column; justify-content: center">
+          <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.1em; margin-bottom: var(--space-4); display: flex; align-items: center; gap: 8px">
+            <span class="team-dot" style="background: var(--gold-400)"></span> LIVE SPECTATOR TIP
+          </div>
+          <p id="caddy-advice-text" style="font-style: italic; color: rgba(255,255,255,0.9); line-height: 1.6; font-size: var(--text-sm); margin: 0">
+            <strong>Cotton McKnight:</strong> "Click or tap any cup on the board to the left, folks! Pepper and I are locked in and ready to deliver championship-level putting blueprints!"<br/><br/>
+            <strong>Pepper Reddick:</strong> "That is right, Cotton! Let us see if they have got what it takes to dominate the tavern floor tonight!"
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Official Rules Section -->
+    <section class="animate-in delay-2" style="margin-bottom: var(--space-8)">
+      <div class="section-header"><h3>🏆 Official Puttermore Rules</h3></div>
+      <div class="home-grid">
+        <div class="card" style="padding: var(--space-4)">
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">1. Match Setup</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            Two team putting boards are set facing each other exactly 20 to 30 feet apart (adjusted for brewery space!). Each board starts fully open with a pyramid layout of 6 cups: 3 Back (B1-B3), 2 Middle (M1-M2), and 1 Front (F1).
+          </p>
+        </div>
+        <div class="card" style="padding: var(--space-4)">
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">2. Team Rotation</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            Teams consist of multiple registered players. Captains alternate putting turns. Each team gets exactly two putts per active regulation turn. Individual players must alternate putting roles so every player gets a piece of the pressure!
+          </p>
+        </div>
+        <div class="card" style="padding: var(--space-4)">
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">3. 🔥 Ball Backs</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            If both putters of the active team successfully sink their targets in the same turn, they trigger a **Double Sink Ball Back**! Both putters get their balls returned to take another set of consecutive shots, unlocking massive table swings!
+          </p>
+        </div>
+        <div class="card" style="padding: var(--space-4)">
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">4. Redemption & OT</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            Once a team sinks the final cup, the opposing team gets one final **Redemption Turn** to attempt to sink all their remaining cups. If they succeed, the match goes to **Sudden Death Overtime**—the first team to sink any cup wins the match!
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Captain FAQ Section -->
+    <section class="animate-in delay-3" style="margin-bottom: var(--space-6)">
+      <div class="section-header"><h3>💡 Captain's Help Desk (FAQ)</h3></div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-3)">
+        
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🎯 How do I record scoring updates in real-time?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              Captains can tap the **"Score"** tab in the main menu to launch the Ocho Live Desk. Make sure to select the correct league, match, and rosters. During the game, tap **"Made"** or **"Miss"** for each player's putt, and the board will automatically map the remaining cups! Tap **"Submit Turn"** to finalize the step.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🔄 What if we accidentally submit an incorrect putt?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              Don't panic! The Live Scorer has an in-place **"Undo Turn"** action button at the bottom of the scoreboard. Tapping it rolls back the database logs by exactly one turn, letting you re-record the putts without losing the rest of your match data.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🛡️ Do bounce-out putts count as a made sink?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              According to the Puttermore Rulebook, Section 4.2: A ball must **come to complete rest inside the target cup** to count as a made sink. Balls that strike the inner cup but bounce or roll back out onto the brewery turf are officially marked as a **Miss (❌)**.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🔥 How do tie-breakers work in the Standings?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              Leagues determine rank by Match Wins first. If teams are tied, Puttermore ranks them by **Double Sink Ball Backs** (valuing aggressive play!), followed by **Average Turns to Victory** (valuing efficiency!). If they are still tied, the captain who drank the most stout during the season wins.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <div class="mt-4"><button class="btn btn-ghost" data-nav="">← Go Home</button></div>
+  </div>`
+}
+

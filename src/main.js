@@ -1,6 +1,6 @@
 import './style.css'
 import { renderHome, setSelectedLeague, getHomeTickerText } from './pages/home.js'
-import { renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, renderPlayerProfile, renderMatchDetail, setPlayersViewMode } from './pages/pages.js'
+import { renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, renderPlayerProfile, renderMatchDetail, setPlayersViewMode, renderHelpPage, getCaddyAdvice } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer, getScorerTickerData } from './pages/scorer.js'
 import { getPlayer, getAllMatches } from './data.js'
 import { openReplayModal } from './pages/replay.js'
@@ -19,6 +19,7 @@ const NAV_HTML = `
     <a data-nav="schedule" data-page="schedule">Schedule</a>
     <a data-nav="teams" data-page="teams">Teams</a>
     <a data-nav="players" data-page="players">Players</a>
+    <a data-nav="help" data-page="help">How to Play</a>
     <a data-nav="scorer" data-page="scorer">🎯 Scorer</a>
   </div>
 </nav>
@@ -82,6 +83,7 @@ function render() {
       case 'player': content = renderPlayerProfile(param); break
       case 'match': content = renderMatchDetail(param); break
       case 'scorer': content = renderScorer(); break
+      case 'help': content = renderHelpPage(); break
       default: content = renderHome()
     }
   } catch (err) {
@@ -158,6 +160,43 @@ document.addEventListener('click', (e) => {
     }
     updateGlobalTicker(page)
     updateActiveNav(page)
+    return
+  }
+  
+  // Interactive Caddy Desk target cups (Help page)
+  const helpCup = e.target.closest('[data-help-hole]')
+  if (helpCup) {
+    const holeId = helpCup.dataset.helpHole
+    document.querySelectorAll('[data-help-hole]').forEach(el => el.classList.remove('active'))
+    helpCup.classList.add('active')
+
+    const adviceTextEl = document.getElementById('caddy-advice-text')
+    if (adviceTextEl) {
+      const advice = getCaddyAdvice(holeId)
+      adviceTextEl.innerHTML = `
+        <strong>${advice.cotton.split(': "')[0]}:</strong> "${advice.cotton.split(': "')[1]}<br/><br/>
+        <strong>${advice.pepper.split(': "')[0]}:</strong> "${advice.pepper.split(': "')[1]}
+      `
+    }
+    return
+  }
+
+  // Collapsible FAQ Accordion Toggles (Help page)
+  const faqHeader = e.target.closest('.faq-item-header')
+  if (faqHeader) {
+    const item = faqHeader.closest('.faq-item')
+    const isActive = item.classList.contains('active')
+    
+    // Reset all FAQ items to collapsed
+    document.querySelectorAll('.faq-item').forEach(el => {
+      el.classList.remove('active')
+      el.querySelector('.faq-toggle-icon').innerText = '＋'
+    })
+
+    if (!isActive) {
+      item.classList.add('active')
+      faqHeader.querySelector('.faq-toggle-icon').innerText = '－'
+    }
     return
   }
   

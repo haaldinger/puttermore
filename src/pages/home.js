@@ -84,6 +84,18 @@ export function renderHome() {
       </div>
     </section>
     <div class="container" style="margin-top: var(--space-4)">
+      <!-- Premium Guide Callout -->
+      <div class="card card-glass animate-in delay-1" style="border: 1px dashed rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.02); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); cursor: pointer" data-nav="help">
+        <div style="display: flex; align-items: center; gap: var(--space-3)">
+          <span style="font-size: var(--text-xl)">📖</span>
+          <div>
+            <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm); color: var(--gold-400)">NEW TO THE TABLE? HOW TO PLAY GUIDE</div>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary)">Master Double-Sinks, Redemption rules, and get pro putting caddy blueprints!</div>
+          </div>
+        </div>
+        <span style="font-weight: bold; color: var(--gold-400); font-size: var(--text-base)">→</span>
+      </div>
+
       <div class="league-tabs animate-in">${leagueTabs}</div>
 
       <div class="league-venue-bar animate-in delay-1">

@@ -756,3 +756,69 @@ main { display: block; }
   100% { stroke: rgba(255,255,255,0.66); stroke-width: 2px; }
 }
 
+/* ─── Help & How to Play Page ─── */
+.help-cup {
+  transition: all var(--duration-normal) var(--ease-out) !important;
+}
+.help-cup:hover {
+  stroke: var(--gold-400) !important;
+  fill: rgba(251, 191, 36, 0.15) !important;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+}
+.help-cup.active {
+  stroke: var(--pink-400) !important;
+  fill: rgba(233, 30, 139, 0.2) !important;
+  filter: drop-shadow(0 0 14px rgba(233, 30, 139, 0.6));
+}
+
+.faq-item {
+  border: 1px solid var(--border-subtle);
+  background: rgba(17, 17, 17, 0.45);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+.faq-item-header {
+  padding: var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast);
+}
+.faq-item-header:hover {
+  color: var(--gold-400);
+}
+.faq-toggle-icon {
+  font-weight: bold;
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  transition: transform var(--duration-normal) var(--ease-out), color var(--duration-fast);
+}
+.faq-item.active .faq-item-header {
+  color: var(--pink-400);
+}
+.faq-item.active .faq-toggle-icon {
+  transform: rotate(90deg);
+  color: var(--pink-400);
+}
+.faq-item-body {
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  transition: max-height var(--duration-normal) var(--ease-out), padding var(--duration-normal) var(--ease-out);
+}
+.faq-item.active .faq-item-body {
+  max-height: 200px;
+  padding-bottom: var(--space-4);
+}
+
+
