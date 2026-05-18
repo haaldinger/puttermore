@@ -139,6 +139,7 @@ Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown
 - **Mobile-first** layout with bottom tab navigation
 - **Active Light-Follow Glassmorphism [NEW]** — Ultra-responsive glass cards with dynamic backdrop-blur filters, hot-pink glowing borders, and an incredibly slick radial-gradient shine that actively tracks and follows the user's cursor at an optimized, lightweight 60fps!
 - **Window-Level Scrolling [NEW]** — Moving scrolling containers from nested containers to the body level to ensure buttery smooth, native inertia scrolling on iOS Safari without bottom page cropping!
+- **ESPN8: The Ocho Live Broadcasting [NEW]** — Retro scrolling television broadcast ticker on the homepage containing rotating live comments, and a dynamic, high-octane **Ocho Broadcast Desk** on Match Detail pages generating customized dialogs between Cotton McKnight and Pepper Reddick based on scores, overtime, and ball backs!
 - **League-aware** — every page scopes to the selected brewery with color-branded tabs
 - **Smooth animations** and glassmorphism effects throughout
 - **Turf-green** SVG game boards with team-colored pucks
@@ -150,7 +151,7 @@ Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown
 - **Registration flow** — online team sign-up with waitlist management
 - **Gallery / Social wall** — photo uploads from game nights
 - **Drink tracker** — fun "Sips per Sink" social stat
-- **Auto-generated commentary** — ESPN-8 style play-by-play
 - **Multi-season history** — carry stats across multiple 6-week seasons
 - **Backend integration** — cloud database so multiple captains can enter scores from their own phones
 - **Push notifications** — reminders for upcoming matches and score alerts
+
