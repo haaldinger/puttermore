@@ -136,6 +136,7 @@ Druid Hill Daggers · Station North Stars · Patterson Park Aces · Highlandtown
 - **Dark mode** interface built for the bar/brewery setting
 - **Hot pink and black** palette pulled directly from the Puttermore logo
 - **Mobile-first** layout with bottom tab navigation
+- **Active Light-Follow Glassmorphism [NEW]** — Ultra-responsive glass cards with dynamic backdrop-blur filters, hot-pink glowing borders, and an incredibly slick radial-gradient shine that actively tracks and follows the user's cursor at an optimized, lightweight 60fps!
 - **Window-Level Scrolling [NEW]** — Moving scrolling containers from nested containers to the body level to ensure buttery smooth, native inertia scrolling on iOS Safari without bottom page cropping!
 - **League-aware** — every page scopes to the selected brewery with color-branded tabs
 - **Smooth animations** and glassmorphism effects throughout
