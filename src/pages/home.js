@@ -67,9 +67,30 @@ export function renderHome() {
     "Cotton McKnight: Bmore Squeegee Boys are applying massive corner pressure on the board tonight!",
     "Pepper Reddick: Barksdale Putters are running this table like it's the West Side corner, Cotton!",
     "Cotton McKnight: Average turns per game is hovering at 14. This is absolute, unadulterated high-octane bar-sports, Pepper!",
-    "Pepper Reddick: If you can dodge a wrench, Cotton, you can sink an F1 cup!"
+    "Pepper Reddick: If you can dodge a wrench, Cotton, you can sink an F1 cup!",
+    "Cotton McKnight: The atmosphere here is absolutely electric, Pepper. Or maybe that's just the neon beer signs humming.",
+    "Pepper Reddick: You can feel the gravity in the room, Cotton! Putting on this turf requires the precision of a brain surgeon and the patience of a Dundalk fisherman!",
+    "Cotton McKnight: Barksdale Putters just sank a middle cup with the cold-blooded efficiency of Omar Little on a Tuesday morning!",
+    "Pepper Reddick: He whistle-putted that one right into the hole, Cotton! A truly staggering display of bar athletic dominance!",
+    "Cotton McKnight: Dundalk Dirtbikes are moving through this bracket like they're dodging traffic on I-95, Pepper!",
+    "Pepper Reddick: Unbelievable, Cotton! That was a high-speed maneuver that would make the 12 O'Clock Boys proud!",
+    "Cotton McKnight: House of Cups is folding their opponents like a deck of cards tonight.",
+    "Pepper Reddick: They're playing chess while everyone else is playing checkers, Cotton. Or in this case, drinking lagers!",
+    "Cotton McKnight: Mr. Trash Wheel has just gobbled up three consecutive putts! The inner harbor is clean and so is their scorecard, Pepper!",
+    "Pepper Reddick: That's some high-quality environmental cleanup, Cotton! No debris left on the board!",
+    "Cotton McKnight: Squeegee Boys are squeegeeing the board clean! Not a single cup is safe from their squeegee of destiny!",
+    "Pepper Reddick: That'll cost you a dollar, Cotton, but boy is it worth it!",
+    "Cotton McKnight: Omar's Whistlers are whistling their way to a division title. A hauntingly beautiful performance, Pepper.",
+    "Pepper Reddick: You hear that whistle, Cotton, and you know the cups are about to disappear!",
+    "Cotton McKnight: It's all about the angles, Pepper. Trigonometry in a bar setting is a beautiful thing.",
+    "Pepper Reddick: I failed high school geometry, Cotton, but I know how to bounce a ball off the side cushion and into a B3 cup!",
+    "Cotton McKnight: We are looking at a historic night in Baltimore social sports history, Pepper. I haven't been this excited since the national rock-paper-scissors tournament!",
+    "Pepper Reddick: My heart is beating faster than a hamster on a wheel, Cotton! This is pure theater!"
   ]
-  const randomQuote = ochoQuotes[Math.floor(Math.random() * ochoQuotes.length)]
+  
+  // Shuffle the quotes so the ticker is different and exciting every single load!
+  const shuffledQuotes = ochoQuotes.sort(() => Math.random() - 0.5)
+  const tickerTapeText = shuffledQuotes.map(q => `"${q}"`).join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; ")
 
   return `
     <section class="hero">
@@ -98,9 +119,9 @@ export function renderHome() {
       </div>
     </section>
     <div class="container" style="margin-top: var(--space-4)">
-      <div class="ocho-ticker animate-in delay-3" style="margin: 0 auto var(--space-6) auto; max-width: 680px; display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.08); border: 1px dashed rgba(251, 191, 36, 0.3); padding: var(--space-2) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.04)">
-        <span class="badge" style="background: var(--gold-400); color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3)">🎙️ ESPN8 THE OCHO</span>
-        <marquee scrollamount="3" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">"${randomQuote}"</marquee>
+      <div class="ocho-ticker animate-in delay-3" style="margin: 0 auto var(--space-6) auto; max-width: 720px; display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.08); border: 1px dashed rgba(251, 191, 36, 0.3); padding: var(--space-2) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.04)">
+        <span class="badge" style="background: var(--gold-400); color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3)">🎙️ LIVE OCHO TICKER</span>
+        <marquee scrollamount="3.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${tickerTapeText}</marquee>
       </div>
       <div class="league-tabs animate-in">${leagueTabs}</div>
 
