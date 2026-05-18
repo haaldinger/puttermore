@@ -64,7 +64,10 @@ export function renderHome() {
         <img src="/images/puttermore.png" alt="Puttermore" class="hero-logo animate-in">
         <div class="animate-in delay-1"><span class="badge badge-pink">${season.name} · 3 Leagues · 27 Teams</span></div>
         <h1 class="hero-title animate-in delay-2"><span class="gradient-text">PUTTERMORE</span></h1>
-        <p class="hero-subtitle animate-in delay-2">Sink 'Em and Drink 'Em — Baltimore's social putting league</p>
+        <p class="hero-subtitle animate-in delay-2" style="max-width: 480px; margin: 0 auto; line-height: 1.5">
+          <span style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); display: block; color: #fff; margin-bottom: 2px">Sink 'Em and Drink 'Em</span>
+          <span style="font-size: var(--text-sm); color: var(--text-muted); display: block">Baltimore's social putting league</span>
+        </p>
         <div class="hero-actions animate-in delay-3">
           <button class="btn btn-primary btn-lg" data-nav="scorer">🎯 Live Scorer</button>
           <button class="btn btn-secondary btn-lg" data-nav="standings">View Standings</button>
