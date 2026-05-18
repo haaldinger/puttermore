@@ -4,7 +4,7 @@
  */
 import './style.css'
 import { renderHome, setSelectedLeague } from './pages/home.js'
-import { renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, renderPlayerProfile, renderMatchDetail } from './pages/pages.js'
+import { renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, renderPlayerProfile, renderMatchDetail, setPlayersViewMode } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer } from './pages/scorer.js'
 import { getPlayer } from './data.js'
 
@@ -101,6 +101,14 @@ document.addEventListener('click', (e) => {
     } catch (err) { content = renderHome() }
     app.innerHTML = NAV_HTML + '<main id="page-content">' + content + '</main>'
     updateActiveNav(page)
+    return
+  }
+  
+  // View mode toggling (Players page)
+  const viewModeBtn = e.target.closest('.view-mode-btn')
+  if (viewModeBtn && viewModeBtn.dataset.mode) {
+    setPlayersViewMode(viewModeBtn.dataset.mode)
+    render()
     return
   }
 

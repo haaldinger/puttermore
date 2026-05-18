@@ -212,39 +212,107 @@ export function renderTeamProfile(teamId) {
   </div>`
 }
 
+let playersViewMode = 'league'
+export function getPlayersViewMode() { return playersViewMode }
+export function setPlayersViewMode(mode) { playersViewMode = mode }
+
 export function renderPlayersPage() {
   const season = getActiveSeason()
-  const leagueId = getSelectedLeague()
-  const league = getLeague(leagueId)
-  const venue = getVenue(league.venueId)
-  const allPlayers = []
-  const standings = getStandings(leagueId)
-  standings.forEach(s => {
-    const roster = getTeamRoster(s.team.id)
-    roster.forEach(p => {
-      const stats = getPlayerStats(p.id)
-      allPlayers.push({ player: p, team: s.team, ...stats })
+  const currentLeagueId = getSelectedLeague()
+  const currentLeague = getLeague(currentLeagueId)
+  
+  const displayPlayers = []
+  
+  if (playersViewMode === 'league') {
+    const standings = getStandings(currentLeagueId)
+    standings.forEach(s => {
+      const roster = getTeamRoster(s.team.id)
+      roster.forEach(p => {
+        const stats = getPlayerStats(p.id)
+        displayPlayers.push({ player: p, team: s.team, league: currentLeague, ...stats })
+      })
     })
-  })
-  allPlayers.sort((a, b) => b.puttingPct - a.puttingPct)
+  } else {
+    getAllLeagues().forEach(l => {
+      const standings = getStandings(l.id)
+      standings.forEach(s => {
+        const roster = getTeamRoster(s.team.id)
+        roster.forEach(p => {
+          const stats = getPlayerStats(p.id)
+          displayPlayers.push({ player: p, team: s.team, league: l, ...stats })
+        })
+      })
+    })
+  }
+  
+  displayPlayers.sort((a, b) => b.puttingPct - a.puttingPct)
 
-  const rows = allPlayers.map((e, i) => `
-    <tr data-nav="player/${e.player.id}" style="cursor:pointer">
-      <td class="mono">${i+1}</td>
-      <td><div class="flex items-center gap-2"><div class="roster-avatar" style="background:${e.player.avatarColor};width:28px;height:28px;font-size:10px">${e.player.name.split(' ').map(n=>n[0]).join('')}</div>${e.player.name}</div></td>
-      <td><span class="team-dot" style="background:${e.team.color}"></span> ${e.team.name}</td>
-      <td class="mono" style="font-weight:700;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%</td>
-      <td class="mono">${e.totalMade}/${e.totalPutts}</td>
-      <td class="mono col-hide-mobile">${e.gamesPlayed}</td>
-      <td class="col-hide-mobile">${e.bestHole||'—'}</td>
-    </tr>`).join('')
+  const rows = displayPlayers.map((e, i) => {
+    const v = getVenue(e.league.venueId)
+    const venueTag = `<span class="badge" style="background:${v.color}15;color:${v.color};border:1px solid ${v.color}25">${v.shortName}</span>`
+    
+    // Top rank trophy visual indicators
+    let rankDisplay = i + 1
+    if (playersViewMode === 'cross') {
+      if (i === 0) rankDisplay = '🥇'
+      else if (i === 1) rankDisplay = '🥈'
+      else if (i === 2) rankDisplay = '🥉'
+      else if (i < 10) rankDisplay = `<span style="color:var(--gold-400);font-weight:700">★</span> ${i + 1}`
+    }
+    
+    return `
+      <tr data-nav="player/${e.player.id}" style="cursor:pointer">
+        <td class="mono" style="text-align:center;font-weight:700">${rankDisplay}</td>
+        <td><div class="flex items-center gap-2"><div class="roster-avatar" style="background:${e.player.avatarColor};width:28px;height:28px;font-size:10px">${e.player.name.split(' ').map(n=>n[0]).join('')}</div>${e.player.name}</div></td>
+        <td><span class="team-dot" style="background:${e.team.color}"></span> ${e.team.name}</td>
+        ${playersViewMode === 'cross' ? `<td>${venueTag}</td>` : ''}
+        <td class="mono" style="font-weight:700;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%</td>
+        <td class="mono">${e.totalMade}/${e.totalPutts}</td>
+        <td class="mono col-hide-mobile">${e.gamesPlayed}</td>
+        <td class="col-hide-mobile">${e.bestHole||'—'}</td>
+      </tr>`
+  }).join('')
+
+  const subHeader = playersViewMode === 'league' 
+    ? `${currentLeague.name} · Individual putting stats`
+    : `All 3 Breweries Combined · 54 Players Leaderboard`
 
   return `<div class="page container">
-    <div class="page-header animate-in"><h1>Players</h1><p>${league.name} · Individual putting stats</p></div>
-    <div class="league-tabs animate-in">${leagueTabsHtml()}</div>
-    <div class="table-wrapper animate-in delay-1"><table><thead><tr>
-      <th>#</th><th>Player</th><th>Team</th><th>Accuracy</th><th>Made</th><th class="col-hide-mobile">Games</th><th class="col-hide-mobile">Best Hole</th>
-    </tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="page-header animate-in">
+      <h1>Players</h1>
+      <p>${subHeader}</p>
+    </div>
+    
+    <div class="flex flex-col sm-row justify-between items-center gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3); border-radius: var(--radius-xl); border: 1px solid var(--border-card)">
+      ${playersViewMode === 'league' 
+        ? `<div class="league-tabs" style="margin-bottom: 0">${leagueTabsHtml()}</div>` 
+        : `<div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.1em; text-transform: uppercase; padding-left: var(--space-2)">🏆 UNIFIED LEADERBOARD</div>`
+      }
+      <div class="view-toggle" style="margin-bottom: 0">
+        <button class="view-toggle-btn view-mode-btn ${playersViewMode === 'league' ? 'active' : ''}" data-mode="league">Current Brewery</button>
+        <button class="view-toggle-btn view-mode-btn ${playersViewMode === 'cross' ? 'active' : ''}" data-mode="cross">🏆 Cross-League</button>
+      </div>
+    </div>
+    
+    <div class="table-wrapper animate-in delay-1">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:center;width:60px">#</th>
+            <th>Player</th>
+            <th>Team</th>
+            ${playersViewMode === 'cross' ? '<th>Brewery</th>' : ''}
+            <th>Accuracy</th>
+            <th>Made</th>
+            <th class="col-hide-mobile">Games</th>
+            <th class="col-hide-mobile">Best Hole</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
   </div>`
 }
 
