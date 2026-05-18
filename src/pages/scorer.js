@@ -165,9 +165,116 @@ export function renderScorer() {
       <div class="card turn-log" style="padding:var(--space-3)">${turnLogHtml}</div>
     </section>` : ''}
 
-    <div class="mt-4"><button class="btn btn-ghost" id="scorer-reset-btn">← New Game</button></div>
+    <div class="mt-4 flex items-center justify-center gap-3">
+      <button class="btn btn-ghost" id="scorer-reset-btn">← New Game</button>
+      <button class="btn btn-secondary btn-sm" id="trash-talk-btn" style="border: 1px dashed var(--gold-400); background: rgba(251,191,36,0.06); color: var(--gold-400)">🌶️ Trash Talk</button>
+    </div>
     <div id="ball-back-toast" class="ball-back-toast">🔥 BALL BACK!</div>
+    
+    <div id="trash-talk-toast" class="trash-talk-toast" style="position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(13, 13, 13, 0.98); border: 2px solid var(--gold-400); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-sm); line-height: 1.5; color: #fff; width: 90%; max-width: 440px; box-shadow: 0 8px 32px rgba(251,191,36,0.3); backdrop-filter: blur(12px); opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999">
+      <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.05em; margin-bottom: var(--space-1); display: flex; align-items: center; gap: 6px">
+        🌶️ OCHO TRASH TALK & YO MOMMA DESK
+      </div>
+      <div id="trash-talk-content" style="font-style: italic; opacity: 0.95"></div>
+    </div>
   </div>`
+}
+
+function triggerTrashTalk() {
+  const s = scorerState
+  let selectedQuotes = []
+  
+  if (s) {
+    if (s.phase === 'redemption') {
+      selectedQuotes = [
+        "Cotton McKnight: Holy putting grass, Pepper, we are in REDEMPTION! The tension is high enough to snap a carbon-fiber shaft!",
+        "Pepper Reddick: Absolutely, Cotton! One mistake here and they'll be buying the next round in total silence! This is real taproom drama!",
+        "Cotton McKnight: The board is cleared but they need to run the table now! Talk about a high-stakes rescue mission!",
+        "Pepper Reddick: It's redemption time! Yo momma could bounce it off a bar stool, but can they sink it under pressure?"
+      ]
+    } else if (s.phase === 'overtime' || s.overtime) {
+      selectedQuotes = [
+        "Cotton McKnight: OVERTIME, Pepper! Settle in, folks, because we are in sudden death putting territory!",
+        "Pepper Reddick: Sudden death, Cotton! My heart is pounding like a subwoofer in the back of a Dundalk civic!",
+        "Cotton McKnight: Front 3 cups are reopen and the pressure is at an absolute, boiling-point maximum!"
+      ]
+    } else if (s.homeBoardOpen && s.awayBoardOpen && s.homeBoardOpen.size === 1 && s.awayBoardOpen.size === 1) {
+      selectedQuotes = [
+        "Cotton McKnight: A classic 1v1 shootout! Both teams are down to their final cup, Pepper!",
+        "Pepper Reddick: It is a absolute duel to the death! One ball in, one ball out, and someone goes home a hero!",
+        "Cotton McKnight: Whoever sinks this next F1 cup secures immortality. Or at least free craft beer!"
+      ]
+    } else if (s.turns && s.turns.length > 0 && s.turns[s.turns.length - 1].ballBack) {
+      selectedQuotes = [
+        "Cotton McKnight: They are heating up, Pepper! A spectacular double-sink ball back in their last turn!",
+        "Pepper Reddick: They are on a absolute tear! The ball is sticking to that cup like honey on a biscuit!",
+        "Cotton McKnight: The momentum has completely shifted! This team is rolling like Mr. Trash Wheel in a high tide!"
+      ]
+    }
+  }
+  
+  // If no high-stakes match state is detected, fallback to the massive database of classic trash talk and Baltimore Yo Momma jokes!
+  if (selectedQuotes.length === 0) {
+    selectedQuotes = [
+      "Cotton McKnight: That putt was so wide, Pepper, I think it went into the next county!",
+      "Pepper Reddick: I've seen better rolls on a stale Dundalk crab cake, Cotton!",
+      "Cotton McKnight: A stunning miss! It looks like they forgot their putting eyes at the bottom of their last pint!",
+      "Pepper Reddick: He's aiming for the cup but putting like he's trying to hit a Squeegee Boy on the corner, Cotton!",
+      "Cotton McKnight: Bold strategy, Cotton. Let's see if missing by three feet pays off for 'em!",
+      "Pepper Reddick: If I had a dollar for every missed putt tonight, Cotton, I could buy the entire Heavy Seas brewery!",
+      "Cotton McKnight: Barksdale Putters are looking more like Barksdale Benchwarmers on that turn!",
+      "Pepper Reddick: That putting stroke was stiffer than a Dundalk dirtbike's suspension, Cotton!",
+      "Cotton McKnight: Oh! A tragic rim-out! That ball spun around the cup like a tourist looking for parking in Fells Point!",
+      "Pepper Reddick: You can't get that close and not finish, Cotton! It's against the laws of nature and bar-putting!",
+      "Cotton McKnight: Pepper, is it just me, or is the turf moving faster than their reaction times tonight?",
+      "Pepper Reddick: That ball had so much spin, Cotton, it practically needed its own zip code!",
+      "Cotton McKnight: I haven't seen a choke like that since the great Biloxi lawnmower disaster of '96!",
+      "Pepper Reddick: That was a catastrophic mechanical failure of the putting arm, Cotton!",
+      "Cotton McKnight: Mr. Trash Wheel is crying tears of absolute sorrow watching that putt drift wide!",
+      "Pepper Reddick: That ball is trash, Cotton, but not the kind Mr. Trash Wheel likes to eat!",
+      "Cotton McKnight: The angle of departure on that putt was completely fictional, Pepper!",
+      "Pepper Reddick: He just invented a whole new branch of mathematics, Cotton: Putting Astrology!",
+      "Cotton McKnight: Dundee Strokers are looking like they've got butter on their fingers and bricks in their shoes tonight!",
+      "Pepper Reddick: They're playing like they're wearing virtual reality headsets tuned to a different game, Cotton!",
+      "Cotton McKnight: That was a textbook under-putt, Pepper. Didn't even reach the grass clippings!",
+      "Pepper Reddick: Staggering under-performance! My grandma could have sneezed the ball closer to the cup, Cotton!",
+      "Cotton McKnight: He's standing over the ball... the sweat is dripping... and... oh, he's hit the wall! Literally, the brick wall behind the table!",
+      "Pepper Reddick: That ball traveled in a completely non-Euclidean path, Cotton! Mind-bendingly bad!",
+      "Cotton McKnight: They are playing with the urgency of a snail on a coffee break, Pepper.",
+      "Pepper Reddick: I think their putter is actually a decorated broomstick, Cotton! That would explain the friction coefficient!",
+      "Pepper Reddick: Yo momma is so slow, Cotton, she makes the Dundalk dirtbike speed limit look like land-speed record velocity!",
+      "Cotton McKnight: Yo momma's putts are so crooked, she could bounce a golf ball off a round table and still hit the bartender!",
+      "Pepper Reddick: Yo momma is so short, Cotton, she uses the front cup (F1) as a hot tub!",
+      "Cotton McKnight: Yo momma is so heavy, when she stepped on the Mobtown turf, she triggered an artificial earthquake in East Baltimore!",
+      "Pepper Reddick: Yo momma is so bad at putting, she missed the entire brewery and accidentally registered for a bowling league!",
+      "Cotton McKnight: Yo momma's eyesight is so poor, Pepper, she mistook Mr. Trash Wheel for a giant floating putting cup!",
+      "Pepper Reddick: Yo momma is so old, she played putting games with George Washington at the historic Fells Point tavern, Cotton!",
+      "Cotton McKnight: Yo momma is so lazy, she expects a ball back even when she misses the board entirely!",
+      "Pepper Reddick: Yo momma's putting stroke is so shaky, Cotton, she looks like she's holding a paint mixer!",
+      "Cotton McKnight: Yo momma is so confusing, she tries to pay the Squeegee Boys with Monopoly money!",
+      "Pepper Reddick: Yo momma is so loud, when she sinks a cup, they can hear her screaming all the way in Salisbury, Cotton!",
+      "Cotton McKnight: Yo momma is so clumsy, she tripped over the side cushion and spilled three pitchers of craft IPA!"
+    ]
+  }
+  
+  const randomQuote = selectedQuotes[Math.floor(Math.random() * selectedQuotes.length)]
+  
+  const contentEl = document.getElementById('trash-talk-content')
+  const toastEl = document.getElementById('trash-talk-toast')
+  if (contentEl && toastEl) {
+    contentEl.innerHTML = `"${randomQuote}"`
+    toastEl.style.opacity = '1'
+    toastEl.style.visibility = 'visible'
+    toastEl.style.transform = 'translateX(-50%) translateY(0)'
+    
+    // Auto fade-out after 5.5 seconds
+    if (window.trashTalkTimeout) clearTimeout(window.trashTalkTimeout)
+    window.trashTalkTimeout = setTimeout(() => {
+      toastEl.style.opacity = '0'
+      toastEl.style.visibility = 'hidden'
+      toastEl.style.transform = 'translateX(-50%) translateY(20px)'
+    }, 5500)
+  }
 }
 
 // ─── Event Handling ───
@@ -202,6 +309,9 @@ export function handleScorerEvents(e) {
   }
   if (target.id === 'scorer-save-btn' && scorerState) {
     saveGameResult(); scorerState = null; return true
+  }
+  if (target.id === 'trash-talk-btn') {
+    triggerTrashTalk(); return true
   }
   if (target.id === 'scorer-reset-btn') { scorerState = null; return true }
   return false
