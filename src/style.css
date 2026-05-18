@@ -57,6 +57,13 @@ ul, ol { list-style: none; }
 .container { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 var(--space-4); }
 .page { padding-top: calc(var(--nav-height) + var(--space-4)); padding-bottom: calc(var(--bottom-height) + var(--space-12)); }
 main { display: block; }
+#page-content { width: 100%; }
+@media (max-width: 768px) {
+  #page-content {
+    /* Safe-scrolling padding-bottom to prevent bottom-tab overlay on mobile viewports */
+    padding-bottom: calc(var(--bottom-height) + var(--space-8)) !important;
+  }
+}
 
 /* ─── Navbar ─── */
 .navbar {
