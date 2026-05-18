@@ -7,7 +7,7 @@ import { getSelectedLeague, setSelectedLeague } from './home.js'
 let scorerState = null
 let viewMode = 'side'
 
-function getScorerTickerData() {
+export function getScorerTickerData() {
   const s = scorerState
   if (!s) {
     return {
@@ -285,14 +285,6 @@ export function renderScorer() {
       <button class="view-toggle-btn ${viewMode === 'focused' ? 'active' : ''}" data-view="focused">Focused</button>
       <button class="view-toggle-btn ${viewMode === 'stacked' ? 'active' : ''}" data-view="stacked">Stacked</button>
     </div>
-
-    ${(() => {
-      const ticker = getScorerTickerData()
-      return `<div class="ocho-ticker animate-in delay-1" style="margin: 0 auto var(--space-4) auto; max-width: 680px; display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.08); border: 1px dashed rgba(251, 191, 36, 0.3); padding: var(--space-2) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.04)">
-        <span class="badge" id="scorer-ticker-badge" style="background: ${ticker.badgeColor}; color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3); transition: all 0.3s ease">${ticker.badgeText}</span>
-        <marquee id="scorer-ticker-marquee" scrollamount="4.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${ticker.text}</marquee>
-      </div>`
-    })()}
 
     <div class="dual-boards ${viewClass} animate-in delay-1">${homeBoardHtml}${awayBoardHtml}</div>
 
