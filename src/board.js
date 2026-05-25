@@ -60,7 +60,7 @@ export function renderSingleBoard(teamName, teamColor, claimedHoles = [], attack
 
   const header = `<div class="dual-board-header">
       <span class="team-dot" style="background:${teamColor}"></span>
-      <span class="dual-board-label">${teamName}'s Cups</span>
+      <span class="dual-board-label">${teamName}</span>
       <span class="dual-board-score">${6 - score} left</span>
     </div>`
 

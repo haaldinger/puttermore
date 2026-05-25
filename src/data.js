@@ -221,3 +221,14 @@ export function getTeamAdvancedStats(teamId) {
     weeklyBreakdown: Object.values(weeklyData).sort((a, b) => a.week - b.week)
   }
 }
+
+export function getHoleShortName(hole) {
+  if (!hole || hole === 'miss') return 'Miss'
+  if (hole === 'cleared') return 'CLR'
+  const map = {
+    'back-1': 'B1', 'back-2': 'B2', 'back-3': 'B3',
+    'middle-1': 'M1', 'middle-2': 'M2', 'front-1': 'F1'
+  }
+  return map[hole] || hole
+}
+

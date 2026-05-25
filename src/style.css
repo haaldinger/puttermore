@@ -191,6 +191,7 @@ main { display: block; }
 .badge {
   display: inline-flex; align-items: center; font-size: var(--text-xs); font-weight: 600;
   padding: 2px 10px; border-radius: var(--radius-full); letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .badge-pink { background: rgba(233,30,139,0.15); color: var(--pink-400); border: 1px solid rgba(233,30,139,0.25); }
 .badge-gold { background: rgba(251,191,36,0.15); color: var(--gold-400); border: 1px solid rgba(251,191,36,0.25); }
@@ -444,12 +445,20 @@ main { display: block; }
 .ball-back-toast {
   position: fixed; top: var(--nav-height); left: 50%; transform: translateX(-50%) translateY(-20px);
   background: linear-gradient(135deg, var(--pink-500), var(--gold-400));
-  color: #fff; font-family: var(--font-display); font-weight: 900; font-size: var(--text-lg);
-  padding: var(--space-3) var(--space-8); border-radius: var(--radius-full);
+  color: #fff; font-family: var(--font-display); font-weight: 900; font-size: var(--text-base);
+  padding: var(--space-3) var(--space-6); border-radius: var(--radius-xl);
   z-index: 200; box-shadow: 0 8px 32px rgba(233,30,139,0.5);
   transition: all 0.4s var(--ease-out); pointer-events: none;
   opacity: 0; visibility: hidden;
   border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.35;
+  box-sizing: border-box;
+  max-width: 90vw;
 }
 .ball-back-toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(var(--space-4)); }
 .ball-back-toast.winner-toast {
@@ -463,15 +472,33 @@ main { display: block; }
   border-color: #fdba74;
 }
 
+/* Toast Title & Detail elements inside showToast */
+.toast-title {
+  font-size: var(--text-base);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+.toast-detail {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  opacity: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: var(--space-1);
+  line-height: 1.2;
+}
+
 /* ─── Turn Log ─── */
 .turn-log { max-height: 300px; overflow-y: auto; }
 .turn-entry {
-  display: flex; align-items: center; gap: var(--space-3);
+  display: flex; align-items: flex-start; gap: var(--space-3);
   padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
   font-size: var(--text-xs); border-bottom: 1px solid var(--border-card);
 }
 .turn-entry:last-child { border-bottom: none; }
-.turn-entry .turn-num { font-weight: 700; color: var(--text-muted); min-width: 28px; }
+.turn-entry .turn-num { font-weight: 700; color: var(--text-muted); min-width: 28px; flex-shrink: 0; }
 
 /* ─── Profile ─── */
 .profile-header {
@@ -1186,6 +1213,22 @@ main { display: block; }
 
 .announcer-reroll-btn:active {
   transform: scale(0.9) rotate(90deg);
+}
+
+/* ─── Responsive Mobile Toast Overrides ─── */
+@media (max-width: 480px) {
+  .ball-back-toast {
+    font-size: var(--text-sm) !important;
+    padding: var(--space-2.5) var(--space-4) !important;
+    border-radius: var(--radius-lg) !important;
+    max-width: 90vw !important;
+  }
+  .toast-title {
+    font-size: var(--text-sm) !important;
+  }
+  .toast-detail {
+    font-size: var(--text-xs) !important;
+  }
 }
 
 

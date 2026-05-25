@@ -1,4 +1,4 @@
-import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams } from '../data.js'
+import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getHoleShortName } from '../data.js'
 import { renderSingleBoard } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
 import { saveMatch, getLoggedInUser } from '../store.js'
@@ -441,7 +441,8 @@ export function renderScorer() {
       <span class="team-dot" style="background:${team.color}"></span>
       <span style="flex:1">${phaseTag}${t.putts.map(p => {
         const name = getPlayer(p.playerId)?.name?.split(' ')[0] || '?'
-        return `${name}: ${p.made ? '✅' + (p.hole !== 'miss' ? ' ' + p.hole : '') : '❌'}`
+        const holeLabel = getHoleShortName(p.hole)
+        return `${name}: ${p.made ? '✅ ' + holeLabel : '❌'}`
       }).join(' · ')}</span>
       ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
     </div>`
@@ -899,10 +900,10 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
       const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
       const streak = s[streakKey]
       if (streak === 6) {
-        showToast(`👑 PERFECT BOARD! 6 IN A ROW! 🏆 ${s.winner.toUpperCase()} WINS!`, 'winner')
+        showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🏆 ${s.winner.toUpperCase()} WINS!</div>`, 'winner')
         triggerTrashTalk('streak_6', putters[putters.length - 1].id)
       } else {
-        showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+        showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
       }
       return
     }
@@ -926,16 +927,16 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
     const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
     const streak = s[streakKey]
     if (streak === 4) {
-      showToast("⚡ UNSTOPPABLE! 4 IN A ROW! 🔥 BALL BACK!", "streak")
+      showToast(`<div class="toast-title">⚡ UNSTOPPABLE! 4 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
       triggerTrashTalk('streak_4', putters[putters.length - 1].id)
     } else if (streak === 6) {
-      showToast("👑 PERFECT BOARD! 6 IN A ROW! 🔥 BALL BACK!", "streak")
+      showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
       triggerTrashTalk('streak_6', putters[putters.length - 1].id)
     } else if (streak > 6 && streak % 2 === 0) {
-      showToast(`🔥 BALL BACK! ${streak} IN A ROW!`, "streak")
+      showToast(`<div class="toast-title">🔥 BALL BACK!</div><div class="toast-detail">${streak} IN A ROW!</div>`, "streak")
       triggerTrashTalk('streak_2', putters[putters.length - 1].id)
     } else {
-      showToast('🔥 BALL BACK!')
+      showToast('<div class="toast-title">🔥 BALL BACK!</div>')
       triggerTrashTalk('ballback', putters[putters.length - 1].id)
     }
   }
@@ -996,10 +997,10 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
       const streak = s[streakKey]
       if (streak === 6) {
-        showToast(`👑 PERFECT BOARD! 6 IN A ROW! 🏆 ${s.winner.toUpperCase()} WINS!`, 'winner')
+        showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🏆 ${s.winner.toUpperCase()} WINS!</div>`, 'winner')
         triggerTrashTalk('streak_6', putters[putters.length - 1].id)
       } else {
-        showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+        showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
       }
       return
     }
@@ -1029,7 +1030,7 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
-      showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+      showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
       return
     }
 
@@ -1040,16 +1041,16 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
       const streak = s[streakKey]
       if (streak === 4) {
-        showToast("⚡ UNSTOPPABLE! 4 IN A ROW! 🔥 BALL BACK!", "streak")
+        showToast(`<div class="toast-title">⚡ UNSTOPPABLE! 4 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
         triggerTrashTalk('streak_4', putters[putters.length - 1].id)
       } else if (streak === 6) {
-        showToast("👑 PERFECT BOARD! 6 IN A ROW! 🔥 BALL BACK!", "streak")
+        showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
         triggerTrashTalk('streak_6', putters[putters.length - 1].id)
       } else if (streak > 6 && streak % 2 === 0) {
-        showToast(`🔥 BALL BACK! ${streak} IN A ROW!`, "streak")
+        showToast(`<div class="toast-title">🔥 BALL BACK!</div><div class="toast-detail">${streak} IN A ROW!</div>`, "streak")
         triggerTrashTalk('streak_2', putters[putters.length - 1].id)
       } else {
-        showToast('🔥 BALL BACK!')
+        showToast('<div class="toast-title">🔥 BALL BACK!</div>')
         triggerTrashTalk('ballback', putters[putters.length - 1].id)
       }
     }

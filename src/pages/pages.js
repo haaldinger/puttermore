@@ -1,4 +1,4 @@
-import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats } from '../data.js'
+import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName } from '../data.js'
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
 import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter } from '../store.js'
@@ -690,7 +690,8 @@ export function renderMatchDetail(matchId) {
       <span class="team-dot" style="background:${team?.color || '#666'}"></span>
       <span style="flex:1">${phaseTag}${t.putts.map(p => {
         const name = getPlayer(p.playerId)?.name?.split(' ')[0] || '?'
-        return `${name}: ${p.made ? '✅' + (p.hole !== 'miss' ? ' ' + p.hole : '') : '❌'}`
+        const holeLabel = getHoleShortName(p.hole)
+        return `${name}: ${p.made ? '✅ ' + holeLabel : '❌'}`
       }).join(' · ')}</span>
       ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
     </div>`
