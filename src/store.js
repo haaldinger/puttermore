@@ -4,7 +4,7 @@
 import { players as seedPlayers, teams as seedTeams, seasons as seedSeasons, matches as seedMatches, venues as seedVenues, leagues as seedLeagues } from './seed.js'
 
 const STORE_KEY = 'puttermore_store'
-const STORE_VERSION = 7
+const STORE_VERSION = 8
 
 let _state = null
 
