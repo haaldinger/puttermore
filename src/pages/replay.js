@@ -147,6 +147,15 @@ export function openReplayModal(match) {
   speedMultiplier = 1
   if (playbackInterval) clearInterval(playbackInterval)
 
+  // Pre-generate and cache commentary for each shot so that:
+  // 1. Commentary is stable/deterministic (doesn't change when stepping back/forth)
+  // 2. We can render the complete chronological log of what Cotton & Pepper have said
+  replayShots.forEach((shot) => {
+    const player = getPlayer(shot.playerId)
+    const team = getTeam(shot.teamId)
+    shot.commentary = getCommentary(shot, player, team)
+  })
+
   // Render the modal backdrop overlay
   const modal = document.createElement('div')
   modal.id = 'replay-modal'
@@ -167,7 +176,7 @@ export function openReplayModal(match) {
       <div class="replay-dashboard">
         <!-- Left: Broadcast commentary & log -->
         <div class="replay-broadcast-panel">
-          <div class="replay-commentary-box">
+          <div class="replay-commentary-box" style="flex: 0 0 auto">
             <div style="font-size:var(--text-xs);font-weight:800;color:var(--gold-400);letter-spacing:0.1em;margin-bottom:var(--space-2)">🎙️ LIVE BROADCAST AUDIO</div>
             
             <div class="speech-bubble cotton-speech">
@@ -181,7 +190,18 @@ export function openReplayModal(match) {
             </div>
           </div>
 
-          <div class="replay-stats-display">
+          <!-- Broadcast History Log Ticker -->
+          <div class="replay-history-box" style="display:flex; flex-direction:column; gap:var(--space-2); background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.06); padding:var(--space-3); border-radius:var(--radius-xl); flex:1; max-height:220px; overflow:hidden">
+            <div style="font-size:10px; font-weight:800; color:var(--text-secondary); letter-spacing:0.05em; display:flex; justify-content:space-between; align-items:center">
+              <span>📻 LIVE TRANSCRIPT HISTORY</span>
+              <span class="badge" id="history-count-badge" style="font-size:9px; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:2px 6px; border-radius:var(--radius-sm)">1 message</span>
+            </div>
+            <div id="replay-history-log" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:6px; padding-right:4px">
+              <!-- Chronological comments will go here -->
+            </div>
+          </div>
+
+          <div class="replay-stats-display" style="flex: 0 0 auto">
             <div class="replay-score-row">
               <div class="replay-team-score" style="color:${getTeam(match.homeTeamId).color}">
                 <div style="font-size:var(--text-xs);color:var(--text-muted)">${getTeam(match.homeTeamId).name}</div>
@@ -243,6 +263,19 @@ export function openReplayModal(match) {
   document.getElementById('replay-btn-next').addEventListener('click', stepForward)
   document.getElementById('replay-btn-play-pause').addEventListener('click', togglePlay)
   document.getElementById('replay-scrubber').addEventListener('input', handleScrub)
+
+  // Live Transcript history click navigation!
+  const historyLog = document.getElementById('replay-history-log')
+  if (historyLog) {
+    historyLog.addEventListener('click', (e) => {
+      const row = e.target.closest('.history-log-row')
+      if (row) {
+        pausePlayback()
+        currentShotIdx = parseInt(row.dataset.shotIdx)
+        updateReplayUI()
+      }
+    })
+  }
 
   document.querySelectorAll('.replay-speed-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -401,14 +434,75 @@ function updateReplayUI() {
       badgeDetail.innerHTML = `<span style="color:${team.color}">${pName} (${tName})</span> puts at <strong>${activeShot.hole.replace('-', ' ')}</strong>... ${activeShot.made ? '<span style="color:var(--green-400)">SINK! ✅</span>' : '<span style="color:var(--pink-400)">MISS ❌</span>'}`
     }
 
-    // Speech bubbles
-    const commentary = getCommentary(activeShot, player, team)
+    // Speech bubbles (utilizing cached commentaries for consistency)
+    const commentary = activeShot.commentary
     if (cottonAudio) cottonAudio.innerText = commentary.cotton
     if (pepperAudio) pepperAudio.innerText = commentary.pepper
   } else {
     if (badgeDetail) badgeDetail.innerText = 'GAME READY · PRESS PLAY'
     if (cottonAudio) cottonAudio.innerText = 'Cotton McKnight: "Welcome to ESPN8: The Ocho Match Replay! Hit Play or Step Forward to start the simulation desk, folks!"'
     if (pepperAudio) pepperAudio.innerText = 'Pepper Reddick: "Oh yes, Cotton! Prepare yourselves for some high-velocity social putting action!"'
+  }
+
+  // Update Live Transcript History Log
+  const historyLogContainer = document.getElementById('replay-history-log')
+  const historyCountBadge = document.getElementById('history-count-badge')
+  if (historyLogContainer) {
+    let logHtml = ''
+    
+    // Add Intro Row
+    const isIntroActive = currentShotIdx === -1
+    logHtml += `
+      <div class="history-log-row ${isIntroActive ? 'active-history-row' : ''}" data-shot-idx="-1" style="cursor:pointer; display:flex; gap:8px; padding:6px 8px; border-radius:var(--radius-md); border-left:3px solid var(--gold-400); background:${isIntroActive ? 'rgba(251,191,36,0.06)' : 'rgba(0,0,0,0.15)'}; margin-bottom:4px">
+        <div style="font-size:9px; font-weight:900; color:var(--gold-400); background:rgba(251,191,36,0.15); width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0">🎙️</div>
+        <div style="font-size:10px; font-style:italic; color:${isIntroActive ? '#fff' : 'var(--text-secondary)'}; line-height:1.3">
+          <strong>ESPN8 Intro:</strong> Welcome to the Ocho Match Replay Simulator Desk! Hit Play to start the broadcast.
+        </div>
+      </div>
+    `
+    
+    // Add all broadcasted commentaries up to the current shot index
+    let totalMessages = 0
+    for (let i = 0; i <= currentShotIdx; i++) {
+      const shot = replayShots[i]
+      if (shot && shot.commentary) {
+        const isCurrentShot = i === currentShotIdx
+        totalMessages += 2
+        
+        // Cotton's comment
+        logHtml += `
+          <div class="history-log-row ${isCurrentShot ? 'active-history-row' : ''}" data-shot-idx="${i}" style="cursor:pointer; display:flex; gap:8px; padding:6px 8px; border-radius:var(--radius-md); border-left:3px solid #fbbf24; background:${isCurrentShot ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.02)'}; margin-bottom:2px">
+            <div style="font-size:9px; font-weight:900; color:#fbbf24; background:rgba(251,191,36,0.15); width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0">C</div>
+            <div style="font-size:10px; font-style:italic; color:${isCurrentShot ? '#fff' : 'var(--text-primary)'}; line-height:1.3; flex:1">
+              <strong>Shot ${i+1}:</strong> ${shot.commentary.cotton.replace(/^Cotton McKnight:\s*"/, '').replace(/"$/, '')}
+            </div>
+          </div>
+        `
+        
+        // Pepper's comment
+        logHtml += `
+          <div class="history-log-row ${isCurrentShot ? 'active-history-row' : ''}" data-shot-idx="${i}" style="cursor:pointer; display:flex; gap:8px; padding:6px 8px; border-radius:var(--radius-md); border-left:3px solid #ec4899; background:${isCurrentShot ? 'rgba(236,72,153,0.08)' : 'rgba(236,72,153,0.02)'}; margin-bottom:4px">
+            <div style="font-size:9px; font-weight:900; color:#ec4899; background:rgba(236,72,153,0.15); width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0">P</div>
+            <div style="font-size:10px; font-style:italic; color:${isCurrentShot ? '#fff' : 'var(--text-primary)'}; line-height:1.3; flex:1">
+              <strong>Shot ${i+1}:</strong> ${shot.commentary.pepper.replace(/^Pepper Reddick:\s*"/, '').replace(/"$/, '')}
+            </div>
+          </div>
+        `
+      }
+    }
+    
+    historyLogContainer.innerHTML = logHtml
+    if (historyCountBadge) {
+      historyCountBadge.innerText = `${totalMessages + 1} broadcast messages`
+    }
+    
+    // Auto-scroll logic: scroll the active item (or the end) into view smoothly
+    const activeRow = historyLogContainer.querySelector('.active-history-row')
+    if (activeRow) {
+      setTimeout(() => {
+        activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 50)
+    }
   }
 }
 

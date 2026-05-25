@@ -1659,9 +1659,6 @@ export function renderAdminPage() {
   else if (activeAdminTab === 'roster') {
     const activeTeam = getTeam(activeRosterTeamId)
     const roster = getTeamRoster(activeRosterTeamId)
-    const teamSelectOptions = getStandings('l1').map(s => `
-      <option value="${s.team.id}" ${s.team.id === activeRosterTeamId ? 'selected' : ''}>${s.team.name}</option>
-    `).join('')
 
     const rosterItemsHtml = roster.map(p => {
       const isCaptain = activeTeam.captainPlayerId === p.id

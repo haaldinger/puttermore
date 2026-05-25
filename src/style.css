@@ -711,7 +711,7 @@ main { display: block; }
 
 .replay-commentary-box {
   background: rgba(251, 191, 36, 0.02); border: 1px dashed rgba(251, 191, 36, 0.25);
-  padding: var(--space-4); border-radius: var(--radius-xl); flex: 1;
+  padding: var(--space-4); border-radius: var(--radius-xl); flex: 0 0 auto;
   display: flex; flex-direction: column; gap: var(--space-3);
   box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
 }
@@ -1248,6 +1248,20 @@ main { display: block; }
 }
 .custom-select-option.active {
   background: rgba(233, 30, 139, 0.1) !important;
+}
+
+/* ─── Replay History Ticker Log ─── */
+.history-log-row {
+  transition: all 0.15s ease-out;
+}
+.history-log-row:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  transform: translateX(3px);
+}
+.history-log-row.active-history-row {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-left-width: 4px !important;
+  box-shadow: inset 2px 0 10px rgba(255,255,255,0.02);
 }
 
 
