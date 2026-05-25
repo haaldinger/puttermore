@@ -579,14 +579,14 @@ function updateGlobalTicker(page) {
   if (page === 'scorer') {
     const ticker = getScorerTickerData()
     if (ticker) {
-      newHtml = `<div class="ocho-ticker-global" style="display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.06); border-bottom: 1px dashed rgba(251, 191, 36, 0.2); padding: var(--space-2) var(--space-4); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.02)">
+      newHtml = `<div class="ocho-ticker-global" style="display: flex; align-items: center; gap: var(--space-3); background: #0d0c07; border-bottom: 1px dashed rgba(251, 191, 36, 0.25); padding: var(--space-2) var(--space-4); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.4)">
         <span class="badge" id="scorer-ticker-badge" style="background: ${ticker.badgeColor}; color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3); transition: all 0.3s ease">${ticker.badgeText}</span>
         <marquee id="scorer-ticker-marquee" scrollamount="4.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${ticker.text}</marquee>
       </div>`
     }
   } else {
     const text = getHomeTickerText()
-    newHtml = `<div class="ocho-ticker-global" style="display: flex; align-items: center; gap: var(--space-3); background: rgba(251, 191, 36, 0.06); border-bottom: 1px dashed rgba(251, 191, 36, 0.2); padding: var(--space-2) var(--space-4); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 16px rgba(251, 191, 36, 0.02)">
+    newHtml = `<div class="ocho-ticker-global" style="display: flex; align-items: center; gap: var(--space-3); background: #0d0c07; border-bottom: 1px dashed rgba(251, 191, 36, 0.25); padding: var(--space-2) var(--space-4); font-size: var(--text-xs); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.4)">
       <span class="badge" style="background: var(--gold-400); color: #000; font-weight: 800; font-family: var(--font-display); letter-spacing: 0.05em; padding: 2px 8px; flex-shrink: 0; box-shadow: 0 0 8px rgba(251,191,36,0.3)">🎙️ LIVE OCHO TICKER</span>
       <marquee scrollamount="5.5" style="font-style: italic; color: rgba(255,255,255,0.9); width: 100%">${text}</marquee>
     </div>`
