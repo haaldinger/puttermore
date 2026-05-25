@@ -1,4 +1,4 @@
-import { getActiveSeason, getStandings, getRecentResults, getUpcomingMatches, getLeaderboard, getTeam, getAllLeagues, getLeague, getVenue, getPlayerStats, getPlayerTeam, getTeamRoster, getPlayer, getAllPlayers } from '../data.js'
+import { getActiveSeason, getStandings, getRecentResults, getUpcomingMatches, getLeaderboard, getTeam, getAllLeagues, getLeague, getVenue, getPlayerStats, getPlayerTeam, getTeamRoster, getPlayer, getAllPlayers, getAllMatches } from '../data.js'
 import { getLoggedInUser } from '../store.js'
 import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
 
