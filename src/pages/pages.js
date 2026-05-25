@@ -1,4 +1,4 @@
-import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName } from '../data.js'
+import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams } from '../data.js'
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
 import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter } from '../store.js'
@@ -299,6 +299,11 @@ export function renderTeamProfile(teamId) {
   </div>`
 }
 
+let playerSearchQuery = ''
+let playerTeamFilter = ''
+let playerSortColumn = 'accuracy'
+let playerSortDirection = 'desc'
+
 export function renderPlayersPage() {
   const season = getActiveSeason()
   const currentLeagueId = getSelectedLeague()
@@ -327,14 +332,50 @@ export function renderPlayersPage() {
     })
   })
   
-  displayPlayers.sort((a, b) => b.puttingPct - a.puttingPct)
-
-  // Find Banter King
+  // Find Banter King (computed before filtering to spotlight the league leader!)
   let banterKing = null
   displayPlayers.forEach(e => {
     if (e.banterInitiated > 0 && (!banterKing || e.banterInitiated > banterKing.banterInitiated)) {
       banterKing = e
     }
+  })
+
+  // Filter players based on search query and team select dropdown
+  let filteredPlayers = displayPlayers.filter(e => {
+    const q = playerSearchQuery.toLowerCase().trim()
+    const matchesSearch = !q || 
+      e.player.name.toLowerCase().includes(q) || 
+      e.team.name.toLowerCase().includes(q)
+    const matchesTeam = !playerTeamFilter || e.team.id === playerTeamFilter
+    return matchesSearch && matchesTeam
+  })
+
+  // Sort players dynamically based on selected header column
+  filteredPlayers.sort((a, b) => {
+    let valA, valB
+    if (playerSortColumn === 'accuracy') {
+      valA = a.puttingPct
+      valB = b.puttingPct
+    } else if (playerSortColumn === 'made') {
+      valA = a.totalMade
+      valB = b.totalMade
+    } else if (playerSortColumn === 'games') {
+      valA = a.gamesPlayed
+      valB = b.gamesPlayed
+    } else if (playerSortColumn === 'banter') {
+      valA = a.banterInitiated
+      valB = b.banterInitiated
+    } else if (playerSortColumn === 'player') {
+      valA = a.player.name.toLowerCase()
+      valB = b.player.name.toLowerCase()
+    } else if (playerSortColumn === 'team') {
+      valA = a.team.name.toLowerCase()
+      valB = b.team.name.toLowerCase()
+    }
+    
+    if (valA < valB) return playerSortDirection === 'desc' ? 1 : -1
+    if (valA > valB) return playerSortDirection === 'desc' ? -1 : 1
+    return 0
   })
 
   const banterKingHtml = banterKing ? `
@@ -353,7 +394,7 @@ export function renderPlayersPage() {
     </div>
   ` : ''
 
-  const rows = displayPlayers.map((e, i) => {
+  const rows = filteredPlayers.map((e, i) => {
     // Top rank trophy visual indicators
     let rankDisplay = e.banterInitiated > 0 && banterKing && e.player.id === banterKing.player.id ? '👑' : i + 1
     if (i === 0) rankDisplay = '🥇'
@@ -381,6 +422,33 @@ export function renderPlayersPage() {
 
   const subHeader = `${currentLeague.name} · Individual putting stats`
 
+  const teams = getAllTeams()
+  const teamOptions = teams.map(t => `<option value="${t.id}" ${playerTeamFilter === t.id ? 'selected' : ''}>${t.name}</option>`).join('')
+
+  const sortIndicator = (col) => {
+    if (playerSortColumn === col) {
+      return playerSortDirection === 'desc' ? ' ▼' : ' ▲'
+    }
+    return ''
+  }
+
+  const filtersHtml = `
+    <div class="flex flex-wrap items-center gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card)">
+      <div style="flex: 1; min-width: 200px; position: relative;">
+        <input type="text" id="player-search-input" value="${playerSearchQuery}" placeholder="🔍 Search players or teams..." style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; transition: border-color var(--duration-fast)">
+      </div>
+      <div style="min-width: 150px">
+        <select id="player-team-filter" style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer">
+          <option value="">🎯 All Teams</option>
+          ${teamOptions}
+        </select>
+      </div>
+      ${(playerSearchQuery || playerTeamFilter || playerSortColumn !== 'accuracy' || playerSortDirection !== 'desc') ? `
+        <button class="btn btn-ghost btn-sm" id="player-clear-filters-btn" style="padding: var(--space-2) var(--space-4); font-size: var(--text-xs); height: 100%; border: 1px dashed rgba(255,255,255,0.15)">✕ Reset</button>
+      ` : ''}
+    </div>
+  `
+
   return `<div class="page container">
     <div class="page-header animate-in" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-4)">
       <div>
@@ -396,27 +464,91 @@ export function renderPlayersPage() {
     </div>
     
     ${banterKingHtml}
+    ${filtersHtml}
     
     <div class="table-wrapper animate-in delay-1">
       <table>
         <thead>
           <tr>
             <th style="text-align:center;width:60px">#</th>
-            <th>Player</th>
-            <th>Team</th>
-            <th>Accuracy</th>
-            <th>Made</th>
-            <th class="col-hide-mobile">Games</th>
+            <th style="cursor:pointer; user-select:none" data-sort="player">Player${sortIndicator('player')}</th>
+            <th style="cursor:pointer; user-select:none" data-sort="team">Team${sortIndicator('team')}</th>
+            <th style="cursor:pointer; user-select:none" data-sort="accuracy">Accuracy${sortIndicator('accuracy')}</th>
+            <th style="cursor:pointer; user-select:none" data-sort="made">Made${sortIndicator('made')}</th>
+            <th class="col-hide-mobile" style="cursor:pointer; user-select:none" data-sort="games">Games${sortIndicator('games')}</th>
             <th class="col-hide-mobile">Best Hole</th>
-            <th class="col-hide-mobile" style="width:90px">Banter</th>
+            <th class="col-hide-mobile" style="width:90px; cursor:pointer; user-select:none" data-sort="banter">Banter${sortIndicator('banter')}</th>
           </tr>
         </thead>
         <tbody>
-          ${rows}
+          ${filteredPlayers.length ? rows : `<tr><td colspan="8" class="text-center text-muted" style="padding:var(--space-6)">No players match the current filters</td></tr>`}
         </tbody>
       </table>
     </div>
   </div>`
+}
+
+export function handlePlayersEvents(e) {
+  // 1. Click Listener
+  if (e.type === 'click') {
+    // Sort header click
+    const sortHeader = e.target.closest('th[data-sort]')
+    if (sortHeader) {
+      const col = sortHeader.dataset.sort
+      if (playerSortColumn === col) {
+        playerSortDirection = playerSortDirection === 'desc' ? 'asc' : 'desc'
+      } else {
+        playerSortColumn = col
+        playerSortDirection = (col === 'player' || col === 'team') ? 'asc' : 'desc'
+      }
+      refreshPlayersPage()
+      return
+    }
+
+    // Clear filters click
+    const clearBtn = e.target.closest('#player-clear-filters-btn')
+    if (clearBtn) {
+      playerSearchQuery = ''
+      playerTeamFilter = ''
+      playerSortColumn = 'accuracy'
+      playerSortDirection = 'desc'
+      refreshPlayersPage()
+      return
+    }
+  }
+
+  // 2. Input Listener (Search query)
+  if (e.type === 'input' && e.target.id === 'player-search-input') {
+    playerSearchQuery = e.target.value
+    refreshPlayersPage()
+    return
+  }
+
+  // 3. Change Listener (Team select)
+  if (e.type === 'change' && e.target.id === 'player-team-filter') {
+    playerTeamFilter = e.target.value
+    refreshPlayersPage()
+    return
+  }
+}
+
+function refreshPlayersPage() {
+  const searchInput = document.getElementById('player-search-input')
+  const hasFocus = document.activeElement === searchInput
+  const caretPos = searchInput ? searchInput.selectionStart : 0
+
+  const pageContentEl = document.getElementById('page-content')
+  if (pageContentEl) {
+    pageContentEl.innerHTML = renderPlayersPage()
+  }
+
+  if (hasFocus) {
+    const newSearchInput = document.getElementById('player-search-input')
+    if (newSearchInput) {
+      newSearchInput.focus()
+      newSearchInput.setSelectionRange(caretPos, caretPos)
+    }
+  }
 }
 
 // ─── Player Profile ───

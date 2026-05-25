@@ -6,7 +6,8 @@ import {
   renderPlayerProfile, renderMatchDetail, renderHelpPage, getCaddyAdvice, 
   renderLoginPage, renderPutterGallery, renderAdminPage,
   getActiveAdminTab, setActiveAdminTab, getActiveRosterTeamId, setActiveRosterTeamId,
-  getEditingMatchId, setEditingMatchId, getEditingPlayerId, setEditingPlayerId
+  getEditingMatchId, setEditingMatchId, getEditingPlayerId, setEditingPlayerId,
+  handlePlayersEvents
 } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer, getScorerTickerData, showToast } from './pages/scorer.js'
 import { getPlayer, getPlayerTeam, getAllMatches, getStandings, getTeamRoster, getAllPlayers, getPlayerStats } from './data.js'
@@ -1046,6 +1047,9 @@ document.addEventListener('click', (e) => {
       openMenu.style.display = 'none'
     }
   }
+
+  // Players page click handler delegation
+  handlePlayersEvents(e)
 })
 
 // 2. Submit Listener Delegation
@@ -1097,6 +1101,9 @@ document.addEventListener('change', (e) => {
       reader.readAsDataURL(file)
     }
   }
+
+  // Players page change handler delegation
+  handlePlayersEvents(e)
 })
 
 // 3. Input Search Listener (Putter Gallery filter & Sandbox dial)
@@ -1121,6 +1128,9 @@ document.addEventListener('input', (e) => {
       }
     })
   }
+
+  // Players page input handler delegation
+  handlePlayersEvents(e)
 })
 
 // Reactive Time-travel clock shifted event
