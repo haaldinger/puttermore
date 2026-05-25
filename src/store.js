@@ -72,6 +72,11 @@ export function updateMatch(matchId, finalScore, overtime) {
   if (!match) return null
   match.finalScore = finalScore
   match.overtime = overtime
+  if (finalScore.home > finalScore.away) {
+    match.winnerId = match.homeTeamId
+  } else if (finalScore.away > finalScore.home) {
+    match.winnerId = match.awayTeamId
+  }
   saveState()
   return match
 }

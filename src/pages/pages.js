@@ -139,6 +139,8 @@ export function renderSchedule() {
         const isPending = m.status === 'pending_review'
         const showScore = isCompleted || isPending
         const canClick = isCompleted || isPending
+        const isHomeWinner = showScore && (m.winnerId ? m.winnerId === m.homeTeamId : m.finalScore?.home > m.finalScore?.away)
+        const isAwayWinner = showScore && (m.winnerId ? m.winnerId === m.awayTeamId : m.finalScore?.away > m.finalScore?.home)
 
         return `<div class="card match-card" ${canClick ? `data-nav="match/${m.id}" style="cursor:pointer"` : ''}>
           <div class="match-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-2)">
@@ -146,11 +148,11 @@ export function renderSchedule() {
             ${isPending ? `<span class="badge badge-gold" style="font-size:9px">⏳ PENDING</span>` : ''}
           </div>
           <div class="match-teams">
-            <div class="match-team${showScore && m.finalScore?.home > m.finalScore?.away ? ' winner' : ''}"><span class="team-dot" style="background:${ht.color}"></span>${ht.name}</div>
+            <div class="match-team${isHomeWinner ? ' winner' : ''}"><span class="team-dot" style="background:${ht.color}"></span>${ht.name}${isHomeWinner ? ' 👑' : ''}</div>
             <div class="match-score">${showScore
-              ? `<span class="${isCompleted && m.finalScore.home > m.finalScore.away ? 'text-green' : ''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${isCompleted && m.finalScore.away > m.finalScore.home ? 'text-green' : ''}">${m.finalScore.away}</span>`
+              ? `<span class="${isCompleted && isHomeWinner ? 'text-green' : ''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${isCompleted && isAwayWinner ? 'text-green' : ''}">${m.finalScore.away}</span>`
               : '<span class="text-muted">vs</span>'}</div>
-            <div class="match-team away${showScore && m.finalScore?.away > m.finalScore?.home ? ' winner' : ''}">${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
+            <div class="match-team away${isAwayWinner ? ' winner' : ''}">${isAwayWinner ? '👑 ' : ''}${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
           </div>
         </div>`}).join('')}</div>
     </section>`
@@ -213,9 +215,9 @@ export function renderTeamProfile(teamId) {
 
   const matchesHtml = matches.map(m => {
     const opp = m.homeTeamId === teamId ? m.awayTeam : m.homeTeam
-    const teamScore = m.homeTeamId === teamId ? m.finalScore.home : m.finalScore.away
-    const oppScore = m.homeTeamId === teamId ? m.finalScore.away : m.finalScore.home
-    const won = teamScore > oppScore
+    const teamScore = m.finalScore ? (m.homeTeamId === teamId ? m.finalScore.home : m.finalScore.away) : 0
+    const oppScore = m.finalScore ? (m.homeTeamId === teamId ? m.finalScore.away : m.finalScore.home) : 0
+    const won = m.winnerId === teamId
     return `<div class="card match-card">
       <div class="match-meta">Week ${m.weekNumber} · ${m.status === 'completed' ? (won ? '✅ Win' : '❌ Loss') : 'Scheduled'}${m.overtime?' · ⚡OT':''}</div>
       <div class="flex items-center justify-between">
@@ -782,7 +784,10 @@ export function renderMatchDetail(matchId) {
     `
   }
 
-  return `<div class="page container">
+    const isHomeWinner = match.winnerId ? match.winnerId === match.homeTeamId : match.finalScore.home > match.finalScore.away
+    const isAwayWinner = match.winnerId ? match.winnerId === match.awayTeamId : match.finalScore.away > match.finalScore.home
+
+    return `<div class="page container">
     <div class="page-header animate-in">
       <h1>Match Detail</h1>
       <p>Week ${match.weekNumber} · ${league.name} · ${venue.name}</p>
@@ -791,12 +796,12 @@ export function renderMatchDetail(matchId) {
     <div class="scorer-header animate-in delay-1">
       <div class="scorer-team">
         <div class="scorer-team-name" style="color:${homeTeam.color}">${homeTeam.name}</div>
-        <div class="scorer-team-score ${match.finalScore.home > match.finalScore.away ? 'text-green' : ''}">${match.finalScore.home}</div>
+        <div class="scorer-team-score ${isHomeWinner ? 'text-green' : ''}">${match.finalScore.home}</div>
       </div>
       <div class="scorer-vs">—</div>
       <div class="scorer-team">
         <div class="scorer-team-name" style="color:${awayTeam.color}">${awayTeam.name}</div>
-        <div class="scorer-team-score ${match.finalScore.away > match.finalScore.home ? 'text-green' : ''}">${match.finalScore.away}</div>
+        <div class="scorer-team-score ${isAwayWinner ? 'text-green' : ''}">${match.finalScore.away}</div>
       </div>
     </div>
 
@@ -1268,6 +1273,8 @@ export function renderAdminPage() {
       const reviewCards = pendingMatches.map(m => {
         const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
         const isEditing = editingMatchId === m.id
+        const isHomeWinner = m.winnerId ? m.winnerId === m.homeTeamId : m.finalScore.home > m.finalScore.away
+        const isAwayWinner = m.winnerId ? m.winnerId === m.awayTeamId : m.finalScore.away > m.finalScore.home
         
         return `
           <div class="card match-card animate-in" style="padding: var(--space-5); border-color: var(--gold-400)25; background: rgba(251, 191, 36, 0.02)">
@@ -1277,7 +1284,7 @@ export function renderAdminPage() {
             </div>
 
             <div class="match-teams" style="margin-bottom: var(--space-4)">
-              <div class="match-team" style="font-weight: 700"><span class="team-dot" style="background:${ht.color}"></span> ${ht.name}</div>
+              <div class="match-team${isHomeWinner ? ' winner' : ''}" style="font-weight: 700"><span class="team-dot" style="background:${ht.color}"></span> ${ht.name}${isHomeWinner ? ' 👑' : ''}</div>
               
               <div class="match-score" style="font-size: var(--text-xl); font-weight: 800; font-family: var(--font-display)">
                 ${isEditing ? `
@@ -1287,11 +1294,11 @@ export function renderAdminPage() {
                     <input type="number" id="edit-away-score-${m.id}" value="${m.finalScore.away}" min="0" max="6" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-card); text-align: center; border-radius: var(--radius-md); padding: 4px; color:#fff" />
                   </div>
                 ` : `
-                  <span>${m.finalScore.home}</span><span class="text-muted">—</span><span>${m.finalScore.away}</span>
+                  <span class="${isHomeWinner ? 'text-green' : ''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${isAwayWinner ? 'text-green' : ''}">${m.finalScore.away}</span>
                 `}
               </div>
 
-              <div class="match-team away" style="font-weight: 700">${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
+              <div class="match-team away${isAwayWinner ? ' winner' : ''}" style="font-weight: 700">${isAwayWinner ? '👑 ' : ''}${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
             </div>
 
             <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-4); display: flex; gap: var(--space-4); align-items: center">

@@ -1052,7 +1052,7 @@ function saveGameResult() {
       [s.homeTeamId]: s.turns.filter(t => t.teamId === s.homeTeamId && t.ballBack).length,
       [s.awayTeamId]: s.turns.filter(t => t.teamId === s.awayTeamId && t.ballBack).length,
     },
-    winnerId: homeScore >= awayScore ? s.homeTeamId : s.awayTeamId,
+    winnerId: s.winner === s.homeName ? s.homeTeamId : s.awayTeamId,
     overtime: s.overtime,
     banterLog: s.banterLog || [],
   })
