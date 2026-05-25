@@ -1238,5 +1238,17 @@ main { display: block; }
   }
 }
 
+/* ─── Custom Select Option Styling ─── */
+.custom-select-option {
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.custom-select-option:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--pink-400) !important;
+}
+.custom-select-option.active {
+  background: rgba(233, 30, 139, 0.1) !important;
+}
+
 
 

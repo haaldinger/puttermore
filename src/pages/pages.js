@@ -241,19 +241,32 @@ export function renderSchedule() {
     `
   }
 
-  const teamOptions = getLeagueTeams(leagueId).map(t => 
-    `<option value="${t.id}" ${scheduleTeamFilter === t.id ? 'selected' : ''}>${t.name}</option>`
-  ).join('')
+  const selectedTeam = getLeagueTeams(leagueId).find(t => t.id === scheduleTeamFilter)
+  const activeTeamName = selectedTeam ? selectedTeam.name : 'All Teams'
+
+  const dropdownOptionsHtml = getLeagueTeams(leagueId).map(t => `
+    <div class="custom-select-option ${scheduleTeamFilter === t.id ? 'active' : ''}" data-value="${t.id}" style="padding: var(--space-2) var(--space-3); font-size: var(--text-xs); color: ${scheduleTeamFilter === t.id ? 'var(--pink-400)' : 'var(--text-primary)'}; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; display: flex; align-items: center; justify-content: space-between; font-weight: ${scheduleTeamFilter === t.id ? '700' : '400'}">
+      <span>${t.name}</span>
+      ${scheduleTeamFilter === t.id ? '<span style="font-weight:800; color:var(--pink-400)">✓</span>' : ''}
+    </div>
+  `).join('')
 
   const filtersHtml = `
     <div class="flex flex-wrap items-center justify-between gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card)">
       <div class="flex items-center gap-3" style="flex-wrap: wrap">
-        <label for="schedule-team-filter" style="font-size: var(--text-xs); color: var(--text-secondary); font-weight: 500">Filter matches by team:</label>
-        <div style="min-width: 200px">
-          <select id="schedule-team-filter" style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer">
-            <option value="">🎯 All Teams</option>
-            ${teamOptions}
-          </select>
+        <span style="font-size: var(--text-xs); color: var(--text-secondary); font-weight: 500">Filter matches by team:</span>
+        <div class="custom-select-container" style="position: relative; min-width: 200px">
+          <button class="custom-select-trigger" id="schedule-team-select-trigger" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer; text-align: left">
+            <span>🎯 ${activeTeamName}</span>
+            <span style="font-size: 8px; color: var(--text-secondary); margin-left: 8px">▼</span>
+          </button>
+          <div class="custom-select-dropdown" id="schedule-team-select-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: rgba(18,18,18,0.96); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 150; max-height: 200px; overflow-y: auto; padding: 4px">
+            <div class="custom-select-option ${scheduleTeamFilter === '' ? 'active' : ''}" data-value="" style="padding: var(--space-2) var(--space-3); font-size: var(--text-xs); color: ${scheduleTeamFilter === '' ? 'var(--pink-400)' : 'var(--text-primary)'}; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; display: flex; align-items: center; justify-content: space-between; font-weight: ${scheduleTeamFilter === '' ? '700' : '400'}">
+              <span>🎯 All Teams</span>
+              ${scheduleTeamFilter === '' ? '<span style="font-weight:800; color:var(--pink-400)">✓</span>' : ''}
+            </div>
+            ${dropdownOptionsHtml}
+          </div>
         </div>
       </div>
       ${scheduleTeamFilter ? `
@@ -544,8 +557,15 @@ export function renderPlayersPage() {
 
   const subHeader = `${currentLeague.name} · Individual putting stats`
 
-  const teams = getAllTeams()
-  const teamOptions = teams.map(t => `<option value="${t.id}" ${playerTeamFilter === t.id ? 'selected' : ''}>${t.name}</option>`).join('')
+  const selectedTeam = getAllTeams().find(t => t.id === playerTeamFilter)
+  const activeTeamName = selectedTeam ? selectedTeam.name : 'All Teams'
+
+  const dropdownOptionsHtml = getAllTeams().map(t => `
+    <div class="custom-select-option ${playerTeamFilter === t.id ? 'active' : ''}" data-value="${t.id}" style="padding: var(--space-2) var(--space-3); font-size: var(--text-xs); color: ${playerTeamFilter === t.id ? 'var(--pink-400)' : 'var(--text-primary)'}; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; display: flex; align-items: center; justify-content: space-between; font-weight: ${playerTeamFilter === t.id ? '700' : '400'}">
+      <span>${t.name}</span>
+      ${playerTeamFilter === t.id ? '<span style="font-weight:800; color:var(--pink-400)">✓</span>' : ''}
+    </div>
+  `).join('')
 
   const sortIndicator = (col) => {
     if (playerSortColumn === col) {
@@ -559,11 +579,18 @@ export function renderPlayersPage() {
       <div style="flex: 1; min-width: 200px; position: relative;">
         <input type="text" id="player-search-input" value="${playerSearchQuery}" placeholder="🔍 Search players or teams..." style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; transition: border-color var(--duration-fast)">
       </div>
-      <div style="min-width: 150px">
-        <select id="player-team-filter" style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer">
-          <option value="">🎯 All Teams</option>
-          ${teamOptions}
-        </select>
+      <div class="custom-select-container" style="position: relative; min-width: 180px">
+        <button class="custom-select-trigger" id="player-team-select-trigger" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer; text-align: left">
+          <span>🎯 ${activeTeamName}</span>
+          <span style="font-size: 8px; color: var(--text-secondary); margin-left: 8px">▼</span>
+        </button>
+        <div class="custom-select-dropdown" id="player-team-select-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: rgba(18,18,18,0.96); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 150; max-height: 200px; overflow-y: auto; padding: 4px">
+          <div class="custom-select-option ${playerTeamFilter === '' ? 'active' : ''}" data-value="" style="padding: var(--space-2) var(--space-3); font-size: var(--text-xs); color: ${playerTeamFilter === '' ? 'var(--pink-400)' : 'var(--text-primary)'}; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; display: flex; align-items: center; justify-content: space-between; font-weight: ${playerTeamFilter === '' ? '700' : '400'}">
+            <span>🎯 All Teams</span>
+            ${playerTeamFilter === '' ? '<span style="font-weight:800; color:var(--pink-400)">✓</span>' : ''}
+          </div>
+          ${dropdownOptionsHtml}
+        </div>
       </div>
       ${(playerSearchQuery || playerTeamFilter || playerSortColumn !== 'accuracy' || playerSortDirection !== 'desc') ? `
         <button class="btn btn-ghost btn-sm" id="player-clear-filters-btn" style="padding: var(--space-2) var(--space-4); font-size: var(--text-xs); height: 100%; border: 1px dashed rgba(255,255,255,0.15)">✕ Reset</button>
@@ -668,6 +695,54 @@ export function handlePlayersEvents(e) {
       refreshSchedulePage()
       return
     }
+
+    // Custom dropdown triggers & option select handlers
+    const scheduleTrigger = e.target.closest('#schedule-team-select-trigger')
+    if (scheduleTrigger) {
+      const dropdown = document.getElementById('schedule-team-select-dropdown')
+      if (dropdown) {
+        const isOpen = dropdown.style.display === 'block'
+        dropdown.style.display = isOpen ? 'none' : 'block'
+      }
+      // Close other dropdown if open
+      const other = document.getElementById('player-team-select-dropdown')
+      if (other) other.style.display = 'none'
+      return
+    }
+
+    const scheduleOption = e.target.closest('#schedule-team-select-dropdown .custom-select-option')
+    if (scheduleOption) {
+      scheduleTeamFilter = scheduleOption.dataset.value
+      refreshSchedulePage()
+      return
+    }
+
+    const playerTrigger = e.target.closest('#player-team-select-trigger')
+    if (playerTrigger) {
+      const dropdown = document.getElementById('player-team-select-dropdown')
+      if (dropdown) {
+        const isOpen = dropdown.style.display === 'block'
+        dropdown.style.display = isOpen ? 'none' : 'block'
+      }
+      // Close other dropdown if open
+      const other = document.getElementById('schedule-team-select-dropdown')
+      if (other) other.style.display = 'none'
+      return
+    }
+
+    const playerOption = e.target.closest('#player-team-select-dropdown .custom-select-option')
+    if (playerOption) {
+      playerTeamFilter = playerOption.dataset.value
+      refreshPlayersPage()
+      return
+    }
+
+    // Click outside dropdowns to close them
+    if (!e.target.closest('.custom-select-container')) {
+      document.querySelectorAll('.custom-select-dropdown').forEach(d => {
+        d.style.display = 'none'
+      })
+    }
   }
 
   // 2. Input Listener (Search query)
@@ -675,20 +750,6 @@ export function handlePlayersEvents(e) {
     playerSearchQuery = e.target.value
     refreshPlayersPage()
     return
-  }
-
-  // 3. Change Listener (Team select / filter)
-  if (e.type === 'change') {
-    if (e.target.id === 'player-team-filter') {
-      playerTeamFilter = e.target.value
-      refreshPlayersPage()
-      return
-    }
-    if (e.target.id === 'schedule-team-filter') {
-      scheduleTeamFilter = e.target.value
-      refreshSchedulePage()
-      return
-    }
   }
 }
 
