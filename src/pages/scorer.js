@@ -5,6 +5,7 @@ import { saveMatch, getLoggedInUser } from '../store.js'
 import { getSelectedLeague, setSelectedLeague } from './home.js'
 
 let scorerState = null
+let scorerHistory = []
 let viewMode = 'side'
 
 export function getScorerTickerData() {
@@ -516,7 +517,10 @@ export function renderScorer() {
       <div class="card turn-log" style="padding:var(--space-3)">${turnLogHtml}</div>
     </section>` : ''}
 
-    <div class="mt-4 flex items-center justify-center gap-3">
+    <div class="mt-4 flex items-center justify-center gap-3 animate-in delay-3">
+      ${!s.gameOver && (s.turns.length > 0 || s.currentTurnPutts.length > 0) ? `
+        <button class="btn btn-ghost" id="scorer-undo-btn" style="border-color: rgba(255,255,255,0.15); color: var(--text-secondary)">↩️ Undo Turn</button>
+      ` : ''}
       <button class="btn btn-ghost" id="scorer-reset-btn">← New Game</button>
     </div>
   </div>`
@@ -789,6 +793,10 @@ export function handleScorerEvents(e) {
     }
     triggerTrashTalk('general', activePlayerId); return true
   }
+  if (target.id === 'scorer-undo-btn') {
+    undoScorerTurn()
+    return true
+  }
   if (target.id === 'scorer-reset-btn') { scorerState = null; return true }
   return false
 }
@@ -829,12 +837,19 @@ function startGame(matchId) {
     "Pepper Reddick: My putting fingers are twitching just looking at these boards! Let's see who claims the first cup!"
   ]
   scorerState.activeCommentary = initialQuotes[Math.floor(Math.random() * initialQuotes.length)]
+
+  scorerHistory = []
+  pushStateSnapshot()
 }
 
 function recordPutt(hole, made) {
   const s = scorerState
-  if (s && s.otStartSelect) {
+  if (!s) return
+  if (s.otStartSelect) {
     s.otStartSelect = false
+  }
+  if (s.currentTurnPutts.length === 0) {
+    pushStateSnapshot()
   }
   const targetBoardId = s.currentTeam === 'home' ? 'away' : 'home'
   const boardOpen = targetBoardId === 'home' ? s.homeBoardOpen : s.awayBoardOpen
@@ -945,6 +960,10 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
 
 function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId) {
   const s = scorerState
+  if (!s) return
+  if (s.currentTurnPutts.length === 0) {
+    pushStateSnapshot()
+  }
   const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
 
   const putter = putters[s.currentPutterIdx]
@@ -1118,4 +1137,79 @@ function saveGameResult() {
     submittedByPlayerId: loggedIn ? loggedIn.id : null,
     submittedByPlayerName: loggedIn ? loggedIn.name : 'League Scorer',
   })
+}
+
+function pushStateSnapshot() {
+  if (!scorerState) return
+  const snapshot = {
+    ...scorerState,
+    homeBoardOpen: new Set(scorerState.homeBoardOpen),
+    awayBoardOpen: new Set(scorerState.awayBoardOpen),
+    turns: JSON.parse(JSON.stringify(scorerState.turns)),
+    currentTurnPutts: JSON.parse(JSON.stringify(scorerState.currentTurnPutts)),
+    homeBoardClaimed: [...scorerState.homeBoardClaimed],
+    awayBoardClaimed: [...scorerState.awayBoardClaimed],
+    homePlayers: [...scorerState.homePlayers],
+    awayPlayers: [...scorerState.awayPlayers],
+  }
+  scorerHistory.push(snapshot)
+}
+
+export function undoScorerTurn() {
+  const s = scorerState
+  if (!s) return
+  
+  // Case 1: In the middle of a turn (shots have been taken, but turn not finished yet)
+  if (s.currentTurnPutts.length > 0) {
+    s.currentTurnPutts = []
+    s.currentPutterIdx = 0
+    
+    // Restore the open/claimed board states from the last snapshot to clear any claims made in the middle of this turn!
+    if (scorerHistory.length > 0) {
+      const lastSnapshot = scorerHistory[scorerHistory.length - 1]
+      s.homeBoardClaimed = [...lastSnapshot.homeBoardClaimed]
+      s.awayBoardClaimed = [...lastSnapshot.awayBoardClaimed]
+      s.homeBoardOpen = new Set(lastSnapshot.homeBoardOpen)
+      s.awayBoardOpen = new Set(lastSnapshot.awayBoardOpen)
+      s.homeStreak = lastSnapshot.homeStreak
+      s.awayStreak = lastSnapshot.awayStreak
+    }
+    
+    showToast("↩️ Current turn putts cleared!")
+    refreshScorerPage()
+    return
+  }
+  
+  // Case 2: At the start of a turn (no shots taken yet), we want to undo the PREVIOUS completed turn!
+  if (scorerHistory.length > 1) {
+    // Pop the current turn's start-state snapshot
+    scorerHistory.pop()
+    // Peek the previous completed turn's start-state snapshot
+    const prevState = scorerHistory[scorerHistory.length - 1]
+    
+    // Restore scorerState from prevState
+    scorerState = {
+      ...prevState,
+      homeBoardOpen: new Set(prevState.homeBoardOpen),
+      awayBoardOpen: new Set(prevState.awayBoardOpen),
+      turns: JSON.parse(JSON.stringify(prevState.turns)),
+      currentTurnPutts: JSON.parse(JSON.stringify(prevState.currentTurnPutts)),
+      homeBoardClaimed: [...prevState.homeBoardClaimed],
+      awayBoardClaimed: [...prevState.awayBoardClaimed],
+      homePlayers: [...prevState.homePlayers],
+      awayPlayers: [...prevState.awayPlayers],
+    }
+    
+    showToast("↩️ Rolled back previous turn!")
+    refreshScorerPage()
+  } else {
+    showToast("⚠️ Nothing to undo!")
+  }
+}
+
+function refreshScorerPage() {
+  const pageContentEl = document.getElementById('page-content')
+  if (pageContentEl) {
+    pageContentEl.innerHTML = renderScorer()
+  }
 }
