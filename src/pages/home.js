@@ -906,7 +906,10 @@ export function renderHome() {
     `
   }
   else { // POST_GAME_RECAP (All other times)
+    const hasCompletedMatches = getAllMatches().some(m => m.weekNumber === currentWeek && m.status === 'completed')
+    const recapWeekNum = hasCompletedMatches ? currentWeek : Math.max(1, currentWeek - 1)
     const recapMvp = getWeeklyMvp(currentWeek)
+    
     let recapMvpHtml = ''
     if (recapMvp) {
       recapMvpHtml = `
@@ -915,7 +918,7 @@ export function renderHome() {
             ${recapMvp.player.name.split(' ').map(n=>n[0]).join('')}
           </div>
           <div style="flex:1">
-            <div style="font-size:8px; color:var(--pink-400); font-weight:800; letter-spacing:0.05em; text-transform:uppercase">🌟 WEEK ${currentWeek} OFFICIAL MVP</div>
+            <div style="font-size:8px; color:var(--pink-400); font-weight:800; letter-spacing:0.05em; text-transform:uppercase">🌟 WEEK ${recapWeekNum} OFFICIAL MVP</div>
             <div style="font-weight:700; color:#fff; font-size:var(--text-sm)">${recapMvp.player.name} (${recapMvp.team?.name || ''})</div>
             <div style="font-size:10px; color:var(--text-secondary)">Delivered a putting performance of <span style="font-weight:700; color:var(--pink-400)">${(recapMvp.accuracy*100).toFixed(0)}% accuracy</span> (${recapMvp.made} sunk). Supreme bar athlete excellence!</div>
           </div>
@@ -923,9 +926,41 @@ export function renderHome() {
       `
     }
     
+    const leagueDates = ['2026-05-06','2026-05-13','2026-05-20','2026-05-27','2026-06-03','2026-06-10']
+    const targetDateStr = leagueDates[currentWeek - 1] || '2026-05-06'
+    const targetTimeLive = new Date(`${targetDateStr}T18:30:00-04:00`)
+    
     phaseHypeWidgetHtml = `
+      <!-- Next Week Match Countdown Card -->
+      <div class="card card-glass text-center animate-in" style="padding: var(--space-5); background: linear-gradient(135deg, rgba(233,30,139,0.03), rgba(0,0,0,0.25)); border-color: rgba(233,30,139,0.15); margin-bottom: var(--space-5); box-shadow: 0 4px 20px rgba(233,30,139,0.08)">
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--pink-400); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: var(--space-2)">
+          ⛳ WEEK ${currentWeek} MATCH NIGHT COUNTDOWN
+        </div>
+        <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-bottom: var(--space-4)">Official matches start in:</div>
+        
+        <div class="countdown-timer-display" data-countdown-target="${targetTimeLive.toISOString()}" style="display:flex; justify-content:center; gap:var(--space-3); margin-bottom: var(--space-1)">
+          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-2) var(--space-3); min-width:54px">
+            <div class="countdown-number" id="countdown-days" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-md); color:#fff">00</div>
+            <div style="font-size:7px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Days</div>
+          </div>
+          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-2) var(--space-3); min-width:54px">
+            <div class="countdown-number" id="countdown-hours" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-md); color:#fff">00</div>
+            <div style="font-size:7px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Hours</div>
+          </div>
+          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-2) var(--space-3); min-width:54px">
+            <div class="countdown-number" id="countdown-mins" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-md); color:#fff">00</div>
+            <div style="font-size:7px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Mins</div>
+          </div>
+          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-2) var(--space-3); min-width:54px">
+            <div class="countdown-number" id="countdown-secs" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-md); color:var(--pink-400)">00</div>
+            <div style="font-size:7px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Secs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly Recap Card -->
       <div class="card card-glass animate-in" style="border-color: rgba(233,30,139,0.12); padding: var(--space-5); margin-bottom: var(--space-6)">
-        <div style="font-family:var(--font-display); font-weight:900; font-size:var(--text-xs); color:var(--pink-400); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:var(--space-2)">📋 WEEK ${currentWeek} OFFICIAL RECAP</div>
+        <div style="font-family:var(--font-display); font-weight:900; font-size:var(--text-xs); color:var(--pink-400); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:var(--space-2)">📋 WEEK ${recapWeekNum} OFFICIAL RECAP</div>
         <div style="font-size:var(--text-xs); color:var(--text-secondary); line-height:1.4">
           All scorecards are officially verified and locked into the division standings. Tap any completed matchup below to audit the full play-by-play turn charts and trace double sinks.
         </div>
