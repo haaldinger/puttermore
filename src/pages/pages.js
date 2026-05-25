@@ -78,12 +78,50 @@ function leagueTabsHtml() {
 export function renderStandings() {
   const season = getActiveSeason()
   const leagueId = getSelectedLeague()
+  checkLeagueChanged(leagueId)
   const league = getLeague(leagueId)
   const venue = getVenue(league.venueId)
   const standings = getStandings(leagueId)
-  const rows = standings.map((s, i) => `
+
+  // Map rank before sorting
+  const displayStandings = standings.map((s, i) => ({ ...s, rank: i + 1 }))
+
+  // Sort displayStandings dynamically
+  displayStandings.sort((a, b) => {
+    let valA, valB
+    if (standingsSortColumn === 'rank') {
+      valA = a.rank
+      valB = b.rank
+    } else if (standingsSortColumn === 'team') {
+      valA = a.team.name.toLowerCase()
+      valB = b.team.name.toLowerCase()
+    } else if (standingsSortColumn === 'record') {
+      valA = a.wins
+      valB = b.wins
+    } else if (standingsSortColumn === 'winPct') {
+      valA = a.winPct
+      valB = b.winPct
+    } else if (standingsSortColumn === 'holeDiff') {
+      valA = a.holeDiff
+      valB = b.holeDiff
+    } else if (standingsSortColumn === 'holesFor') {
+      valA = a.holesFor
+      valB = b.holesFor
+    } else if (standingsSortColumn === 'ballBacks') {
+      valA = a.ballBacks
+      valB = b.ballBacks
+    }
+
+    if (valA < valB) return standingsSortDirection === 'desc' ? 1 : -1
+    if (valA > valB) return standingsSortDirection === 'desc' ? -1 : 1
+    
+    // Tie-breaker
+    return a.rank - b.rank
+  })
+
+  const rows = displayStandings.map((s) => `
     <tr data-nav="team/${s.team.id}" style="cursor:pointer">
-      <td class="mono">${i + 1}</td>
+      <td class="mono" style="text-align:center;font-weight:700">${s.rank}</td>
       <td>
         <div style="display: flex; align-items: center; gap: var(--space-2); text-align: left">
           <span class="team-dot" style="background:${s.team.color}; flex-shrink: 0"></span>
@@ -99,12 +137,40 @@ export function renderStandings() {
       <td><span class="sparkline">${s.streak.map(r=>`<span class="sparkline-dot ${r==='W'?'win':'loss'}"></span>`).join('')}</span></td>
     </tr>`).join('')
 
+  const sortIndicator = (col) => {
+    if (standingsSortColumn === col) {
+      return standingsSortDirection === 'desc' ? ' ▼' : ' ▲'
+    }
+    return ''
+  }
+
+  const isSorted = standingsSortColumn !== 'rank' || standingsSortDirection !== 'asc'
+  const controlsHtml = `
+    <div class="flex items-center justify-between animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card); font-size: var(--text-xs)">
+      <div class="text-muted">
+        ${isSorted ? `Sorted by <strong style="color: var(--pink-400)">${standingsSortColumn === 'winPct' ? 'Win %' : standingsSortColumn === 'holeDiff' ? 'Cup Differential' : standingsSortColumn === 'ballBacks' ? 'Ball Backs' : standingsSortColumn === 'holesFor' ? 'Holes Sunk' : standingsSortColumn === 'record' ? 'Record' : standingsSortColumn}</strong> (${standingsSortDirection.toUpperCase()})` : 'Showing official standings hierarchy'}
+      </div>
+      ${isSorted ? `
+        <button class="btn btn-ghost btn-sm" id="standings-reset-btn" style="padding: var(--space-1) var(--space-3); font-size: 11px; height: auto; border: 1px dashed rgba(255,255,255,0.15)">✕ Reset Sort</button>
+      ` : ''}
+    </div>
+  `
+
   return `<div class="page container">
     <div class="page-header animate-in"><h1>Season Standings</h1><p>${season.name}</p></div>
     <div class="league-tabs animate-in">${leagueTabsHtml()}</div>
     <div class="league-venue-bar animate-in delay-1"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted">· ${league.day}s</span></div>
+    ${controlsHtml}
     <div class="table-wrapper animate-in delay-1"><table><thead><tr>
-      <th>#</th><th>Team</th><th>Record</th><th>Win%</th><th>+/-</th><th>Holes</th><th>🔥 BB</th><th>Streak</th><th>Form</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="rank">#${sortIndicator('rank')}</th>
+      <th style="cursor:pointer; user-select:none" data-standings-sort="team">Team${sortIndicator('team')}</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="record">Record${sortIndicator('record')}</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="winPct">Win%${sortIndicator('winPct')}</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="holeDiff">+/-${sortIndicator('holeDiff')}</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="holesFor">Holes${sortIndicator('holesFor')}</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="ballBacks">🔥 BB${sortIndicator('ballBacks')}</th>
+      <th style="text-align:center">Streak</th>
+      <th style="text-align:center">Form</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
   </div>`
 }
@@ -113,13 +179,22 @@ export function renderStandings() {
 export function renderSchedule() {
   const season = getActiveSeason()
   const leagueId = getSelectedLeague()
+  checkLeagueChanged(leagueId)
   const league = getLeague(leagueId)
   const venue = getVenue(league.venueId)
+  
   const allMatches = getAllMatches().filter(m => m.leagueId === leagueId).sort((a, b) => a.weekNumber - b.weekNumber)
-  const weeks = {}
-  allMatches.forEach(m => { if (!weeks[m.weekNumber]) weeks[m.weekNumber] = []; weeks[m.weekNumber].push(m) })
+  
+  // Filter matches by selected team
+  const filteredMatches = allMatches.filter(m => {
+    if (!scheduleTeamFilter) return true
+    return m.homeTeamId === scheduleTeamFilter || m.awayTeamId === scheduleTeamFilter
+  })
 
-  const weeksHtml = Object.entries(weeks).map(([wk, ms]) => {
+  const weeks = {}
+  filteredMatches.forEach(m => { if (!weeks[m.weekNumber]) weeks[m.weekNumber] = []; weeks[m.weekNumber].push(m) })
+
+  let weeksHtml = Object.entries(weeks).map(([wk, ms]) => {
     const isWkComplete = ms.every(m => m.status === 'completed')
     const isWkPending = ms.some(m => m.status === 'pending_review') && !isWkComplete
     
@@ -158,10 +233,40 @@ export function renderSchedule() {
     </section>`
   }).join('')
 
+  if (filteredMatches.length === 0) {
+    weeksHtml = `
+      <div class="card card-glass text-center animate-in" style="padding: var(--space-8); margin-top: var(--space-4)">
+        <p class="text-muted">No matches scheduled for the selected team in this league.</p>
+      </div>
+    `
+  }
+
+  const teamOptions = getLeagueTeams(leagueId).map(t => 
+    `<option value="${t.id}" ${scheduleTeamFilter === t.id ? 'selected' : ''}>${t.name}</option>`
+  ).join('')
+
+  const filtersHtml = `
+    <div class="flex flex-wrap items-center justify-between gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card)">
+      <div class="flex items-center gap-3" style="flex-wrap: wrap">
+        <label for="schedule-team-filter" style="font-size: var(--text-xs); color: var(--text-secondary); font-weight: 500">Filter matches by team:</label>
+        <div style="min-width: 200px">
+          <select id="schedule-team-filter" style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer">
+            <option value="">🎯 All Teams</option>
+            ${teamOptions}
+          </select>
+        </div>
+      </div>
+      ${scheduleTeamFilter ? `
+        <button class="btn btn-ghost btn-sm" id="schedule-clear-filter-btn" style="padding: var(--space-2) var(--space-4); font-size: var(--text-xs); border: 1px dashed rgba(255,255,255,0.15)">✕ Clear Filter</button>
+      ` : ''}
+    </div>
+  `
+
   return `<div class="page container">
     <div class="page-header animate-in"><h1>Schedule</h1><p>${season.name}</p></div>
     <div class="league-tabs animate-in">${leagueTabsHtml()}</div>
     <div class="league-venue-bar animate-in delay-1"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted">· ${league.day}s</span></div>
+    ${filtersHtml}
     ${weeksHtml}
   </div>`
 }
@@ -303,6 +408,23 @@ let playerSearchQuery = ''
 let playerTeamFilter = ''
 let playerSortColumn = 'accuracy'
 let playerSortDirection = 'desc'
+
+// Standings & Schedule state
+let standingsSortColumn = 'rank'
+let standingsSortDirection = 'asc'
+let scheduleTeamFilter = ''
+let lastLeagueId = ''
+
+function checkLeagueChanged(leagueId) {
+  if (lastLeagueId && lastLeagueId !== leagueId) {
+    playerTeamFilter = ''
+    scheduleTeamFilter = ''
+    standingsSortColumn = 'rank'
+    standingsSortDirection = 'asc'
+  }
+  lastLeagueId = leagueId
+}
+
 
 export function renderPlayersPage() {
   const season = getActiveSeason()
@@ -491,7 +613,7 @@ export function renderPlayersPage() {
 export function handlePlayersEvents(e) {
   // 1. Click Listener
   if (e.type === 'click') {
-    // Sort header click
+    // Sort header click on Players page
     const sortHeader = e.target.closest('th[data-sort]')
     if (sortHeader) {
       const col = sortHeader.dataset.sort
@@ -505,7 +627,7 @@ export function handlePlayersEvents(e) {
       return
     }
 
-    // Clear filters click
+    // Clear filters click on Players page
     const clearBtn = e.target.closest('#player-clear-filters-btn')
     if (clearBtn) {
       playerSearchQuery = ''
@@ -513,6 +635,37 @@ export function handlePlayersEvents(e) {
       playerSortColumn = 'accuracy'
       playerSortDirection = 'desc'
       refreshPlayersPage()
+      return
+    }
+
+    // Standings Sort header click
+    const standingsHeader = e.target.closest('th[data-standings-sort]')
+    if (standingsHeader) {
+      const col = standingsHeader.dataset.standingsSort
+      if (standingsSortColumn === col) {
+        standingsSortDirection = standingsSortDirection === 'desc' ? 'asc' : 'desc'
+      } else {
+        standingsSortColumn = col
+        standingsSortDirection = (col === 'rank' || col === 'team') ? 'asc' : 'desc'
+      }
+      refreshStandingsPage()
+      return
+    }
+
+    // Standings Reset click
+    const standingsResetBtn = e.target.closest('#standings-reset-btn')
+    if (standingsResetBtn) {
+      standingsSortColumn = 'rank'
+      standingsSortDirection = 'asc'
+      refreshStandingsPage()
+      return
+    }
+
+    // Schedule clear filter click
+    const scheduleClearBtn = e.target.closest('#schedule-clear-filter-btn')
+    if (scheduleClearBtn) {
+      scheduleTeamFilter = ''
+      refreshSchedulePage()
       return
     }
   }
@@ -524,11 +677,18 @@ export function handlePlayersEvents(e) {
     return
   }
 
-  // 3. Change Listener (Team select)
-  if (e.type === 'change' && e.target.id === 'player-team-filter') {
-    playerTeamFilter = e.target.value
-    refreshPlayersPage()
-    return
+  // 3. Change Listener (Team select / filter)
+  if (e.type === 'change') {
+    if (e.target.id === 'player-team-filter') {
+      playerTeamFilter = e.target.value
+      refreshPlayersPage()
+      return
+    }
+    if (e.target.id === 'schedule-team-filter') {
+      scheduleTeamFilter = e.target.value
+      refreshSchedulePage()
+      return
+    }
   }
 }
 
@@ -548,6 +708,20 @@ function refreshPlayersPage() {
       newSearchInput.focus()
       newSearchInput.setSelectionRange(caretPos, caretPos)
     }
+  }
+}
+
+function refreshStandingsPage() {
+  const pageContentEl = document.getElementById('page-content')
+  if (pageContentEl) {
+    pageContentEl.innerHTML = renderStandings()
+  }
+}
+
+function refreshSchedulePage() {
+  const pageContentEl = document.getElementById('page-content')
+  if (pageContentEl) {
+    pageContentEl.innerHTML = renderSchedule()
   }
 }
 
@@ -1365,15 +1539,12 @@ export function renderAdminPage() {
       <div style="margin-bottom:var(--space-4)">
         <div style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:var(--space-2)">Select Simulated League State:</div>
         <div style="display:flex; flex-wrap:wrap; gap:var(--space-2)">
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-09T14:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">Tue Pre-Game (W1)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T17:45:00" style="font-size:10px; padding:4px 8px; font-weight:600">Wed Warmup (5:45 PM)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--pink-400)40">Wed Live Games (7:30 PM)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T21:45:00" style="font-size:10px; padding:4px 8px; font-weight:600">Wed After-Party (9:45 PM)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-11T09:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">Thu Recap (W1)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-13T11:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">Weekend Chill (Sat)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-05-27T17:45:00" style="font-size:10px; padding:4px 8px; font-weight:600">⛳ Wed Warmups (W4 - 5:45 PM)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-05-27T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--pink-400)40">🔴 Wed Live Matches (W4 - 7:30 PM)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-05-28T09:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">📋 Recap & Results (W4)</button>
           
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-17T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W2)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-24T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W3)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-03T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W5)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W6)</button>
         </div>
       </div>
       

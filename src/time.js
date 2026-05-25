@@ -52,30 +52,18 @@ export function getTimeState() {
   if (day === 3) { // Wednesday Match Night
     const minutes = hour * 60 + minute;
     
-    // 5:30 PM (1050 mins) to 6:00 PM (1080 mins)
-    if (minutes >= 1050 && minutes < 1080) {
+    // 5:30 PM (1050 mins) to 6:30 PM (1110 mins)
+    if (minutes >= 1050 && minutes < 1110) {
       return { phase: 'WARMUP', label: 'Pre-Game Warmup' };
     }
-    // 6:00 PM (1080 mins) to 9:00 PM (1260 mins)
-    if (minutes >= 1080 && minutes < 1260) {
+    // 6:30 PM onwards (to midnight)
+    if (minutes >= 1110) {
       return { phase: 'LIVE_MATCHES', label: 'Match Night Live' };
     }
-    // 9:00 PM (1260 mins) to midnight (1439 mins)
-    if (minutes >= 1260) {
-      return { phase: 'AFTER_PARTY', label: 'The After-Party' };
-    }
   }
 
-  if (day === 4 || day === 5) { // Thursday, Friday
-    return { phase: 'POST_GAME_RECAP', label: 'Post-Game Recap' };
-  }
-  
-  if (day === 6 || day === 0) { // Saturday, Sunday
-    return { phase: 'WEEKEND_CHILL', label: 'Weekend Training' };
-  }
-
-  // Monday, Tuesday, Wednesday morning
-  return { phase: 'PRE_GAME_HYPE', label: 'Pre-Game Hype' };
+  // All other times (Thursday through Tuesday, and Wednesday morning/afternoon)
+  return { phase: 'POST_GAME_RECAP', label: 'Post-Game Recap' };
 }
 
 /**
@@ -91,10 +79,10 @@ export function getWeekNumber() {
   // Compare as flat ISO string comparison
   const yyyymmdd = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   
-  if (yyyymmdd <= '2026-06-10') return 1;
-  if (yyyymmdd <= '2026-06-17') return 2;
-  if (yyyymmdd <= '2026-06-24') return 3;
-  if (yyyymmdd <= '2026-07-01') return 4;
-  if (yyyymmdd <= '2026-07-08') return 5;
+  if (yyyymmdd <= '2026-05-06') return 1;
+  if (yyyymmdd <= '2026-05-13') return 2;
+  if (yyyymmdd <= '2026-05-20') return 3;
+  if (yyyymmdd <= '2026-05-27') return 4;
+  if (yyyymmdd <= '2026-06-03') return 5;
   return 6;
 }

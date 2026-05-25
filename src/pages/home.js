@@ -296,17 +296,8 @@ function getRivalryScoutingReport(userStats, comparedPlayerIds) {
 }
 
 // ─── Phase-Aware Sportscasters Dialog Pools ───
+// ─── Phase-Aware Sportscasters Dialog Pools ───
 const phaseCommentaries = {
-  PRE_GAME_HYPE: [
-    {
-      cotton: "We are counting down to Wednesday's opening putts at Mobtown, Pepper. The team rosters are locked, and the rivalries are already simmering like a fresh batch of wort.",
-      pepper: "Oh, the tension is delicious, Cotton! Some of these teams are practicing bank shots off the bar stools, while others are resting their wrists. Wednesday night is going to be a complete shootout!"
-    },
-    {
-      cotton: "Scouting metrics are in, Pepper, and looking at these rosters, accuracy is going to decide the day. A single missed B2 cup will ruin your entire turn sequence.",
-      pepper: "Absolutely, Cotton! And with the double-sink rotation, captains are going to be stressing over who plays in the hot seat. You can't hide a weak stroke on this concrete turf!"
-    }
-  ],
   WARMUP: [
     {
       cotton: "Captains are clinking glasses and warming up their putters here in Canton, Pepper. The concrete green is open, and warmups are officially underway!",
@@ -327,16 +318,6 @@ const phaseCommentaries = {
       pepper: "My heart is beating faster than a hamster on a wheel, Cotton! Tapping these steel shafts off the pub floor requires ultimate steel nerves!"
     }
   ],
-  AFTER_PARTY: [
-    {
-      cotton: "The final putts have sunk, the scores are approved, and the victory stouts are being poured, Pepper. What a staggering night of competition.",
-      pepper: "Oh, it was a pure theater, Cotton! Standings have been completely rearranged, J-MO Boh is celebrating at the bar, and the Mr. Trash Wheels roster is drowning their sours. What an after-party!"
-    },
-    {
-      cotton: "We're looking at instant standings climbs and devastating slot slips tonight, Pepper. The division has been absolutely shaken up.",
-      pepper: "That's social sports, Cotton! Win some, lose some, but everyone wins at the taps! Let's go clink some glasses with the champions!"
-    }
-  ],
   POST_GAME_RECAP: [
     {
       cotton: "The dust has settled over the Canton turf, Pepper, and we are looking at some record-breaking efficiency scores in the weekly recap.",
@@ -345,29 +326,20 @@ const phaseCommentaries = {
     {
       cotton: "Reviewing the score sheets, the double-sink ball-backs were the clear deciding factor in yesterday's clashes, Pepper.",
       pepper: "Right you are! Those turn extensions are worth their weight in gold stouts. Ultimate risk-reward execution out there!"
-    }
-  ],
-  WEEKEND_CHILL: [
-    {
-      cotton: "It is the weekend, Pepper, which means these tavern gladiators are resting their wrists and polishing their custom putters for next week's combat.",
-      pepper: "Well, Cotton, J-MO Boh is currently polishing off a flight of sours. Peak recovery science at its absolute finest!"
     },
     {
-      cotton: "For all the aspiring athletes checking in, the weekend is a perfect time to practice your short-range bank alignment on the living room rug.",
-      pepper: "Or just grab a pint at Mobtown and practice on the real turf, Cotton! No excuses for a rusty shaft!"
+      cotton: "The final putts have sunk, the scores are approved, and the victory stouts are being poured, Pepper. What a staggering night of competition.",
+      pepper: "Oh, it was a pure theater, Cotton! Standings have been completely rearranged, J-MO Boh is celebrating at the bar, and the Mr. Trash Wheels roster is drowning their sours. What an after-party!"
+    },
+    {
+      cotton: "We are counting down to Wednesday's opening putts at Mobtown, Pepper. The team rosters are locked, and the rivalries are already simmering like a fresh batch of wort.",
+      pepper: "Oh, the tension is delicious, Cotton! Some of these teams are practicing bank shots off the bar stools, while others are resting their wrists. Wednesday night is going to be a complete shootout!"
     }
   ]
 }
 
 // ─── Phase-Aware Sportscasters Ticker Quote Pools ───
 const phaseTickerQuotes = {
-  PRE_GAME_HYPE: [
-    "Cotton McKnight: Monday morning and the matchups are set. Polish your shafts, folks, it is go-time!",
-    "Pepper Reddick: I hear J-MO Boh has been putting blindfolded to practice, Cotton! Staggering commitment!",
-    "Cotton McKnight: Crab Cake Closers are looking to defend their division lead this Wednesday.",
-    "Pepper Reddick: If you can dodge a wrench, Cotton, you can sink a Wednesday putt!",
-    "Cotton McKnight: The caddy tips are live. Look for target vulnerability angles before match night."
-  ],
   WARMUP: [
     "Cotton McKnight: Live warmups are active on the Canton brewery turf! Captains are clinking session lagers.",
     "Pepper Reddick: Keep your stroke smooth and simple in warmups, Cotton. Concrete speeds are tricky!",
@@ -381,28 +353,18 @@ const phaseTickerQuotes = {
     "Cotton McKnight: Squeegee Boys are squeegeeing the cups clean tonight! Not a single hole is safe!",
     "Pepper Reddick: Mr. Trash Wheels is cleaning the board like a garbage vacuum! Beautiful environmental cleanup!"
   ],
-  AFTER_PARTY: [
-    "🏆 AFTER-PARTY ACTIVE: Matches are complete, the music is cranking, and the standings are updated!",
-    "Cotton McKnight: Standing climbs are official. The Crab Cake Closers secure supreme tavern glory tonight!",
-    "Pepper Reddick: Consolation sours are in high demand at the bar, Cotton! The Mr. Trash Wheels roster is drowning tears!",
-    "Cotton McKnight: J-MO Boh wins the weekly MVP with a staggering 82% putting accuracy! Sinking bar stouts in style!"
-  ],
   POST_GAME_RECAP: [
     "Cotton McKnight: The scores are verified and committed. Standings show a historic clamber in Canton.",
     "Pepper Reddick: Squeegee Boys are wiping away tears after a tough final turn, Cotton. That bank shot was brutal!",
     "Cotton McKnight: Audit the replay play-by-plays now to see every single ball-back double sink.",
-    "Pepper Reddick: Standings climbs are locked. Crab Cake Closers are standard closer-elite!"
-  ],
-  WEEKEND_CHILL: [
-    "Cotton McKnight: Weekend recovery in progress. Gladiators are resting their wrists and sipping local flights.",
-    "Pepper Reddick: J-MO Boh is polishing off a sour flight, Cotton. True recovery science in action!",
-    "Cotton McKnight: Spotlight is on Winston Bishop's custom putter, 'The Ferguson'. Unpredictable but beautiful!",
-    "Pepper Reddick: Practice the 'Blind Cup' drill on your living room rug this weekend, people! Keep the hands warm!"
+    "Pepper Reddick: Standings climbs are locked. Crab Cake Closers are standard closer-elite!",
+    "Cotton McKnight: Roster matchups are set. Polish your shafts, folks, it is go-time!",
+    "Pepper Reddick: I hear J-MO Boh has been putting blindfolded to practice, Cotton! Staggering commitment!"
   ]
 }
 
 export function getPhaseCommentary(phase) {
-  const list = phaseCommentaries[phase] || phaseCommentaries.PRE_GAME_HYPE
+  const list = phaseCommentaries[phase] || phaseCommentaries.POST_GAME_RECAP
   // Pinned to simulated date day-of-year, so quotes don't toggle randomly on hover
   const date = getCurrentDate()
   const dayOfYear = Math.floor(date.getTime() / 86400000)
@@ -816,11 +778,6 @@ export function renderHome() {
   
   // 1. BEER PAIRINGS
   const beerSwigs = {
-    PRE_GAME_HYPE: {
-      name: "Mobtown Canton Pale Ale",
-      desc: "Crisp, balanced maltiness with a floral hop finish. The perfect thinking drink to draft your weekly match strategy.",
-      badge: "Pre-Game Strategy Swig"
-    },
     WARMUP: {
       name: "Mobtown Session Light Lager",
       desc: "Extremely crisp, clean, and low-ABV. Keeps your hand steady and your focus sharp during physical warm-up rounds.",
@@ -831,24 +788,14 @@ export function renderHome() {
       desc: "Intense, juicy tropical aroma with a heavy hop kick. Calms the nerves when sinking the clutch F1 cups in overtime!",
       badge: "Live Arena Swig — $1 Off"
     },
-    AFTER_PARTY: {
-      name: "Oatmeal Victory Stout & Consolation Sour",
-      desc: "Celebrate division climbs with a rich creamy stout, or wash away double-sink redemption tears with a tart fruit sour flight!",
-      badge: "After-Party Special — Flights on Deal"
-    },
     POST_GAME_RECAP: {
-      name: "Mobtown Red Rye Ale",
-      desc: "Deep copper hue with a spicy rye complexity. An analytical brew designed to accompany full play-by-play video audits.",
-      badge: "Post-Game Analysis Swig"
-    },
-    WEEKEND_CHILL: {
-      name: "Brewery Flight Special",
-      desc: "Four custom local drafts of your choice. Relax your wrists, polish your custom shafts, and soak in the weekend taproom vibes.",
-      badge: "Weekend Training Swig"
+      name: "Mobtown Canton Pale Ale",
+      desc: "Crisp, balanced maltiness with a floral hop finish. The perfect thinking drink to draft your weekly match strategy.",
+      badge: "Post-Game Recap Swig"
     }
   }
   
-  const activeBeer = beerSwigs[timeState.phase] || beerSwigs.PRE_GAME_HYPE
+  const activeBeer = beerSwigs[timeState.phase] || beerSwigs.POST_GAME_RECAP
   
   beerPairingHtml = `
     <div class="card card-glass animate-in" style="background: linear-gradient(135deg, rgba(251,191,36,0.05), rgba(249,115,22,0.02)); border-color: rgba(251,191,36,0.18); padding: var(--space-4); margin-bottom: var(--space-6); display: flex; align-items: center; justify-content: space-between; gap: var(--space-4)">
@@ -876,42 +823,10 @@ export function renderHome() {
     </div>
   `
 
-  if (timeState.phase === 'PRE_GAME_HYPE') {
-    const leagueDates = ['2026-06-10','2026-06-17','2026-06-24','2026-07-01','2026-07-08','2026-07-15']
-    const targetDateStr = leagueDates[currentWeek - 1] || '2026-06-10'
-    const targetTime = new Date(`${targetDateStr}T17:30:00-04:00`)
-    
-    phaseHypeWidgetHtml = `
-      <div class="card card-glass text-center animate-in" style="padding: var(--space-6); background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.04); margin-bottom: var(--space-6)">
-        <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--pink-400); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: var(--space-3)">🎯 NEXT MATCH NIGHT COUNTDOWN (WEEK ${currentWeek})</div>
-        <div class="countdown-timer-display" data-countdown-target="${targetTime.toISOString()}" style="display:flex; justify-content:center; gap:var(--space-4); margin: var(--space-4) 0">
-          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4); min-width:64px">
-            <div class="countdown-number" id="countdown-days" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-2xl); color:#fff">00</div>
-            <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Days</div>
-          </div>
-          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4); min-width:64px">
-            <div class="countdown-number" id="countdown-hours" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-2xl); color:#fff">00</div>
-            <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Hours</div>
-          </div>
-          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4); min-width:64px">
-            <div class="countdown-number" id="countdown-mins" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-2xl); color:#fff">00</div>
-            <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Mins</div>
-          </div>
-          <div class="countdown-unit" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4); min-width:64px">
-            <div class="countdown-number" id="countdown-secs" style="font-family:var(--font-mono); font-weight:800; font-size:var(--text-2xl); color:var(--pink-400)">00</div>
-            <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Secs</div>
-          </div>
-        </div>
-        <div style="font-size: var(--text-xs); color: var(--text-secondary); max-width: 420px; margin: 0 auto; line-height: 1.4">
-          Rivalries are heating up! Check your opponent's baseline metrics in the <strong>Rivalry Radar</strong> comparison bar below to craft your gameplan.
-        </div>
-      </div>
-    `
-  }
-  else if (timeState.phase === 'WARMUP') {
-    const leagueDates = ['2026-06-10','2026-06-17','2026-06-24','2026-07-01','2026-07-08','2026-07-15']
-    const targetDateStr = leagueDates[currentWeek - 1] || '2026-06-10'
-    const targetTimeLive = new Date(`${targetDateStr}T18:00:00-04:00`)
+  if (timeState.phase === 'WARMUP') {
+    const leagueDates = ['2026-05-06','2026-05-13','2026-05-20','2026-05-27','2026-06-03','2026-06-10']
+    const targetDateStr = leagueDates[currentWeek - 1] || '2026-05-06'
+    const targetTimeLive = new Date(`${targetDateStr}T18:30:00-04:00`)
     
     phaseHypeWidgetHtml = `
       <div class="card card-glass text-center animate-in" style="padding: var(--space-6); background: linear-gradient(135deg, rgba(233,30,139,0.05), rgba(0,0,0,0.2)); border-color: var(--pink-400)30; margin-bottom: var(--space-6); box-shadow: 0 0 20px rgba(233,30,139,0.15)">
@@ -990,36 +905,7 @@ export function renderHome() {
       </div>
     `
   }
-  else if (timeState.phase === 'AFTER_PARTY') {
-    const mvp = getWeeklyMvp(currentWeek)
-    let mvpHtml = ''
-    if (mvp) {
-      mvpHtml = `
-        <!-- MVP Banner -->
-        <div style="display:flex; align-items:center; gap:var(--space-3); background:rgba(251,191,36,0.04); border:1px solid rgba(251,191,36,0.18); padding:var(--space-3) var(--space-4); border-radius:var(--radius-lg); margin-top:var(--space-4)" class="mvp-gold-glow animate-in">
-          <div class="profile-avatar" style="background:${mvp.player.avatarColor}; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:var(--text-xs); border:2px solid var(--gold-400)">
-            ${mvp.player.name.split(' ').map(n=>n[0]).join('')}
-          </div>
-          <div style="flex:1">
-            <div style="font-size:8px; color:var(--gold-400); font-weight:800; letter-spacing:0.05em; text-transform:uppercase">🌟 MATCH NIGHT MVP</div>
-            <div style="font-weight:700; color:#fff; font-size:var(--text-sm)">${mvp.player.name} (${mvp.team?.name || ''})</div>
-            <div style="font-size:10px; color:var(--text-secondary)">Sunk <span style="font-weight:700; color:var(--gold-400)">${mvp.made}/${mvp.putts} cups</span> (${(mvp.accuracy*100).toFixed(0)}% putting clinic accuracy!)</div>
-          </div>
-        </div>
-      `
-    }
-    
-    phaseHypeWidgetHtml = `
-      <div class="card card-glass animate-in" style="background: linear-gradient(135deg, rgba(251,191,36,0.06), rgba(0,0,0,0.25)); border-color: rgba(251,191,36,0.2); padding: var(--space-5); margin-bottom: var(--space-6)">
-        <div style="font-family:var(--font-display); font-weight:900; font-size:var(--text-xs); color:var(--gold-400); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:var(--space-2)">🎉 AFTER-PARTY IN FULL SWING!</div>
-        <div style="font-size:var(--text-xs); color:var(--text-secondary); line-height:1.4">
-          Matches of Week ${currentWeek} are officially scored! Standings have been updated, players are celebrating at the taps, and consolation sours are flowing.
-        </div>
-        ${mvpHtml}
-      </div>
-    `
-  }
-  else if (timeState.phase === 'POST_GAME_RECAP') {
+  else { // POST_GAME_RECAP (All other times)
     const recapMvp = getWeeklyMvp(currentWeek)
     let recapMvpHtml = ''
     if (recapMvp) {
@@ -1044,37 +930,6 @@ export function renderHome() {
           All scorecards are officially verified and locked into the division standings. Tap any completed matchup below to audit the full play-by-play turn charts and trace double sinks.
         </div>
         ${recapMvpHtml}
-      </div>
-    `
-  }
-  else { // WEEKEND_CHILL
-    const allPl = getAllPlayers()
-    const spotlightPlayer = allPl[Math.floor(getCurrentDate().getTime() / 86400000) % allPl.length]
-    const spotlightPutterType = spotlightPlayer.putterType || 'blade'
-    const spotlightImageSrc = spotlightPlayer.putterImage || `/images/putter_${spotlightPutterType}.png`
-
-    phaseHypeWidgetHtml = `
-      <div style="display:grid; grid-template-columns:1fr; md-grid-template-columns:1fr 1fr; gap:var(--space-4); margin-bottom:var(--space-6)" class="grid-2 animate-in">
-        <!-- Putter Spotlight -->
-        <div class="card card-glass text-center" style="padding:var(--space-4); background:rgba(0,0,0,0.25); border-color:rgba(255,255,255,0.03); display:flex; flex-direction:column; align-items:center">
-          <div style="font-family:var(--font-display); font-weight:800; font-size:9px; color:var(--gold-400); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:var(--space-2)">🏌️‍♂️ PUTTER OF THE WEEK SPOTLIGHT</div>
-          <div style="display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.15); border-radius:var(--radius-xl); height:100px; width:100px; margin:0 auto var(--space-3) auto; border:1px solid rgba(255,255,255,0.03)">
-            <img src="${spotlightImageSrc}" style="max-height:80px; max-width:80px; object-fit:contain; filter:drop-shadow(0 4px 8px rgba(233,30,139,0.25))" />
-          </div>
-          <div style="font-family:var(--font-display); font-weight:800; font-size:var(--text-sm); color:var(--pink-400)">${spotlightPlayer.putterName || 'The Baltimore Blade'}</div>
-          <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">Crafted by: ${spotlightPlayer.name}</div>
-          <p style="font-size:10px; color:var(--text-secondary); font-style:italic; line-height:1.4; margin:0; flex:1">"${spotlightPlayer.putterDesc || 'Sinks putts like a dream on concrete.'}"</p>
-        </div>
-        
-        <!-- Training Card -->
-        <div class="card card-glass" style="padding:var(--space-4); background:rgba(0,0,0,0.25); border-color:rgba(255,255,255,0.03); display:flex; flex-direction:column; justify-content:center">
-          <div style="font-family:var(--font-display); font-weight:800; font-size:9px; color:var(--pink-400); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:var(--space-2)">🎯 WEEKEND ATHLETE DRILLS</div>
-          <div style="font-weight:700; color:#fff; font-size:var(--text-sm); margin-bottom:4px">The Blind Cup Alignment Drill</div>
-          <p style="font-size:10px; color:var(--text-secondary); line-height:1.4; margin-bottom:var(--space-3)">
-            Place a standard pint glass on your living room rug at home. Step back 10 feet. Align your feet, close your eyes, and trust your stroke's muscle memory. Sink 5 in a row to establish concrete control!
-          </p>
-          <button class="btn btn-secondary btn-xs" data-nav="gallery" style="align-self:flex-start; font-size:10px; padding:4px 10px">🎨 Browse Roster Putters</button>
-        </div>
       </div>
     `
   }

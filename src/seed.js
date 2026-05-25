@@ -9,7 +9,7 @@ export const venues = [
 ]
 
 export const seasons = [
-  { id: 's1', name: 'Summer 2026', weeks: 6, startDate: '2026-06-08', endDate: '2026-07-13', maxTeamsPerLeague: 9, status: 'active' }
+  { id: 's1', name: 'Summer 2026', weeks: 6, startDate: '2026-05-04', endDate: '2026-06-15', maxTeamsPerLeague: 9, status: 'active' }
 ]
 
 export const leagues = [
@@ -191,7 +191,7 @@ function buildSchedule(leagueId, leagueTeams, venueId, seedOffset, dates) {
 }
 
 const leagueDates = {
-  l1: ['2026-06-10','2026-06-17','2026-06-24','2026-07-01','2026-07-08','2026-07-15'] // Wednesdays
+  l1: ['2026-05-06','2026-05-13','2026-05-20','2026-05-27','2026-06-03','2026-06-10'] // Wednesdays
 }
 
 // Build matches for Mobtown league ONLY
