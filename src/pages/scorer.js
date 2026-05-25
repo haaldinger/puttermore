@@ -1043,38 +1043,36 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       return
     }
 
-    if (!anyMade) {
-      // Both missed → redemption over, first team wins
-      s.gameOver = true
-      s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
-      s.currentTurnPutts = []
-      s.currentPutterIdx = 0
-      showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
-      return
-    }
-
-    // At least one made but board not cleared → keep going
-    s.currentTurnPutts = []
-    s.currentPutterIdx = 0
-    if (ballBack) {
-      const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
-      const streak = s[streakKey]
-      if (streak === 4) {
-        showToast(`<div class="toast-title">⚡ UNSTOPPABLE! 4 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
-        triggerTrashTalk('streak_4', putters[putters.length - 1].id)
-      } else if (streak === 6) {
-        showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
-        triggerTrashTalk('streak_6', putters[putters.length - 1].id)
-      } else if (streak > 6 && streak % 2 === 0) {
-        showToast(`<div class="toast-title">🔥 BALL BACK!</div><div class="toast-detail">${streak} IN A ROW!</div>`, "streak")
-        triggerTrashTalk('streak_2', putters[putters.length - 1].id)
+    if (!boardCleared) {
+      if (ballBack) {
+        // Kept alive by earning a ball back! They get another turn to keep putting
+        s.currentTurnPutts = []
+        s.currentPutterIdx = 0
+        const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
+        const streak = s[streakKey]
+        if (streak === 4) {
+          showToast(`<div class="toast-title">⚡ UNSTOPPABLE! 4 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
+          triggerTrashTalk('streak_4', putters[putters.length - 1].id)
+        } else if (streak === 6) {
+          showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
+          triggerTrashTalk('streak_6', putters[putters.length - 1].id)
+        } else if (streak > 6 && streak % 2 === 0) {
+          showToast(`<div class="toast-title">🔥 BALL BACK!</div><div class="toast-detail">${streak} IN A ROW!</div>`, "streak")
+          triggerTrashTalk('streak_2', putters[putters.length - 1].id)
+        } else {
+          showToast('<div class="toast-title">🔥 BALL BACK!</div>')
+          triggerTrashTalk('ballback', putters[putters.length - 1].id)
+        }
+        checkCloseGameBanter()
       } else {
-        showToast('<div class="toast-title">🔥 BALL BACK!</div>')
-        triggerTrashTalk('ballback', putters[putters.length - 1].id)
+        // Redemption failed (missed shot and did not clear the board) → Opponent wins!
+        s.gameOver = true
+        s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
+        s.currentTurnPutts = []
+        s.currentPutterIdx = 0
+        showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
       }
     }
-    // Ball back = same team goes again, otherwise they still go (it's redemption)
-    checkCloseGameBanter()
   }
 }
 
