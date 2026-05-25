@@ -2,7 +2,7 @@ import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, g
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
 import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter } from '../store.js'
-import { getCurrentDate, setTimeOverride, getTimeState, getWeekNumber } from '../time.js'
+import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
 
 // ─── Putter SVG Renderer ───
 export function renderPutterSvg(type, color = '#e91e8b') {
@@ -1502,60 +1502,12 @@ export function renderAdminPage() {
     </div></div>`
   }
 
-  // Simulated Time Travel clock states
-  const simulatedDate = getCurrentDate()
-  const simulatedEST = simulatedDate.toLocaleString("en-US", { timeZone: "America/New_York" })
-  const timeState = getTimeState()
-  const simulatedWeek = getWeekNumber()
-
-  // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
-  const tzOffset = simulatedDate.getTimezoneOffset() * 60000
-  const localISOTime = new Date(simulatedDate.getTime() - tzOffset).toISOString().slice(0, 16)
-
-  // Render sub-tabs header & time scrubber sandbox card
+  // Render sub-tabs header
   const tabsHtml = `
-    <div class="view-toggle animate-in" style="margin-bottom: var(--space-4)">
+    <div class="view-toggle animate-in" style="margin-bottom: var(--space-6)">
       <button class="view-toggle-btn ${activeAdminTab === 'review' ? 'active' : ''}" data-admin-tab="review">📋 Game Review</button>
       <button class="view-toggle-btn ${activeAdminTab === 'roster' ? 'active' : ''}" data-admin-tab="roster">👥 Roster Controls</button>
       <button class="view-toggle-btn ${activeAdminTab === 'analytics' ? 'active' : ''}" data-admin-tab="analytics">📊 Cup Analytics</button>
-    </div>
-
-    <!-- Time-Travel Sandbox Scrubber Card -->
-    <div class="card card-glass animate-in" style="background: linear-gradient(135deg, rgba(20,20,20,0.85), rgba(30,10,30,0.45)); border-color: rgba(233,30,139,0.18); padding: var(--space-4); margin-bottom: var(--space-6); box-shadow: 0 8px 32px rgba(0,0,0,0.4)">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:var(--space-4); border-bottom:1px dashed rgba(255,255,255,0.06); padding-bottom:var(--space-3)">
-        <div>
-          <div style="font-family:var(--font-display); font-weight:800; font-size:var(--text-xs); color:var(--pink-400); letter-spacing:0.08em; text-transform:uppercase">🕰️ Time-Travel Simulator Sandbox</div>
-          <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-top:2px">
-            Active Phase: <span style="color:#fff; font-weight:700">${timeState.label}</span> · League Week: <span style="color:var(--gold-400); font-weight:800">${simulatedWeek}</span>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-family:var(--font-mono); font-size:var(--text-xs); color:#fff; font-weight:700">${simulatedEST}</div>
-          <div style="font-size:9px; color:var(--text-muted); margin-top:2px">Baltimore Eastern Time (EST)</div>
-        </div>
-      </div>
-      
-      <!-- Quick Triggers -->
-      <div style="margin-bottom:var(--space-4)">
-        <div style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:var(--space-2)">Select Simulated League State:</div>
-        <div style="display:flex; flex-wrap:wrap; gap:var(--space-2)">
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-05-27T17:45:00" style="font-size:10px; padding:4px 8px; font-weight:600">⛳ Wed Warmups (W4 - 5:45 PM)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-05-27T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--pink-400)40">🔴 Wed Live Matches (W4 - 7:30 PM)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-05-28T09:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">📋 Recap & Results (W4)</button>
-          
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-03T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W5)</button>
-          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W6)</button>
-        </div>
-      </div>
-      
-      <!-- Date Picker & Reset -->
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid rgba(255,255,255,0.04); padding-top:var(--space-3)">
-        <div style="display:flex; align-items:center; gap:8px">
-          <label for="sandbox-datetime-picker" style="font-size:10px; color:var(--text-secondary); font-weight:700">Dial Custom Clock:</label>
-          <input type="datetime-local" id="sandbox-datetime-picker" value="${localISOTime}" style="background:var(--bg-input); border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius-md); padding:4px 8px; color:#fff; font-size:var(--text-xs); outline:none" />
-        </div>
-        <button class="btn btn-ghost btn-sm" id="sandbox-reset-clock" style="color:var(--pink-400); font-weight:700; font-size:var(--text-xs); padding:4px 8px; display:flex; align-items:center; gap:4px">🔄 Sync with System Clock</button>
-      </div>
     </div>
   `
 

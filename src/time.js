@@ -3,30 +3,12 @@
  * Pinned to Baltimore Eastern Time (America/New_York)
  */
 
-const TIME_OVERRIDE_KEY = 'puttermore_time_override';
-
 /**
- * Gets the current system date or simulated override date
+ * Gets the current system date
  * @returns {Date}
  */
 export function getCurrentDate() {
-  const override = localStorage.getItem(TIME_OVERRIDE_KEY);
-  if (override) return new Date(override);
   return new Date();
-}
-
-/**
- * Sets the mock calendar override date
- * @param {string|null} isoString
- */
-export function setTimeOverride(isoString) {
-  if (isoString) {
-    localStorage.setItem(TIME_OVERRIDE_KEY, isoString);
-  } else {
-    localStorage.removeItem(TIME_OVERRIDE_KEY);
-  }
-  // Dispatch a global reactive event so active views re-render
-  window.dispatchEvent(new Event('puttermore-time-shifted'));
 }
 
 /**

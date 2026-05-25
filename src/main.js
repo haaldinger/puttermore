@@ -1,6 +1,6 @@
 import './style.css'
 import { renderHome, setSelectedLeague, getSelectedLeague, getHomeTickerText, toggleComparedPlayerId, clearComparedPlayerIds, setComparedPlayerIds, getComparedPlayerIds } from './pages/home.js'
-import { setTimeOverride, getCurrentDate } from './time.js'
+import { getCurrentDate } from './time.js'
 import { 
   renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, 
   renderPlayerProfile, renderMatchDetail, renderHelpPage, getCaddyAdvice, 
@@ -841,22 +841,6 @@ document.addEventListener('click', (e) => {
 
 // 1. Click Listener Delegation
 document.addEventListener('click', (e) => {
-  // Sandbox quick-select trigger click
-  const sandboxTrigger = e.target.closest('.sandbox-trigger')
-  if (sandboxTrigger) {
-    const mockTime = sandboxTrigger.dataset.timeMock
-    setTimeOverride(mockTime)
-    showToast('🕰️ Time travel engaged!')
-    return
-  }
-
-  // Sandbox reset clock click
-  const sandboxReset = e.target.closest('#sandbox-reset-clock')
-  if (sandboxReset) {
-    setTimeOverride(null)
-    showToast('🕰️ Clock synced with real-world time!')
-    return
-  }
   // Putter Customize Edit Mode
   const editBtn = e.target.closest('#edit-putter-btn')
   if (editBtn) {
@@ -1106,17 +1090,8 @@ document.addEventListener('change', (e) => {
   handlePlayersEvents(e)
 })
 
-// 3. Input Search Listener (Putter Gallery filter & Sandbox dial)
+// 3. Input Search Listener (Putter Gallery filter)
 document.addEventListener('input', (e) => {
-  if (e.target.id === 'sandbox-datetime-picker') {
-    const val = e.target.value
-    if (val) {
-      const date = new Date(val)
-      setTimeOverride(date.toISOString())
-    }
-    return
-  }
-
   if (e.target.id === 'putter-gallery-search') {
     const query = e.target.value.toLowerCase().trim()
     document.querySelectorAll('.putter-gallery-card').forEach(card => {

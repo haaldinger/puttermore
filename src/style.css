@@ -1036,18 +1036,6 @@ main { display: block; }
   text-shadow: 0 0 12px rgba(233,30,139,0.3);
 }
 
-.sandbox-trigger {
-  transition: all var(--duration-fast) var(--ease-out) !important;
-}
-.sandbox-trigger:hover {
-  border-color: var(--pink-400) !important;
-  color: #fff !important;
-  transform: translateY(-1px);
-}
-.sandbox-trigger:active {
-  transform: scale(0.96);
-}
-
 /* ─── Responsive Rivals Controller Bar ─── */
 .rivals-controller-bar {
   display: flex;
