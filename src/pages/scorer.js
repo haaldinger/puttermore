@@ -45,14 +45,15 @@ export function getScorerTickerData() {
   }
   
   if (s.phase === 'overtime' || s.overtime) {
+    const otLabel = s.overtimeCount > 1 ? (s.overtimeCount === 2 ? 'DOUBLE OVERTIME' : s.overtimeCount === 3 ? 'TRIPLE OVERTIME' : `${s.overtimeCount}x OVERTIME`) : 'OVERTIME'
     const quotes = [
-      "⚡ SUDDEN DEATH OVERTIME: Front 3 cups are reopen! Sudden death putting rules are in effect!",
-      "⚡ OVERTIME WATCH: My heart is pounding like a subwoofer in the back of a Dundalk civic!",
-      "⚡ OVERTIME WATCH: Front 3 cups are reopen and the pressure is at an absolute, boiling-point maximum!"
+      `⚡ SUDDEN DEATH ${otLabel}: Front 3 cups are reopen! Sudden death putting rules are in effect!`,
+      `⚡ ${otLabel} WATCH: My heart is pounding like a subwoofer in the back of a Dundalk civic!`,
+      `⚡ ${otLabel} WATCH: Front 3 cups are reopen and the pressure is at an absolute, boiling-point maximum!`
     ]
     return {
       text: quotes.join(" &nbsp;&nbsp;&nbsp;&nbsp; ⚡ &nbsp;&nbsp;&nbsp;&nbsp; "),
-      badgeText: "⚡ OVERTIME",
+      badgeText: `⚡ ${otLabel}`,
       badgeColor: "var(--cyan-400)"
     }
   }
@@ -216,40 +217,144 @@ export function renderScorer() {
 
   // Current putters
   let putterDisplay = ''
+  let activePutterName = ''
   if (!s.gameOver) {
-    const allTeamPlayers = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
-    const completedTeamTurns = s.turns.filter(t => t.teamId === (s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)).length
-    let putters;
-    if (allTeamPlayers.length <= 2) {
-      putters = allTeamPlayers;
-    } else {
-      const seq = completedTeamTurns % 3;
-      if (seq === 0) putters = [allTeamPlayers[0], allTeamPlayers[1]];
-      else if (seq === 1) putters = [allTeamPlayers[0], allTeamPlayers[2]];
-      else putters = [allTeamPlayers[1], allTeamPlayers[2]];
-    }
+    const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
+    const currentPutter = putters[s.currentPutterIdx] || putters[0]
+    activePutterName = currentPutter ? currentPutter.name.split(' ')[0] : '?'
 
     if (isRedemption) {
-      putterDisplay = `<div class="turn-indicator animate-in" style="border-color:${currentColor};background:rgba(251,191,36,0.08)">
-        <div style="font-size:var(--text-xs);color:var(--gold-400);font-weight:700;letter-spacing:0.1em;margin-bottom:2px">⚡ REDEMPTION ROUND</div>
-        <span style="color:${currentColor}">${currentTeamName}</span> — putting at <strong>${targetBoardId === 'home' ? s.homeName : s.awayName}'s cups</strong>
-        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${putters.map(p => p.name).join(' & ')} · Selecting: <strong>${putters[s.currentPutterIdx]?.name}</strong> (${s.currentPutterIdx + 1}/${putters.length})</div>
-        <div style="font-size:var(--text-xs);color:var(--gold-400);margin-top:4px">Both make it = 🔥 Ball Back = Win!</div>
-      </div>`
-    } else {
-      const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
-      const selectorHtml = isStartOfGame ? `
-        <div style="margin-top:var(--space-3); padding-top:var(--space-2); border-top:1px dashed rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; gap:var(--space-2)">
-          <span style="font-size:var(--text-xs); color:var(--text-muted)">Who putts first?</span>
-          <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:700; ${s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6'}">${s.homeName}</button>
-          <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:700; ${s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6'}">${s.awayName}</button>
+      const nextPutter = putters[s.currentPutterIdx]?.name || '?'
+      const putterListHtml = putters.map((p, idx) => {
+        const isActive = idx === s.currentPutterIdx
+        return `<span class="putter-badge ${isActive ? 'active-putter' : ''}" style="${isActive ? `--team-color:${currentColor}` : 'opacity:0.5'}">
+          ${isActive ? '🎯 ' : ''}${p.name}
+        </span>`
+      }).join(' <span class="text-muted" style="font-size:10px;margin:0 4px">and</span> ')
+
+      const commentaryHtml = s.activeCommentary ? `
+        <div class="announcer-commentary-bubble" id="scorer-commentary-trigger">
+          <div class="announcer-commentary-header">
+            <span>🎙️ cotton & pepper live</span>
+            <button class="announcer-reroll-btn" id="scorer-commentary-reroll" title="Get new commentary">🔄</button>
+          </div>
+          <div class="announcer-commentary-text">"${s.activeCommentary}"</div>
         </div>
       ` : ''
 
-      putterDisplay = `<div class="turn-indicator animate-in" style="border-color:${currentColor}">
-        ${isOT ? '<div style="font-size:var(--text-xs);color:var(--gold-400);font-weight:700;letter-spacing:0.1em;margin-bottom:2px">⚡ OVERTIME</div>' : ''}
-        <span style="color:${currentColor}">${currentTeamName}'s Turn</span> — putting at <strong>${targetBoardId === 'home' ? s.homeName : s.awayName}'s cups</strong>
-        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${putters.map(p => p.name).join(' & ')} · Selecting: <strong>${putters[s.currentPutterIdx]?.name}</strong> (${s.currentPutterIdx + 1}/${putters.length})</div>
+      putterDisplay = `<div class="turn-indicator animate-in" style="--team-color: var(--gold-400)">
+        <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-bottom:var(--space-2)">
+          <span class="blink-badge"></span>
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold-400); font-weight:800">⚡ REDEMPTION ROUND</span>
+        </div>
+        <h2 style="font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); color:${currentColor}; text-shadow:0 0 16px ${currentColor}25; margin:0 0 var(--space-1) 0; line-height:1.2">
+          ${currentTeamName.toUpperCase()}
+        </h2>
+        <div style="font-size:var(--text-sm); font-weight:600; color:var(--text-primary); margin-bottom:var(--space-3)">
+          putting at <strong style="color:#fff">${targetBoardId === 'home' ? s.homeName : s.awayName}'s cups</strong>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:var(--space-1); margin-top:var(--space-2)">
+          ${putterListHtml}
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:var(--space-2); font-weight:600">
+          Up Next: <span style="color:${currentColor}; font-weight:800">${nextPutter}</span>
+        </div>
+        <div style="font-size:var(--text-xs); color:var(--gold-400); margin-top:var(--space-3); font-weight:700">
+          ⚠️ Goal: Both players make it = 🔥 Ball Back = Redemption Survives!
+        </div>
+        ${commentaryHtml}
+      </div>`
+    } else {
+      const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
+      const isStartOfOT = s.phase === 'overtime' && s.otStartSelect
+      let selectorHtml = ''
+      if (isStartOfGame) {
+        const renderOrderList = (teamId, teamName, teamColor, players) => {
+          const listHtml = players.map((p, idx) => {
+            const num = idx + 1
+            const upBtn = idx > 0 ? `<button class="btn btn-secondary btn-xs scorer-move-player" data-team-id="${teamId}" data-player-id="${p.id}" data-dir="up" style="padding:1px 6px; font-size:9px; border-radius:var(--radius-sm)">↑</button>` : ''
+            const downBtn = idx < players.length - 1 ? `<button class="btn btn-secondary btn-xs scorer-move-player" data-team-id="${teamId}" data-player-id="${p.id}" data-dir="down" style="padding:1px 6px; font-size:9px; border-radius:var(--radius-sm)">↓</button>` : ''
+            return `
+              <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:4px 10px; border-radius:var(--radius-md); gap:var(--space-2)">
+                <span style="font-size:var(--text-xs); font-weight:700; color:var(--text-secondary)">${num}. <strong style="color:#fff; margin-left:2px">${p.name.split(' ')[0]}</strong></span>
+                <div style="display:flex; gap:3px">${upBtn}${downBtn}</div>
+              </div>
+            `
+          }).join('')
+
+          return `
+            <div style="display:flex; flex-direction:column; gap:var(--space-1.5); flex:1; min-width:140px">
+              <span style="font-size:10px; color:${teamColor}; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; text-align:center">${teamName} Order</span>
+              ${listHtml}
+            </div>
+          `
+        }
+
+        const homeOrderHtml = renderOrderList('home', s.homeName, s.homeColor, s.homePlayers)
+        const awayOrderHtml = renderOrderList('away', s.awayName, s.awayColor, s.awayPlayers)
+
+        selectorHtml = `
+          <div style="margin-top:var(--space-4); padding-top:var(--space-3); border-top:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3)">
+            <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2)">
+              <span style="font-size:var(--text-xs); color:var(--text-secondary); font-weight:600">Which team goes first?</span>
+              <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6'}">${s.homeName}</button>
+              <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6'}">${s.awayName}</button>
+            </div>
+            <div style="display:flex; justify-content:center; gap:var(--space-4); width:100%; max-width:400px; flex-wrap:wrap">
+              ${homeOrderHtml}
+              ${awayOrderHtml}
+            </div>
+          </div>
+        `
+      } else if (isStartOfOT) {
+        selectorHtml = `
+          <div style="margin-top:var(--space-4); padding-top:var(--space-3); border-top:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3)">
+            <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2)">
+              <span style="font-size:var(--text-xs); color:var(--gold-400); font-weight:700">⚡ OT DECIDER: Which team goes first?</span>
+              <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6'}">${s.homeName}</button>
+              <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6'}">${s.awayName}</button>
+            </div>
+          </div>
+        `
+      }
+
+      const nextPutter = putters[s.currentPutterIdx]?.name || '?'
+      const putterListHtml = putters.map((p, idx) => {
+        const isActive = idx === s.currentPutterIdx
+        return `<span class="putter-badge ${isActive ? 'active-putter' : ''}" style="${isActive ? `--team-color:${currentColor}` : 'opacity:0.5'}">
+          ${isActive ? '🎯 ' : ''}${p.name}
+        </span>`
+      }).join(' <span class="text-muted" style="font-size:10px;margin:0 4px">and</span> ')
+
+      const commentaryHtml = s.activeCommentary ? `
+        <div class="announcer-commentary-bubble" id="scorer-commentary-trigger">
+          <div class="announcer-commentary-header">
+            <span>🎙️ cotton & pepper live</span>
+            <button class="announcer-reroll-btn" id="scorer-commentary-reroll" title="Get new commentary">🔄</button>
+          </div>
+          <div class="announcer-commentary-text">"${s.activeCommentary}"</div>
+        </div>
+      ` : ''
+
+      putterDisplay = `<div class="turn-indicator animate-in" style="--team-color:${currentColor}">
+        <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-bottom:var(--space-2)">
+          <span class="blink-badge"></span>
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); font-weight:800">ACTIVE TURN STATE</span>
+          ${isOT ? `<span class="badge badge-gold" style="font-size:9px">⚡ ${s.overtimeCount > 1 ? (s.overtimeCount === 2 ? 'DOUBLE OVERTIME' : s.overtimeCount === 3 ? 'TRIPLE OVERTIME' : `${s.overtimeCount}x OVERTIME`) : 'OVERTIME'}</span>` : ''}
+        </div>
+        <h2 style="font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); color:${currentColor}; text-shadow:0 0 16px ${currentColor}25; margin:0 0 var(--space-1) 0; line-height:1.2">
+          ${currentTeamName.toUpperCase()}
+        </h2>
+        <div style="font-size:var(--text-sm); font-weight:600; color:var(--text-primary); margin-bottom:var(--space-3)">
+          putting at <strong style="color:#fff">${targetBoardId === 'home' ? s.homeName : s.awayName}'s cups</strong>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:var(--space-1); margin-top:var(--space-2)">
+          ${putterListHtml}
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:var(--space-2); font-weight:600">
+          Up Next: <span style="color:${currentColor}; font-weight:800">${nextPutter}</span>
+        </div>
+        ${commentaryHtml}
         ${selectorHtml}
       </div>`
     }
@@ -336,9 +441,14 @@ export function renderScorer() {
       const tgt = s.currentTeam === 'home' ? 'away' : 'home'
       const tgtOpen = tgt === 'home' ? s.homeBoardOpen : s.awayBoardOpen
       const noHolesLeft = tgtOpen.size === 0
-      return `<div class="scorer-actions animate-in delay-2">
-        ${noHolesLeft ? '<button class="scorer-action-btn made" id="scorer-made-btn">✅ Made It</button>' : ''}
-        <button class="scorer-action-btn miss" id="scorer-miss-btn">✕ Miss</button>
+      return `<div class="scorer-actions animate-in delay-2" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-2)">
+        <div style="font-size:var(--text-xs); font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary)">
+          🎯 ${activePutterName.toUpperCase()}'S SHOT
+        </div>
+        <div style="display:flex; gap:var(--space-3); justify-content:center">
+          ${noHolesLeft ? `<button class="scorer-action-btn made" id="scorer-made-btn">✅ ${activePutterName} Made It</button>` : ''}
+          <button class="scorer-action-btn miss" id="scorer-miss-btn">✕ ${activePutterName} Miss</button>
+        </div>
       </div>`
     })() : ''}
 
@@ -349,15 +459,6 @@ export function renderScorer() {
 
     <div class="mt-4 flex items-center justify-center gap-3">
       <button class="btn btn-ghost" id="scorer-reset-btn">← New Game</button>
-      <button class="btn btn-secondary btn-sm" id="trash-talk-btn" style="border: 1px dashed var(--gold-400); background: rgba(251,191,36,0.06); color: var(--gold-400)">🌶️ Trash Talk</button>
-    </div>
-    <div id="ball-back-toast" class="ball-back-toast">🔥 BALL BACK!</div>
-    
-    <div id="trash-talk-toast" class="trash-talk-toast" style="position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(13, 13, 13, 0.98); border: 2px solid var(--gold-400); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); font-size: var(--text-sm); line-height: 1.5; color: #fff; width: 90%; max-width: 440px; box-shadow: 0 8px 32px rgba(251,191,36,0.3); backdrop-filter: blur(12px); opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999">
-      <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.05em; margin-bottom: var(--space-1); display: flex; align-items: center; gap: 6px">
-        🌶️ OCHO TRASH TALK & YO MOMMA DESK
-      </div>
-      <div id="trash-talk-content" style="font-style: italic; opacity: 0.95"></div>
     </div>
   </div>`
 }
@@ -378,46 +479,97 @@ function checkCloseGameBanter() {
     if (Math.random() < 0.35) {
       setTimeout(() => {
         triggerTrashTalk()
+        window.dispatchEvent(new CustomEvent('puttermore-time-shifted'))
       }, 1000)
     }
   }
 }
 
-function triggerTrashTalk() {
+function triggerTrashTalk(context = 'general', activePlayerId = null) {
   const s = scorerState
+  if (!s) return
+
   let selectedQuotes = []
   
-  if (s) {
-    if (s.phase === 'redemption') {
+  if (context === 'redemption' || s.phase === 'redemption') {
+    selectedQuotes = [
+      "Cotton McKnight: Holy putting grass, Pepper, we are in REDEMPTION! The tension is high enough to snap a carbon-fiber shaft!",
+      "Pepper Reddick: Absolutely, Cotton! One mistake here and they'll be buying the next round in total silence! This is real taproom drama!",
+      "Cotton McKnight: The board is cleared but they need to run the table now! Talk about a high-stakes rescue mission!",
+      "Pepper Reddick: It's redemption time! Yo momma could bounce it off a bar stool, but can they sink it under pressure?"
+    ]
+  } else if (context === 'overtime' || s.phase === 'overtime' || s.overtime) {
+    if (s.overtimeCount > 1) {
+      const otName = s.overtimeCount === 2 ? 'DOUBLE' : s.overtimeCount === 3 ? 'TRIPLE' : `${s.overtimeCount}x`
       selectedQuotes = [
-        "Cotton McKnight: Holy putting grass, Pepper, we are in REDEMPTION! The tension is high enough to snap a carbon-fiber shaft!",
-        "Pepper Reddick: Absolutely, Cotton! One mistake here and they'll be buying the next round in total silence! This is real taproom drama!",
-        "Cotton McKnight: The board is cleared but they need to run the table now! Talk about a high-stakes rescue mission!",
-        "Pepper Reddick: It's redemption time! Yo momma could bounce it off a bar stool, but can they sink it under pressure?"
+        `Cotton McKnight: Holy Dundalk dirtbikes, Pepper! We are in ${otName} OVERTIME! My blood pressure is high enough to pop a beer keg!`,
+        `Pepper Reddick: ${otName} OVERTIME! I'm sweating faster than a hot Old Bay crab on a July afternoon in Fells Point!`,
+        "Cotton McKnight: This is absolute insanity! Neither team wants to die! It's like watching two crabs fighting over a piece of bait at the bottom of the Chesapeake!",
+        "Pepper Reddick: These players are ice cold, Cotton! Sinking putts under this level of absolute, championship-tier pressure is legendary!",
+        `Cotton McKnight: A historic ${otName} Overtime! The pressure in this room is thick enough to spread on a cracker like cream cheese!`,
+        "Pepper Reddick: Settle in, Baltimore! This is pure, unadulterated bar putting history unfolding right before our eyes!"
       ]
-    } else if (s.phase === 'overtime' || s.overtime) {
+    } else {
       selectedQuotes = [
         "Cotton McKnight: OVERTIME, Pepper! Settle in, folks, because we are in sudden death putting territory!",
         "Pepper Reddick: Sudden death, Cotton! My heart is pounding like a subwoofer in the back of a Dundalk civic!",
         "Cotton McKnight: Front 3 cups are reopen and the pressure is at an absolute, boiling-point maximum!"
       ]
-    } else if (s.homeBoardOpen && s.awayBoardOpen && s.homeBoardOpen.size === 1 && s.awayBoardOpen.size === 1) {
-      selectedQuotes = [
-        "Cotton McKnight: A classic 1v1 shootout! Both teams are down to their final cup, Pepper!",
-        "Pepper Reddick: It is a absolute duel to the death! One ball in, one ball out, and someone goes home a hero!",
-        "Cotton McKnight: Whoever sinks this next F1 cup secures immortality. Or at least free craft beer!"
-      ]
-    } else if (s.turns && s.turns.length > 0 && s.turns[s.turns.length - 1].ballBack) {
-      selectedQuotes = [
-        "Cotton McKnight: They are heating up, Pepper! A spectacular double-sink ball back in their last turn!",
-        "Pepper Reddick: They are on a absolute tear! The ball is sticking to that cup like honey on a biscuit!",
-        "Cotton McKnight: The momentum has completely shifted! This team is rolling like Mr. Trash Wheel in a high tide!"
-      ]
     }
+  } else if (context === 'shootout' || (s.homeBoardOpen && s.awayBoardOpen && s.homeBoardOpen.size === 1 && s.awayBoardOpen.size === 1)) {
+    selectedQuotes = [
+      "Cotton McKnight: A classic 1v1 shootout! Both teams are down to their final cup, Pepper!",
+      "Pepper Reddick: It is an absolute duel to the death! One ball in, one ball out, and someone goes home a hero!",
+      "Cotton McKnight: Whoever sinks this next F1 cup secures immortality. Or at least free craft beer!"
+    ]
+  } else if (context === 'ballback' || (s.turns && s.turns.length > 0 && s.turns[s.turns.length - 1].ballBack)) {
+    selectedQuotes = [
+      "Cotton McKnight: They are heating up, Pepper! A spectacular double-sink ball back in their last turn!",
+      "Pepper Reddick: They are on an absolute tear! The ball is sticking to that cup like honey on a biscuit!",
+      "Cotton McKnight: The momentum has completely shifted! This team is rolling like Mr. Trash Wheel in a high tide!"
+    ]
+  } else if (context === 'make') {
+    selectedQuotes = [
+      "Cotton McKnight: A spectacular roll! Clean as a whistle, Pepper!",
+      "Pepper Reddick: It is in the back of the cup! The crowd is going wild!",
+      "Cotton McKnight: Sunk it! That was a textbook putting stroke right there!",
+      "Pepper Reddick: Oh! Nothing but green felt and cup bottom! Magnificent shot!",
+      "Cotton McKnight: Absolutely gorgeous arc on that ball. Masterful work!",
+      "Pepper Reddick: Talk about visual precision! That ball practically had eyes!",
+      "Cotton McKnight: Clean sink! The opponent's board is getting lighter by the second!"
+    ]
+  } else if (context === 'miss') {
+    selectedQuotes = [
+      "Cotton McKnight: That putt was so wide, Pepper, I think it went into the next county!",
+      "Pepper Reddick: I've seen better rolls on a stale Dundalk crab cake, Cotton!",
+      "Cotton McKnight: A stunning miss! It looks like they forgot their putting eyes at the bottom of their last pint!",
+      "Pepper Reddick: He's aiming for the cup but putting like he's trying to hit a Squeegee Boy on the corner, Cotton!",
+      "Cotton McKnight: Bold strategy, Cotton. Let's see if missing by three feet pays off for 'em!",
+      "Pepper Reddick: If I had a dollar for every missed putt tonight, Cotton, I could buy the entire Heavy Seas brewery!",
+      "Cotton McKnight: Mr. Trash Wheel is crying tears of absolute sorrow watching that putt drift wide!",
+      "Pepper Reddick: That ball is trash, Cotton, but not the kind Mr. Trash Wheel likes to eat!",
+      "Cotton McKnight: The angle of departure on that putt was completely fictional, Pepper!",
+      "Pepper Reddick: He just invented a whole new branch of mathematics, Cotton: Putting Astrology!",
+      "Cotton McKnight: That was a textbook under-putt, Pepper. Didn't even reach the grass clippings!",
+      "Pepper Reddick: Staggering under-performance! My grandma could have sneezed the ball closer to the cup, Cotton!",
+      "Pepper Reddick: That putting stroke was stiffer than a Dundalk dirtbike's suspension, Cotton!"
+    ]
+  } else if (context === 'streak_4') {
+    selectedQuotes = [
+      "Cotton McKnight: Four consecutive makes! This team is absolutely on fire, Pepper!",
+      "Pepper Reddick: Unbelievable! They're sweeping the board like a hurricane passing through Fells Point!",
+      "Cotton McKnight: That is four cups down! Staggering display of championship concentration!"
+    ]
+  } else if (context === 'streak_6') {
+    selectedQuotes = [
+      "Cotton McKnight: SIX IN A ROW! A PERFECT SWEEP! Pepper, I have goosebumps on my goosebumps!",
+      "Pepper Reddick: 👑 UNBELIEVABLE! They swept the entire mat in consecutive shots! This is legendary status!",
+      "Cotton McKnight: I have never seen a performance like this since the great Dundalk Shootout of '04!"
+    ]
   }
-  
-  // If no high-stakes match state is detected, fallback to the massive database of classic trash talk and Baltimore Yo Momma jokes!
-  if (selectedQuotes.length === 0) {
+
+  // Fallback to general bickering & Yo Momma jokes
+  if (selectedQuotes.length === 0 || context === 'general') {
     selectedQuotes = [
       "Cotton McKnight: That putt was so wide, Pepper, I think it went into the next county!",
       "Pepper Reddick: I've seen better rolls on a stale Dundalk crab cake, Cotton!",
@@ -456,27 +608,35 @@ function triggerTrashTalk() {
       "Pepper Reddick: Yo momma's putting stroke is so shaky, Cotton, she looks like she's holding a paint mixer!",
       "Cotton McKnight: Yo momma is so confusing, she tries to pay the Squeegee Boys with Monopoly money!",
       "Pepper Reddick: Yo momma is so loud, when she sinks a cup, they can hear her screaming all the way in Salisbury, Cotton!",
-      "Cotton McKnight: Yo momma is so clumsy, she tripped over the side cushion and spilled three pitchers of craft IPA!"
     ]
+    if (s.turns && s.turns.length >= 8) {
+      selectedQuotes.unshift(
+        "Cotton McKnight: Talk about a marathon! This late-game bickering is reaching historic levels of taproom intensity!",
+        "Pepper Reddick: Absolutely, Cotton! This game has gone on longer than a Dundalk traffic light on a rainy Tuesday night!",
+        "Cotton McKnight: My throat is drier than a mouthful of crab shells, Pepper! We are deep into late-game survival territory here!",
+        "Pepper Reddick: Unbelievable marathon match! The players are breathing heavier than a Squeegee Boy on a 95-degree Baltimore afternoon!",
+        "Cotton McKnight: High-stakes late game! One bad twitch now and they'll be sweeping turf clippings in absolute disgrace!"
+      )
+    }
   }
-  
+
   const randomQuote = selectedQuotes[Math.floor(Math.random() * selectedQuotes.length)]
-  
-  const contentEl = document.getElementById('trash-talk-content')
-  const toastEl = document.getElementById('trash-talk-toast')
-  if (contentEl && toastEl) {
-    contentEl.innerHTML = `"${randomQuote}"`
-    toastEl.style.opacity = '1'
-    toastEl.style.visibility = 'visible'
-    toastEl.style.transform = 'translateX(-50%) translateY(0)'
-    
-    // Auto fade-out after 5.5 seconds
-    if (window.trashTalkTimeout) clearTimeout(window.trashTalkTimeout)
-    window.trashTalkTimeout = setTimeout(() => {
-      toastEl.style.opacity = '0'
-      toastEl.style.visibility = 'hidden'
-      toastEl.style.transform = 'translateX(-50%) translateY(20px)'
-    }, 5500)
+  s.activeCommentary = randomQuote
+
+  if (activePlayerId) {
+    if (!s.banterLog) s.banterLog = []
+    const lastBanter = s.banterLog[s.banterLog.length - 1]
+    if (!lastBanter || lastBanter.quote !== randomQuote) {
+      const pInfo = getPlayer(activePlayerId)
+      s.banterLog.push({
+        playerId: activePlayerId,
+        playerName: pInfo ? pInfo.name : 'Unknown Player',
+        teamId: s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId,
+        quote: randomQuote,
+        context: context,
+        timestamp: new Date().toISOString()
+      })
+    }
   }
 }
 
@@ -496,15 +656,46 @@ export function handleScorerEvents(e) {
     const matchId = target.closest('.match-pick-item').dataset.matchId
     if (matchId) { startGame(matchId); return true }
   }
-  if (target.closest('#scorer-start-home') && scorerState && scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0) {
-    scorerState.currentTeam = 'home'
-    scorerState.currentPutterIdx = 0
-    return true
+  if (target.closest('#scorer-start-home') && scorerState) {
+    const isStartOfGame = scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0
+    const isStartOfOT = scorerState.phase === 'overtime' && scorerState.otStartSelect
+    if (isStartOfGame || isStartOfOT) {
+      scorerState.currentTeam = 'home'
+      scorerState.currentPutterIdx = 0
+      return true
+    }
   }
-  if (target.closest('#scorer-start-away') && scorerState && scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0) {
-    scorerState.currentTeam = 'away'
-    scorerState.currentPutterIdx = 0
-    return true
+  if (target.closest('#scorer-start-away') && scorerState) {
+    const isStartOfGame = scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0
+    const isStartOfOT = scorerState.phase === 'overtime' && scorerState.otStartSelect
+    if (isStartOfGame || isStartOfOT) {
+      scorerState.currentTeam = 'away'
+      scorerState.currentPutterIdx = 0
+      return true
+    }
+  }
+  if (target.closest('.scorer-move-player') && scorerState && scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0) {
+    const el = target.closest('.scorer-move-player')
+    const teamId = el.dataset.teamId
+    const playerId = el.dataset.playerId
+    const dir = el.dataset.dir
+    if (teamId && playerId && dir) {
+      const s = scorerState
+      const activePlayers = teamId === 'home' ? s.homePlayers : s.awayPlayers
+      const idx = activePlayers.findIndex(p => p.id === playerId)
+      if (idx !== -1) {
+        if (dir === 'up' && idx > 0) {
+          const temp = activePlayers[idx]
+          activePlayers[idx] = activePlayers[idx - 1]
+          activePlayers[idx - 1] = temp
+        } else if (dir === 'down' && idx < activePlayers.length - 1) {
+          const temp = activePlayers[idx]
+          activePlayers[idx] = activePlayers[idx + 1]
+          activePlayers[idx + 1] = temp
+        }
+      }
+      return true
+    }
   }
   if (target.closest('.board-hole')) {
     const el = target.closest('.board-hole')
@@ -529,8 +720,15 @@ export function handleScorerEvents(e) {
   if (target.id === 'scorer-save-btn' && scorerState) {
     saveGameResult(); scorerState = null; return true
   }
-  if (target.id === 'trash-talk-btn') {
-    triggerTrashTalk(); return true
+  if (target.closest('.announcer-commentary-bubble') || target.id === 'scorer-commentary-reroll') {
+    const s = scorerState
+    let activePlayerId = null
+    if (s) {
+      const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
+      const currentPutter = putters[s.currentPutterIdx] || putters[0]
+      if (currentPutter) activePlayerId = currentPutter.id
+    }
+    triggerTrashTalk('general', activePlayerId); return true
   }
   if (target.id === 'scorer-reset-btn') { scorerState = null; return true }
   return false
@@ -560,12 +758,25 @@ function startGame(matchId) {
     firstToClear: null, // team that cleared first
     hadRedemption: false,
     gameOver: false, winner: null, overtime: false,
+    overtimeCount: 0,
     homeStreak: 0, awayStreak: 0, // Streak tracking
+    activeCommentary: "", // Announcer speech bubble state
   }
+
+  const initialQuotes = [
+    "Cotton McKnight: Welcome to match night live scoring! The turf is freshly vacuumed and the cups are standing tall!",
+    "Pepper Reddick: I love the smell of premium green turf in the evening, Cotton! Let's get these balls rolling!",
+    "Cotton McKnight: The teams are set, the scorekeepers are prepped, and we are ready for some absolute magic!",
+    "Pepper Reddick: My putting fingers are twitching just looking at these boards! Let's see who claims the first cup!"
+  ]
+  scorerState.activeCommentary = initialQuotes[Math.floor(Math.random() * initialQuotes.length)]
 }
 
 function recordPutt(hole, made) {
   const s = scorerState
+  if (s && s.otStartSelect) {
+    s.otStartSelect = false
+  }
   const targetBoardId = s.currentTeam === 'home' ? 'away' : 'home'
   const boardOpen = targetBoardId === 'home' ? s.homeBoardOpen : s.awayBoardOpen
   const boardClaimed = targetBoardId === 'home' ? s.homeBoardClaimed : s.awayBoardClaimed
@@ -575,17 +786,7 @@ function recordPutt(hole, made) {
   }
 
   // Normal / OT play
-  const allTeamPlayers = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
-  const completedTeamTurns = s.turns.filter(t => t.teamId === (s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)).length
-  let putters;
-  if (allTeamPlayers.length <= 2) {
-    putters = allTeamPlayers;
-  } else {
-    const seq = completedTeamTurns % 3;
-    if (seq === 0) putters = [allTeamPlayers[0], allTeamPlayers[1]];
-    else if (seq === 1) putters = [allTeamPlayers[0], allTeamPlayers[2]];
-    else putters = [allTeamPlayers[1], allTeamPlayers[2]];
-  }
+  const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
 
   const putter = putters[s.currentPutterIdx]
   const putt = { playerId: putter.id, hole: hole || 'miss', made, board: targetBoardId }
@@ -593,12 +794,16 @@ function recordPutt(hole, made) {
 
   const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
 
-  if (made && hole && boardOpen.has(hole)) {
-    boardOpen.delete(hole)
-    boardClaimed.push(hole)
+  if (made) {
+    if (hole && boardOpen.has(hole)) {
+      boardOpen.delete(hole)
+      boardClaimed.push(hole)
+    }
     s[streakKey]++
+    triggerTrashTalk('make', putter.id)
   } else {
-    if (!made) s[streakKey] = 0
+    s[streakKey] = 0
+    triggerTrashTalk('miss', putter.id)
   }
 
   s.currentPutterIdx++
@@ -626,13 +831,21 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
   // Check if all cups cleared on opponent's board
   const targetCount = 6
   if (boardClaimed.length >= targetCount) {
-    // Ball back + board cleared OR Overtime cleared = INSTANT WIN
-    if (ballBack || s.phase === 'overtime') {
+    // Ball back + board cleared = INSTANT WIN
+    if (ballBack) {
       s.gameOver = true
       s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
-      showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+
+      const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
+      const streak = s[streakKey]
+      if (streak === 6) {
+        showToast(`👑 PERFECT BOARD! 6 IN A ROW! 🏆 ${s.winner.toUpperCase()} WINS!`, 'winner')
+        triggerTrashTalk('streak_6', putters[putters.length - 1].id)
+      } else {
+        showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+      }
       return
     }
     // No ball back → redemption for the other team
@@ -643,6 +856,7 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
     s.redemptionPutterIdx = 0
     s.currentTurnPutts = []
     s.currentPutterIdx = 0
+    triggerTrashTalk('redemption', putters[putters.length - 1].id)
     return
   }
 
@@ -655,12 +869,16 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
     const streak = s[streakKey]
     if (streak === 4) {
       showToast("⚡ UNSTOPPABLE! 4 IN A ROW! 🔥 BALL BACK!", "streak")
+      triggerTrashTalk('streak_4', putters[putters.length - 1].id)
     } else if (streak === 6) {
       showToast("👑 PERFECT BOARD! 6 IN A ROW! 🔥 BALL BACK!", "streak")
+      triggerTrashTalk('streak_6', putters[putters.length - 1].id)
     } else if (streak > 6 && streak % 2 === 0) {
       showToast(`🔥 BALL BACK! ${streak} IN A ROW!`, "streak")
+      triggerTrashTalk('streak_2', putters[putters.length - 1].id)
     } else {
       showToast('🔥 BALL BACK!')
+      triggerTrashTalk('ballback', putters[putters.length - 1].id)
     }
   }
   checkCloseGameBanter()
@@ -668,17 +886,7 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
 
 function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId) {
   const s = scorerState
-  const allTeamPlayers = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
-  const completedTeamTurns = s.turns.filter(t => t.teamId === (s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)).length
-  let putters;
-  if (allTeamPlayers.length <= 2) {
-    putters = allTeamPlayers;
-  } else {
-    const seq = completedTeamTurns % 3;
-    if (seq === 0) putters = [allTeamPlayers[0], allTeamPlayers[1]];
-    else if (seq === 1) putters = [allTeamPlayers[0], allTeamPlayers[2]];
-    else putters = [allTeamPlayers[1], allTeamPlayers[2]];
-  }
+  const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
 
   const putter = putters[s.currentPutterIdx]
 
@@ -687,12 +895,16 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
 
   const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
 
-  if (made && hole && boardOpen.has(hole)) {
-    boardOpen.delete(hole)
-    boardClaimed.push(hole)
+  if (made) {
+    if (hole && boardOpen.has(hole)) {
+      boardOpen.delete(hole)
+      boardClaimed.push(hole)
+    }
     s[streakKey]++
+    triggerTrashTalk('make', putter.id)
   } else {
-    if (!made) s[streakKey] = 0
+    s[streakKey] = 0
+    triggerTrashTalk('miss', putter.id)
   }
 
   s.currentPutterIdx++
@@ -722,7 +934,15 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
-      showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+
+      const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
+      const streak = s[streakKey]
+      if (streak === 6) {
+        showToast(`👑 PERFECT BOARD! 6 IN A ROW! 🏆 ${s.winner.toUpperCase()} WINS!`, 'winner')
+        triggerTrashTalk('streak_6', putters[putters.length - 1].id)
+      } else {
+        showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
+      }
       return
     }
 
@@ -730,6 +950,8 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       // Cleared but no ball back → TIE → Overtime
       s.phase = 'overtime'
       s.overtime = true
+      if (!s.overtimeCount) s.overtimeCount = 0
+      s.overtimeCount++
       s.homeBoardClaimed = ['back-1', 'back-2', 'back-3']
       s.awayBoardClaimed = ['back-1', 'back-2', 'back-3']
       s.homeBoardOpen = new Set(OT_HOLES)
@@ -738,6 +960,8 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       s.currentPutterIdx = 0
       s.currentTurnPutts = []
       s.firstToClear = null
+      s.otStartSelect = true
+      triggerTrashTalk('overtime', putters[putters.length - 1].id)
       return
     }
 
@@ -759,12 +983,16 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       const streak = s[streakKey]
       if (streak === 4) {
         showToast("⚡ UNSTOPPABLE! 4 IN A ROW! 🔥 BALL BACK!", "streak")
+        triggerTrashTalk('streak_4', putters[putters.length - 1].id)
       } else if (streak === 6) {
         showToast("👑 PERFECT BOARD! 6 IN A ROW! 🔥 BALL BACK!", "streak")
+        triggerTrashTalk('streak_6', putters[putters.length - 1].id)
       } else if (streak > 6 && streak % 2 === 0) {
         showToast(`🔥 BALL BACK! ${streak} IN A ROW!`, "streak")
+        triggerTrashTalk('streak_2', putters[putters.length - 1].id)
       } else {
         showToast('🔥 BALL BACK!')
+        triggerTrashTalk('ballback', putters[putters.length - 1].id)
       }
     }
     // Ball back = same team goes again, otherwise they still go (it's redemption)
@@ -773,24 +1001,42 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
 }
 
 export function showToast(message, type = '') {
-  // Remove any stale toast classes first
   const existing = document.getElementById('ball-back-toast')
-  if (existing) {
-    existing.classList.remove('show', 'winner-toast', 'streak-toast')
-    existing.innerHTML = message
-    if (type === 'winner') {
-      existing.classList.add('winner-toast')
-    } else if (type === 'streak') {
-      existing.classList.add('streak-toast')
-    }
+  if (!existing) return
+
+  // Cancel any scheduled animations from previous plays to prevent race conditions or duplicate toasts
+  if (window.activeToastTimeout) clearTimeout(window.activeToastTimeout)
+  if (window.activeToastHideTimeout) clearTimeout(window.activeToastHideTimeout)
+
+  existing.classList.remove('show', 'winner-toast', 'streak-toast')
+  existing.innerHTML = message
+  
+  if (type === 'winner') {
+    existing.classList.add('winner-toast')
+  } else if (type === 'streak') {
+    existing.classList.add('streak-toast')
   }
-  setTimeout(() => {
-    const t = document.getElementById('ball-back-toast')
-    if (t) {
-      t.classList.add('show')
-      setTimeout(() => t.classList.remove('show'), type === 'winner' ? 3500 : 1800)
-    }
-  }, 150)
+
+  window.activeToastTimeout = setTimeout(() => {
+    existing.classList.add('show')
+    window.activeToastHideTimeout = setTimeout(() => {
+      existing.classList.remove('show')
+    }, type === 'winner' ? 5000 : 2500)
+  }, 50)
+}
+
+function getCurrentPutters(s, teamId) {
+  const isHome = teamId === s.homeTeamId
+  const players = isHome ? s.homePlayers : s.awayPlayers
+  if (players.length <= 2) return players
+
+  const teamTurns = s.turns.filter(t => t.teamId === teamId)
+  const transitions = teamTurns.filter(t => !t.ballBack).length
+  
+  const seq = transitions % 3
+  if (seq === 0) return [players[0], players[1]]
+  if (seq === 1) return [players[0], players[2]]
+  return [players[1], players[2]]
 }
 
 function saveGameResult() {
@@ -808,5 +1054,6 @@ function saveGameResult() {
     },
     winnerId: homeScore >= awayScore ? s.homeTeamId : s.awayTeamId,
     overtime: s.overtime,
+    banterLog: s.banterLog || [],
   })
 }

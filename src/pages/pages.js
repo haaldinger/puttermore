@@ -306,19 +306,54 @@ export function renderPlayersPage() {
   const displayPlayers = []
   const standings = getStandings(currentLeagueId)
   
+  const playerBanterCounts = {}
+  getAllMatches().forEach(m => {
+    if (m.status === 'completed' && m.banterLog) {
+      m.banterLog.forEach(b => {
+        if (!playerBanterCounts[b.playerId]) playerBanterCounts[b.playerId] = 0
+        playerBanterCounts[b.playerId]++
+      })
+    }
+  })
+
   standings.forEach(s => {
     const roster = getTeamRoster(s.team.id)
     roster.forEach(p => {
       const stats = getPlayerStats(p.id)
-      displayPlayers.push({ player: p, team: s.team, league: currentLeague, ...stats })
+      const banterInitiated = playerBanterCounts[p.id] || 0
+      displayPlayers.push({ player: p, team: s.team, league: currentLeague, banterInitiated, ...stats })
     })
   })
   
   displayPlayers.sort((a, b) => b.puttingPct - a.puttingPct)
 
+  // Find Banter King
+  let banterKing = null
+  displayPlayers.forEach(e => {
+    if (e.banterInitiated > 0 && (!banterKing || e.banterInitiated > banterKing.banterInitiated)) {
+      banterKing = e
+    }
+  })
+
+  const banterKingHtml = banterKing ? `
+    <div class="card card-glass text-center animate-in" style="margin-bottom: var(--space-6); padding: var(--space-4); border: 2px dashed var(--gold-400); background: linear-gradient(135deg, rgba(251,191,36,0.06), rgba(251,191,36,0.01)); box-shadow: 0 8px 32px rgba(251,191,36,0.08); border-radius: var(--radius-xl)">
+      <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-bottom:var(--space-2)">
+        <span class="blink-badge" style="--team-color: var(--gold-400)"></span>
+        <span style="font-family: var(--font-display); font-weight: 900; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.1em; text-transform: uppercase">👑 MOBTOWN BANTER LEADER 🌶️</span>
+      </div>
+      <h3 style="font-family: var(--font-display); font-weight: 900; font-size: var(--text-xl); color: #fff; margin: 0 0 var(--space-1) 0">
+        <span style="color: ${banterKing.player.avatarColor}; font-weight: 900">${banterKing.player.name}</span>
+        <span style="font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary)">initiated</span> ${banterKing.banterInitiated} comments
+      </h3>
+      <p style="font-style: italic; color: var(--text-muted); font-size: var(--text-xs); margin: 0; max-width: 500px; margin-left: auto; margin-right: auto">
+        "${banterKing.player.name}'s hot shots sparked announcer Cotton McKnight & Pepper Reddick to commentate in live matches!"
+      </p>
+    </div>
+  ` : ''
+
   const rows = displayPlayers.map((e, i) => {
     // Top rank trophy visual indicators
-    let rankDisplay = i + 1
+    let rankDisplay = e.banterInitiated > 0 && banterKing && e.player.id === banterKing.player.id ? '👑' : i + 1
     if (i === 0) rankDisplay = '🥇'
     else if (i === 1) rankDisplay = '🥈'
     else if (i === 2) rankDisplay = '🥉'
@@ -338,6 +373,7 @@ export function renderPlayersPage() {
         <td class="mono">${e.totalMade}/${e.totalPutts}</td>
         <td class="mono col-hide-mobile">${e.gamesPlayed}</td>
         <td class="col-hide-mobile">${e.bestHole||'—'}</td>
+        <td class="mono col-hide-mobile" style="font-weight:700;color:var(--gold-400)">${e.banterInitiated} 🌶️</td>
       </tr>`
   }).join('')
 
@@ -357,6 +393,8 @@ export function renderPlayersPage() {
       <div class="league-venue-bar" style="margin-bottom: 0; font-size: var(--text-xs)"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted"> · Wednesday Nights</span></div>
     </div>
     
+    ${banterKingHtml}
+    
     <div class="table-wrapper animate-in delay-1">
       <table>
         <thead>
@@ -368,6 +406,7 @@ export function renderPlayersPage() {
             <th>Made</th>
             <th class="col-hide-mobile">Games</th>
             <th class="col-hide-mobile">Best Hole</th>
+            <th class="col-hide-mobile" style="width:90px">Banter</th>
           </tr>
         </thead>
         <tbody>
@@ -418,6 +457,60 @@ export function renderPlayerProfile(playerId) {
   const putterType = player.putterType || 'blade'
 
   const putterImageSrc = player.putterImage || `/images/putter_${putterType}.png`
+
+  // Compile player's banter history
+  let playerBanterHtml = ''
+  const allBanter = []
+  
+  getAllMatches().forEach(m => {
+    if (m.status === 'completed' && m.banterLog) {
+      m.banterLog.forEach(b => {
+        if (b.playerId === playerId) {
+          allBanter.push({
+            ...b,
+            matchId: m.id,
+            weekNumber: m.weekNumber
+          })
+        }
+      })
+    }
+  })
+
+  // Sort chronologically (newest first)
+  allBanter.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+
+  if (allBanter.length > 0) {
+    const banterItems = allBanter.map(b => {
+      const contextTag = b.context === 'make' ? '🟢 Make' : b.context === 'miss' ? '🔴 Miss' : b.context.startsWith('streak') ? '🔥 Ball Back' : b.context === 'redemption' ? '⚡ Redemption' : b.context === 'overtime' ? '⚡ OT' : '🎙️ Banter'
+      return `<div class="turn-entry" style="padding: var(--space-2) var(--space-3)">
+        <span class="mono text-muted" style="font-size: 10px; min-width: 60px">Wk ${b.weekNumber} match</span>
+        <span class="badge" style="font-size: 8px; background: rgba(255,255,255,0.05); color: #fff; padding: 2px 6px">${contextTag}</span>
+        <span style="flex: 1; font-style: italic; color: var(--text-primary); margin-left: var(--space-3)">"${b.quote}"</span>
+        <button class="btn btn-ghost btn-sm" data-nav="match/${b.matchId}" style="font-size:9px; padding:2px 8px; border-radius:4px; border: 1px solid rgba(255,255,255,0.05)">View Match</button>
+      </div>`
+    }).join('')
+
+    playerBanterHtml = `
+      <section class="animate-in delay-3" style="margin-top:var(--space-6)">
+        <div class="section-header">
+          <h3>🎙️ Announcer Banter History</h3>
+          <span class="badge badge-gold" style="font-size: 10px">${allBanter.length} comments</span>
+        </div>
+        <div class="card turn-log" style="padding:var(--space-3); max-height: 250px; overflow-y: auto">
+          ${banterItems}
+        </div>
+      </section>
+    `
+  } else {
+    playerBanterHtml = `
+      <section class="animate-in delay-3" style="margin-top:var(--space-6)">
+        <div class="section-header"><h3>🎙️ Announcer Banter History</h3></div>
+        <div class="card text-center text-muted" style="padding:var(--space-6); font-size:var(--text-sm)">
+          No announcer commentary has been recorded for this player yet.
+        </div>
+      </section>
+    `
+  }
 
   return `<div class="page container">
     <div class="profile-header animate-in">
@@ -536,6 +629,7 @@ export function renderPlayerProfile(playerId) {
         </div>
       </section>`:''}
     </div>
+    ${playerBanterHtml}
     <div class="mt-8"><button class="btn btn-ghost" data-nav="players">← All Players</button></div>
   </div>`
 }
@@ -599,6 +693,39 @@ export function renderMatchDetail(matchId) {
       ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
     </div>`
   }).join('') : '<div class="text-center text-muted" style="padding:var(--space-4)">No turn data available</div>'
+
+  // Announcer commentary/banter log
+  let banterLogHtml = ''
+  if (isCompleted && match.banterLog && match.banterLog.length > 0) {
+    const banterItems = match.banterLog.map(b => {
+      const pColor = getPlayer(b.playerId)?.avatarColor || '#fff'
+      const contextTag = b.context === 'make' ? '🟢 Make' : b.context === 'miss' ? '🔴 Miss' : b.context.startsWith('streak') ? '🔥 BB' : b.context === 'redemption' ? '⚡ RDM' : b.context === 'overtime' ? '⚡ OT' : '🎙️ Banter'
+      const timeStr = b.timestamp ? new Date(b.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'Live'
+      
+      return `<div class="turn-entry">
+        <span class="turn-num mono text-muted" style="min-width:55px;font-size:9px">${timeStr}</span>
+        <span class="badge" style="font-size:8px;background:rgba(255,255,255,0.05);color:var(--text-secondary);padding:1px 4px">${contextTag}</span>
+        <span class="roster-name" style="color:${pColor};font-weight:700;margin:0 var(--space-1);white-space:nowrap">${b.playerName.split(' ')[0]}</span>
+        <span style="flex:1;font-style:italic;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis">"${b.quote}"</span>
+      </div>`
+    }).join('')
+
+    banterLogHtml = `
+      <section class="animate-in delay-3">
+        <div class="section-header"><h3>Live Announcer Banter</h3><span class="badge badge-gold">${match.banterLog.length} comments</span></div>
+        <div class="card turn-log" style="padding:var(--space-3);max-height:500px">${banterItems}</div>
+      </section>
+    `
+  } else if (isCompleted) {
+    banterLogHtml = `
+      <section class="animate-in delay-3">
+        <div class="section-header"><h3>Live Announcer Banter</h3></div>
+        <div class="card text-center text-muted" style="padding:var(--space-12);font-size:var(--text-sm)">
+          No live commentary was recorded during this match.
+        </div>
+      </section>
+    `
+  }
 
   // Summary stats
   const totalTurns = match.totalTurns || match.turns?.length || 0
@@ -709,10 +836,13 @@ export function renderMatchDetail(matchId) {
       </section>
     </div>
 
-    <section class="animate-in delay-3" style="margin-top:var(--space-4)">
-      <div class="section-header"><h3>Shot-by-Shot</h3><span class="badge badge-pink">${totalTurns} turns</span></div>
-      <div class="card turn-log" style="padding:var(--space-3);max-height:500px">${turnLogHtml}</div>
-    </section>
+    <div class="grid-2" style="margin-top:var(--space-4); align-items:start">
+      <section class="animate-in delay-3">
+        <div class="section-header"><h3>Shot-by-Shot</h3><span class="badge badge-pink">${totalTurns} turns</span></div>
+        <div class="card turn-log" style="padding:var(--space-3);max-height:500px">${turnLogHtml}</div>
+      </section>
+      ${banterLogHtml}
+    </div>
 
     <div class="mt-4"><button class="btn btn-ghost" data-nav="schedule">← Schedule</button></div>
   </div>`
