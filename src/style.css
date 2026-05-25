@@ -325,7 +325,19 @@ main { display: block; }
 /* ─── Dual Boards ─── */
 .dual-boards { display: flex; gap: var(--space-3); justify-content: center; align-items: flex-start; }
 .dual-boards.stacked { flex-direction: column; align-items: center; }
-.dual-boards.focused .dual-board:not(.active) { display: none; }
+.dual-boards.focused .dual-board {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+.dual-boards.focused:has(.dual-board.active) .dual-board:not(.active) {
+  opacity: 0.25 !important;
+  transform: scale(0.92);
+  filter: grayscale(0.4) blur(0.5px);
+}
+.dual-boards.focused:has(.dual-board.active) .dual-board.active {
+  opacity: 1 !important;
+  transform: scale(1.04);
+  z-index: 2;
+}
 .dual-board {
   flex: 1; max-width: 280px; min-width: 140px;
   transition: all var(--duration-normal) var(--ease-out);
