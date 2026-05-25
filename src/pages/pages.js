@@ -1301,11 +1301,16 @@ export function renderAdminPage() {
               <div class="match-team away${isAwayWinner ? ' winner' : ''}" style="font-weight: 700">${isAwayWinner ? '👑 ' : ''}${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
             </div>
 
-            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-4); display: flex; gap: var(--space-4); align-items: center">
-              <span>Turns Played: ${m.totalTurns || m.turns?.length || 0}</span>
-              <span>Overtime: ${isEditing ? `
-                <input type="checkbox" id="edit-ot-${m.id}" ${m.overtime ? 'checked' : ''} style="transform: scale(1.1); cursor: pointer" />
-              ` : (m.overtime ? '⚡ Yes' : 'No')}</span>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1.5)">
+              <div style="display: flex; gap: var(--space-4); align-items: center">
+                <span>Turns Played: ${m.totalTurns || m.turns?.length || 0}</span>
+                <span>Overtime: ${isEditing ? `
+                  <input type="checkbox" id="edit-ot-${m.id}" ${m.overtime ? 'checked' : ''} style="transform: scale(1.1); cursor: pointer" />
+                ` : (m.overtime ? '⚡ Yes' : 'No')}</span>
+              </div>
+              <div style="font-size: 10px; color: var(--gold-400); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em">
+                🧢 Submitted by Captain: <span style="color: #fff">${m.submittedByPlayerName || 'Unknown Captain'}</span>
+              </div>
             </div>
 
             <div class="flex gap-2 justify-end" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: var(--space-3)">

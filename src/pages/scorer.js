@@ -1,4 +1,4 @@
-import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues } from '../data.js'
+import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams } from '../data.js'
 import { renderSingleBoard } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
 import { saveMatch, getLoggedInUser } from '../store.js'
@@ -160,6 +160,40 @@ export function renderScorer() {
     const venue = getVenue(league.venueId)
     const scheduled = getAllMatches().filter(m => m.leagueId === leagueId && m.status === 'scheduled')
 
+    const loggedIn = getLoggedInUser()
+    const captainTeam = loggedIn ? getAllTeams().find(t => t.captainPlayerId === loggedIn.id) : null
+
+    let myNextMatch = null
+    if (captainTeam) {
+      const teamScheduled = getAllMatches().filter(m => 
+        m.leagueId === leagueId &&
+        m.status === 'scheduled' && 
+        (m.homeTeamId === captainTeam.id || m.awayTeamId === captainTeam.id)
+      ).sort((a, b) => a.weekNumber - b.weekNumber || a.timeSlot.localeCompare(b.timeSlot))
+      myNextMatch = teamScheduled[0] || null
+    }
+
+    let clearanceBannerHtml = ''
+    if (!loggedIn) {
+      clearanceBannerHtml = `
+        <div class="turn-indicator animate-in" style="background:rgba(239,68,68,0.06); border-color:var(--red-500); color:var(--red-400); font-size:var(--text-xs); margin-bottom:var(--space-4); text-align:center">
+          🔒 <strong>SPECTATOR ACCESS ONLY</strong>: Please log in as a Team Captain to start an official scoring session.
+        </div>
+      `
+    } else if (!captainTeam) {
+      clearanceBannerHtml = `
+        <div class="turn-indicator animate-in" style="background:rgba(239,68,68,0.06); border-color:var(--red-500); color:var(--red-400); font-size:var(--text-xs); margin-bottom:var(--space-4); text-align:center">
+          🔒 <strong>RESTRICTED DESK</strong>: Authenticated as ${loggedIn.name}. Only official Team Captains are authorized to start scoring sessions.
+        </div>
+      `
+    } else {
+      clearanceBannerHtml = `
+        <div class="turn-indicator animate-in" style="background:rgba(34,197,94,0.06); border-color:var(--green-500); color:var(--green-400); font-size:var(--text-xs); margin-bottom:var(--space-4); text-align:center">
+          🧢 <strong>CAPTAIN DESK ACTIVE</strong>: Authenticated as ${loggedIn.name} (${captainTeam.name} Captain).
+        </div>
+      `
+    }
+
     // Group by week
     const weeks = {}
     scheduled.forEach(m => {
@@ -181,7 +215,27 @@ export function renderScorer() {
         <div class="match-pick-week-label">Week ${wk} · ${matches[0]?.date || ''}</div>
         ${matches.map(m => {
           const h = getTeam(m.homeTeamId), a = getTeam(m.awayTeamId)
-          return `<button class="match-pick-item" data-match-id="${m.id}">
+          
+          let isDisabled = false
+          let badgeHtml = ''
+          let btnStyle = ''
+          
+          if (captainTeam) {
+            if (myNextMatch && m.id === myNextMatch.id) {
+              badgeHtml = `<span class="badge badge-win" style="font-size: 8px; margin-left: auto; background: var(--green-500)20; border-color: var(--green-400); color: var(--green-400)">🎯 NEXT GAME</span>`
+              btnStyle = `border: 2px solid var(--green-500); box-shadow: 0 0 12px var(--green-500)20; animation: putter-pulse 2s infinite ease-in-out`
+            } else {
+              isDisabled = true
+              badgeHtml = `<span class="badge" style="font-size: 8px; margin-left: auto; background: rgba(255,255,255,0.05); color: var(--text-muted)">🔒 Locked</span>`
+              btnStyle = `opacity: 0.45; cursor: not-allowed`
+            }
+          } else {
+            isDisabled = true
+            badgeHtml = `<span class="badge" style="font-size: 8px; margin-left: auto; background: rgba(255,255,255,0.05); color: var(--text-muted)">🔒 Locked</span>`
+            btnStyle = `opacity: 0.45; cursor: not-allowed`
+          }
+
+          return `<button class="match-pick-item" data-match-id="${m.id}" ${isDisabled ? 'disabled style="pointer-events:none"' : ''} style="${btnStyle}">
             <span class="match-pick-teams">
               <span class="team-dot" style="background:${h.color}"></span>
               <span class="match-pick-name">${h.name}</span>
@@ -189,7 +243,10 @@ export function renderScorer() {
               <span class="match-pick-name">${a.name}</span>
               <span class="team-dot" style="background:${a.color}"></span>
             </span>
-            <span class="match-pick-time">${m.timeSlot}</span>
+            <span class="match-pick-time" style="display:flex; align-items:center; gap:8px">
+              ${badgeHtml}
+              <span>${m.timeSlot}</span>
+            </span>
           </button>`
         }).join('')}
       </div>`).join('')
@@ -200,6 +257,7 @@ export function renderScorer() {
       <div class="page-header animate-in"><h1>🎯 Live Scorer</h1><p>Select a match to start scoring</p></div>
       <div class="league-tabs animate-in" style="justify-content:center">${leagueTabs}</div>
       <div class="league-venue-bar animate-in delay-1"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted">· ${league.day}s</span></div>
+      ${clearanceBannerHtml}
       <div class="match-pick-list animate-in delay-1">${matchListHtml}${noMatches}</div>
     </div>`
   }
@@ -1043,6 +1101,7 @@ function saveGameResult() {
   const s = scorerState
   const homeScore = s.awayBoardClaimed.length
   const awayScore = s.homeBoardClaimed.length
+  const loggedIn = getLoggedInUser()
   saveMatch(s.matchId, {
     turns: s.turns,
     holesWon: { [s.homeTeamId]: [...s.awayBoardClaimed], [s.awayTeamId]: [...s.homeBoardClaimed] },
@@ -1055,5 +1114,7 @@ function saveGameResult() {
     winnerId: s.winner === s.homeName ? s.homeTeamId : s.awayTeamId,
     overtime: s.overtime,
     banterLog: s.banterLog || [],
+    submittedByPlayerId: loggedIn ? loggedIn.id : null,
+    submittedByPlayerName: loggedIn ? loggedIn.name : 'League Scorer',
   })
 }
