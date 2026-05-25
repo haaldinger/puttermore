@@ -1,7 +1,7 @@
 import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues } from '../data.js'
 import { renderSingleBoard } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
-import { saveMatch } from '../store.js'
+import { saveMatch, getLoggedInUser } from '../store.js'
 import { getSelectedLeague, setSelectedLeague } from './home.js'
 
 let scorerState = null
@@ -217,8 +217,19 @@ export function renderScorer() {
   // Current putters
   let putterDisplay = ''
   if (!s.gameOver) {
+    const allTeamPlayers = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
+    const completedTeamTurns = s.turns.filter(t => t.teamId === (s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)).length
+    let putters;
+    if (allTeamPlayers.length <= 2) {
+      putters = allTeamPlayers;
+    } else {
+      const seq = completedTeamTurns % 3;
+      if (seq === 0) putters = [allTeamPlayers[0], allTeamPlayers[1]];
+      else if (seq === 1) putters = [allTeamPlayers[0], allTeamPlayers[2]];
+      else putters = [allTeamPlayers[1], allTeamPlayers[2]];
+    }
+
     if (isRedemption) {
-      const putters = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
       putterDisplay = `<div class="turn-indicator animate-in" style="border-color:${currentColor};background:rgba(251,191,36,0.08)">
         <div style="font-size:var(--text-xs);color:var(--gold-400);font-weight:700;letter-spacing:0.1em;margin-bottom:2px">⚡ REDEMPTION ROUND</div>
         <span style="color:${currentColor}">${currentTeamName}</span> — putting at <strong>${targetBoardId === 'home' ? s.homeName : s.awayName}'s cups</strong>
@@ -226,11 +237,20 @@ export function renderScorer() {
         <div style="font-size:var(--text-xs);color:var(--gold-400);margin-top:4px">Both make it = 🔥 Ball Back = Win!</div>
       </div>`
     } else {
-      const putters = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
+      const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
+      const selectorHtml = isStartOfGame ? `
+        <div style="margin-top:var(--space-3); padding-top:var(--space-2); border-top:1px dashed rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; gap:var(--space-2)">
+          <span style="font-size:var(--text-xs); color:var(--text-muted)">Who putts first?</span>
+          <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:700; ${s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6'}">${s.homeName}</button>
+          <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:700; ${s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6'}">${s.awayName}</button>
+        </div>
+      ` : ''
+
       putterDisplay = `<div class="turn-indicator animate-in" style="border-color:${currentColor}">
         ${isOT ? '<div style="font-size:var(--text-xs);color:var(--gold-400);font-weight:700;letter-spacing:0.1em;margin-bottom:2px">⚡ OVERTIME</div>' : ''}
         <span style="color:${currentColor}">${currentTeamName}'s Turn</span> — putting at <strong>${targetBoardId === 'home' ? s.homeName : s.awayName}'s cups</strong>
         <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${putters.map(p => p.name).join(' & ')} · Selecting: <strong>${putters[s.currentPutterIdx]?.name}</strong> (${s.currentPutterIdx + 1}/${putters.length})</div>
+        ${selectorHtml}
       </div>`
     }
   }
@@ -271,6 +291,30 @@ export function renderScorer() {
       <div class="scorer-vs">—</div>
       <div class="scorer-team"><div class="scorer-team-name" style="color:${s.awayColor}">${s.awayName}</div><div class="scorer-team-score ${awayScore > homeScore ? 'text-green' : ''}">${awayScore}</div></div>
     </div>
+
+    ${(() => {
+      const loggedIn = getLoggedInUser()
+      const isHomeCaptain = loggedIn && s.homeTeamId && getTeam(s.homeTeamId)?.captainPlayerId === loggedIn.id
+      const isAwayCaptain = loggedIn && s.awayTeamId && getTeam(s.awayTeamId)?.captainPlayerId === loggedIn.id
+      const isMatchCaptain = isHomeCaptain || isAwayCaptain
+
+      if (!s.gameOver) {
+        if (loggedIn && isMatchCaptain) {
+          return `<div class="turn-indicator animate-in" style="background:rgba(34,197,94,0.06);border-color:var(--green-500);color:var(--green-400);font-size:var(--text-xs);margin-bottom:var(--space-4)">
+            🧢 <strong>CAPTAIN MODE</strong>: Authenticated as ${loggedIn.name} (${isHomeCaptain ? s.homeName : s.awayName} Captain)
+          </div>`
+        } else if (loggedIn) {
+          return `<div class="turn-indicator animate-in" style="background:rgba(251,191,36,0.06);border-color:var(--gold-400);color:var(--gold-400);font-size:var(--text-xs);margin-bottom:var(--space-4)">
+            🔒 <strong>SPECTATOR MODE</strong>: You are logged in as ${loggedIn.name}. Captain scoring override active for testing!
+          </div>`
+        } else {
+          return `<div class="turn-indicator animate-in" style="background:rgba(255,255,255,0.03);border-color:var(--border-subtle);color:var(--text-secondary);font-size:var(--text-xs);margin-bottom:var(--space-4)">
+            🔒 <strong>SPECTATOR MODE</strong>: Guest View. Choose a Captain Profile to unlock official scoring clearance! (Override active for testing)
+          </div>`
+        }
+      }
+      return ''
+    })()}
 
     ${s.gameOver ? `
       <div class="card-glass animate-in text-center" style="padding:var(--space-8);margin-bottom:var(--space-6)">
@@ -452,12 +496,28 @@ export function handleScorerEvents(e) {
     const matchId = target.closest('.match-pick-item').dataset.matchId
     if (matchId) { startGame(matchId); return true }
   }
+  if (target.closest('#scorer-start-home') && scorerState && scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0) {
+    scorerState.currentTeam = 'home'
+    scorerState.currentPutterIdx = 0
+    return true
+  }
+  if (target.closest('#scorer-start-away') && scorerState && scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0) {
+    scorerState.currentTeam = 'away'
+    scorerState.currentPutterIdx = 0
+    return true
+  }
   if (target.closest('.board-hole')) {
     const el = target.closest('.board-hole')
     const hole = el.dataset.hole, boardId = el.dataset.board
     if (hole && scorerState && !scorerState.gameOver) {
       const expectedBoard = scorerState.currentTeam === 'home' ? 'away' : 'home'
-      if (boardId === expectedBoard) { recordPutt(hole, true); return true }
+      if (boardId === expectedBoard) {
+        const boardOpen = expectedBoard === 'home' ? scorerState.homeBoardOpen : scorerState.awayBoardOpen
+        // Ignore clicks on already claimed/sunk cups to prevent duplicate phantom putts
+        if (!boardOpen.has(hole)) return true
+        recordPutt(hole, true)
+        return true
+      }
     }
   }
   if (target.id === 'scorer-made-btn' && scorerState && !scorerState.gameOver) {
@@ -487,8 +547,8 @@ function startGame(matchId) {
     homeTeamId: match.homeTeamId, awayTeamId: match.awayTeamId,
     homeName: ht.name, awayName: at.name,
     homeColor: ht.color, awayColor: at.color,
-    homePlayers: getTeamRoster(match.homeTeamId).slice(0, 2),
-    awayPlayers: getTeamRoster(match.awayTeamId).slice(0, 2),
+    homePlayers: getTeamRoster(match.homeTeamId),
+    awayPlayers: getTeamRoster(match.awayTeamId),
     homeBoardClaimed: [], awayBoardClaimed: [],
     homeBoardOpen: new Set(HOLES), awayBoardOpen: new Set(HOLES),
     currentTeam: 'home',
@@ -515,7 +575,18 @@ function recordPutt(hole, made) {
   }
 
   // Normal / OT play
-  const putters = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
+  const allTeamPlayers = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
+  const completedTeamTurns = s.turns.filter(t => t.teamId === (s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)).length
+  let putters;
+  if (allTeamPlayers.length <= 2) {
+    putters = allTeamPlayers;
+  } else {
+    const seq = completedTeamTurns % 3;
+    if (seq === 0) putters = [allTeamPlayers[0], allTeamPlayers[1]];
+    else if (seq === 1) putters = [allTeamPlayers[0], allTeamPlayers[2]];
+    else putters = [allTeamPlayers[1], allTeamPlayers[2]];
+  }
+
   const putter = putters[s.currentPutterIdx]
   const putt = { playerId: putter.id, hole: hole || 'miss', made, board: targetBoardId }
   s.currentTurnPutts.push(putt)
@@ -526,11 +597,6 @@ function recordPutt(hole, made) {
     boardOpen.delete(hole)
     boardClaimed.push(hole)
     s[streakKey]++
-    // Trigger streak toasts!
-    if (s[streakKey] === 3) showToast("🔥 ON FIRE! 3 IN A ROW!", "streak")
-    else if (s[streakKey] === 4) showToast("⚡ UNSTOPPABLE! 4 IN A ROW!", "streak")
-    else if (s[streakKey] === 5) showToast("🚨 IMPOSSIBLE! 5 IN A ROW!", "streak")
-    else if (s[streakKey] === 6) showToast("👑 PERFECT BOARD! 6 IN A ROW!", "streak")
   } else {
     if (!made) s[streakKey] = 0
   }
@@ -566,7 +632,7 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
       s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
-      showToast(`🏆 ${s.winner} WINS!`, 'winner')
+      showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
       return
     }
     // No ball back → redemption for the other team
@@ -585,14 +651,35 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
   if (!ballBack) {
     s.currentTeam = s.currentTeam === 'home' ? 'away' : 'home'
   } else {
-    showToast('🔥 BALL BACK!')
+    const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
+    const streak = s[streakKey]
+    if (streak === 4) {
+      showToast("⚡ UNSTOPPABLE! 4 IN A ROW! 🔥 BALL BACK!", "streak")
+    } else if (streak === 6) {
+      showToast("👑 PERFECT BOARD! 6 IN A ROW! 🔥 BALL BACK!", "streak")
+    } else if (streak > 6 && streak % 2 === 0) {
+      showToast(`🔥 BALL BACK! ${streak} IN A ROW!`, "streak")
+    } else {
+      showToast('🔥 BALL BACK!')
+    }
   }
   checkCloseGameBanter()
 }
 
 function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId) {
   const s = scorerState
-  const putters = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
+  const allTeamPlayers = s.currentTeam === 'home' ? s.homePlayers : s.awayPlayers
+  const completedTeamTurns = s.turns.filter(t => t.teamId === (s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)).length
+  let putters;
+  if (allTeamPlayers.length <= 2) {
+    putters = allTeamPlayers;
+  } else {
+    const seq = completedTeamTurns % 3;
+    if (seq === 0) putters = [allTeamPlayers[0], allTeamPlayers[1]];
+    else if (seq === 1) putters = [allTeamPlayers[0], allTeamPlayers[2]];
+    else putters = [allTeamPlayers[1], allTeamPlayers[2]];
+  }
+
   const putter = putters[s.currentPutterIdx]
 
   const putt = { playerId: putter.id, hole: hole || 'miss', made, board: targetBoardId }
@@ -604,10 +691,6 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
     boardOpen.delete(hole)
     boardClaimed.push(hole)
     s[streakKey]++
-    if (s[streakKey] === 3) showToast("🔥 ON FIRE! 3 IN A ROW!", "streak")
-    else if (s[streakKey] === 4) showToast("⚡ UNSTOPPABLE! 4 IN A ROW!", "streak")
-    else if (s[streakKey] === 5) showToast("🚨 IMPOSSIBLE! 5 IN A ROW!", "streak")
-    else if (s[streakKey] === 6) showToast("👑 PERFECT BOARD! 6 IN A ROW!", "streak")
   } else {
     if (!made) s[streakKey] = 0
   }
@@ -639,7 +722,7 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
-      showToast(`🏆 ${s.winner} WINS!`, 'winner')
+      showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
       return
     }
 
@@ -664,7 +747,7 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
-      showToast(`🏆 ${s.winner} WINS!`, 'winner')
+      showToast(`🏆 CLUTCH SHOOTING! GAME SET MATCH — ${s.winner.toUpperCase()} WINS!`, 'winner')
       return
     }
 
@@ -672,28 +755,40 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
     s.currentTurnPutts = []
     s.currentPutterIdx = 0
     if (ballBack) {
-      showToast('🔥 BALL BACK!')
+      const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
+      const streak = s[streakKey]
+      if (streak === 4) {
+        showToast("⚡ UNSTOPPABLE! 4 IN A ROW! 🔥 BALL BACK!", "streak")
+      } else if (streak === 6) {
+        showToast("👑 PERFECT BOARD! 6 IN A ROW! 🔥 BALL BACK!", "streak")
+      } else if (streak > 6 && streak % 2 === 0) {
+        showToast(`🔥 BALL BACK! ${streak} IN A ROW!`, "streak")
+      } else {
+        showToast('🔥 BALL BACK!')
+      }
     }
     // Ball back = same team goes again, otherwise they still go (it's redemption)
     checkCloseGameBanter()
   }
 }
 
-function showToast(message, isWinner = false) {
+export function showToast(message, type = '') {
   // Remove any stale toast classes first
   const existing = document.getElementById('ball-back-toast')
   if (existing) {
-    existing.classList.remove('show', 'winner-toast')
+    existing.classList.remove('show', 'winner-toast', 'streak-toast')
     existing.innerHTML = message
-    if (isWinner) {
+    if (type === 'winner') {
       existing.classList.add('winner-toast')
+    } else if (type === 'streak') {
+      existing.classList.add('streak-toast')
     }
   }
   setTimeout(() => {
     const t = document.getElementById('ball-back-toast')
     if (t) {
       t.classList.add('show')
-      setTimeout(() => t.classList.remove('show'), isWinner ? 3500 : 1800)
+      setTimeout(() => t.classList.remove('show'), type === 'winner' ? 3500 : 1800)
     }
   }, 150)
 }

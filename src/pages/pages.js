@@ -1,6 +1,66 @@
-import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats } from '../data.js'
+import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats } from '../data.js'
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
+import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter } from '../store.js'
+import { getCurrentDate, setTimeOverride, getTimeState, getWeekNumber } from '../time.js'
+
+// ─── Putter SVG Renderer ───
+export function renderPutterSvg(type, color = '#e91e8b') {
+  let headPath = '';
+  let shaftPath = '<line x1="40" y1="20" x2="60" y2="85" stroke="#ccc" stroke-width="3" stroke-linecap="round"/>';
+  let details = '';
+
+  if (type === 'blade') {
+    headPath = `<path d="M 52 82 L 85 82 C 88 82, 88 89, 85 89 L 45 89 C 43 89, 43 84, 45 84 L 52 84 Z" fill="${color}" stroke="#fff" stroke-width="1"/>`;
+    details = `<line x1="55" y1="84" x2="80" y2="84" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+               <circle cx="50" cy="86" r="2" fill="#fff"/>`;
+  } else if (type === 'mallet') {
+    headPath = `<path d="M 45 80 L 80 80 C 85 80, 85 92, 80 92 L 45 92 C 40 92, 40 80, 45 80" fill="${color}" stroke="#fff" stroke-dasharray="3,1" stroke-width="1"/>`;
+    details = `<path d="M 55 80 Q 65 88, 75 80" fill="none" stroke="#fff" stroke-width="1.5"/>`;
+  } else if (type === 'gold') {
+    headPath = `<path d="M 50 82 L 85 78 C 88 78, 90 85, 85 88 L 45 92 C 43 92, 42 85, 45 84 Z" fill="url(#goldGrad)" stroke="#ffd700" stroke-width="1"/>`;
+    shaftPath = '<line x1="40" y1="20" x2="60" y2="85" stroke="url(#goldGrad)" stroke-width="3.5" stroke-linecap="round"/>';
+    details = `<circle cx="65" cy="84" r="3" fill="#fff" filter="drop-shadow(0 0 3px #fff)"/>`;
+  } else if (type === 'neon') {
+    headPath = `<path d="M 48 82 L 88 82 L 88 90 L 48 90 Z" fill="rgba(233,30,139,0.3)" stroke="${color}" stroke-width="2" style="filter: drop-shadow(0 0 5px ${color})"/>`;
+    shaftPath = `<line x1="40" y1="20" x2="60" y2="85" stroke="${color}" stroke-width="3" style="filter: drop-shadow(0 0 4px ${color})"/>`;
+    details = `<line x1="50" y1="86" x2="86" y2="86" stroke="#fff" stroke-width="1"/>`;
+  } else if (type === 'classic') {
+    headPath = `<path d="M 50 82 Q 75 75, 82 82 L 78 90 Q 70 88, 48 88 Z" fill="#8B4513" stroke="#d4af37" stroke-width="1.5"/>`;
+    shaftPath = '<line x1="40" y1="20" x2="60" y2="85" stroke="#d2b48c" stroke-width="4" stroke-linecap="round"/>';
+    details = `<path d="M 72 80 L 82 82 L 78 90 L 68 86 Z" fill="#d4af37"/>`;
+  } else {
+    headPath = `<path d="M 48 82 L 82 82 L 80 92 L 46 92 Z" fill="#222" stroke="#444" stroke-width="1.5"/>`;
+    shaftPath = '<line x1="40" y1="20" x2="60" y2="85" stroke="#333" stroke-width="3" stroke-linecap="round"/>';
+    details = `<line x1="64" y1="82" x2="64" y2="92" stroke="${color}" stroke-width="2"/>`;
+  }
+
+  return `
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3))">
+      <defs>
+        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ffe875" />
+          <stop offset="50%" stop-color="#f7b733" />
+          <stop offset="100%" stop-color="#c18300" />
+        </linearGradient>
+        <linearGradient id="gripGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#333" />
+          <stop offset="100%" stop-color="#111" />
+        </linearGradient>
+      </defs>
+      <!-- Grip -->
+      <rect x="36" y="15" width="8" height="20" rx="2" fill="url(#gripGrad)" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" transform="rotate(-15 36 15)"/>
+      <!-- Shaft -->
+      \${shaftPath}
+      <!-- Hosel -->
+      <path d="M 58 80 L 62 80 L 60 85 Z" fill="#777"/>
+      <!-- Head -->
+      \${headPath}
+      <!-- Details -->
+      \${details}
+    </svg>
+  `;
+}
 
 // ─── League tabs helper ───
 function leagueTabsHtml() {
@@ -24,7 +84,12 @@ export function renderStandings() {
   const rows = standings.map((s, i) => `
     <tr data-nav="team/${s.team.id}" style="cursor:pointer">
       <td class="mono">${i + 1}</td>
-      <td><span class="team-dot" style="background:${s.team.color}"></span> ${s.team.name}</td>
+      <td>
+        <div style="display: flex; align-items: center; gap: var(--space-2); text-align: left">
+          <span class="team-dot" style="background:${s.team.color}; flex-shrink: 0"></span>
+          <span style="font-weight: 600; line-height: 1.25; overflow-wrap: break-word">${s.team.name}</span>
+        </div>
+      </td>
       <td class="mono">${s.wins}-${s.losses}</td>
       <td class="mono">${(s.winPct * 100).toFixed(0)}%</td>
       <td class="mono">${s.holeDiff > 0 ? '+' : ''}${s.holeDiff}</td>
@@ -54,22 +119,42 @@ export function renderSchedule() {
   const weeks = {}
   allMatches.forEach(m => { if (!weeks[m.weekNumber]) weeks[m.weekNumber] = []; weeks[m.weekNumber].push(m) })
 
-  const weeksHtml = Object.entries(weeks).map(([wk, ms]) => `
+  const weeksHtml = Object.entries(weeks).map(([wk, ms]) => {
+    const isWkComplete = ms.every(m => m.status === 'completed')
+    const isWkPending = ms.some(m => m.status === 'pending_review') && !isWkComplete
+    
+    let weekBadge = `<span class="badge badge-pink">Upcoming</span>`
+    if (isWkComplete) {
+      weekBadge = `<span class="badge badge-win">Complete</span>`
+    } else if (isWkPending) {
+      weekBadge = `<span class="badge badge-gold">Pending Approval</span>`
+    }
+
+    return `
     <section class="home-section animate-in">
-      <div class="section-header"><h3>Week ${wk}</h3><span class="badge ${ms[0].status==='completed'?'badge-win':'badge-pink'}">${ms[0].status==='completed'?'Complete':'Upcoming'}</span></div>
+      <div class="section-header"><h3>Week ${wk}</h3>${weekBadge}</div>
       <div class="flex flex-col gap-3">${ms.map(m => {
         const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
-        return `<div class="card match-card" ${m.status==='completed'?`data-nav="match/${m.id}" style="cursor:pointer"`:''}>
-          <div class="match-meta">${m.timeSlot} · ${new Date(m.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}${m.overtime?' · ⚡OT':''}</div>
+        const isCompleted = m.status === 'completed'
+        const isPending = m.status === 'pending_review'
+        const showScore = isCompleted || isPending
+        const canClick = isCompleted || isPending
+
+        return `<div class="card match-card" ${canClick ? `data-nav="match/${m.id}" style="cursor:pointer"` : ''}>
+          <div class="match-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-2)">
+            <span>${m.timeSlot} · ${new Date(m.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}${m.overtime?' · ⚡OT':''}</span>
+            ${isPending ? `<span class="badge badge-gold" style="font-size:9px">⏳ PENDING</span>` : ''}
+          </div>
           <div class="match-teams">
-            <div class="match-team${m.finalScore?.home>m.finalScore?.away?' winner':''}"><span class="team-dot" style="background:${ht.color}"></span>${ht.name}</div>
-            <div class="match-score">${m.status==='completed'
-              ? `<span class="${m.finalScore.home>m.finalScore.away?'text-green':''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${m.finalScore.away>m.finalScore.home?'text-green':''}">${m.finalScore.away}</span>`
+            <div class="match-team${showScore && m.finalScore?.home > m.finalScore?.away ? ' winner' : ''}"><span class="team-dot" style="background:${ht.color}"></span>${ht.name}</div>
+            <div class="match-score">${showScore
+              ? `<span class="${isCompleted && m.finalScore.home > m.finalScore.away ? 'text-green' : ''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${isCompleted && m.finalScore.away > m.finalScore.home ? 'text-green' : ''}">${m.finalScore.away}</span>`
               : '<span class="text-muted">vs</span>'}</div>
-            <div class="match-team away${m.finalScore?.away>m.finalScore?.home?' winner':''}">${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
+            <div class="match-team away${showScore && m.finalScore?.away > m.finalScore?.home ? ' winner' : ''}">${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
           </div>
         </div>`}).join('')}</div>
-    </section>`).join('')
+    </section>`
+  }).join('')
 
   return `<div class="page container">
     <div class="page-header animate-in"><h1>Schedule</h1><p>${season.name}</p></div>
@@ -212,60 +297,43 @@ export function renderTeamProfile(teamId) {
   </div>`
 }
 
-let playersViewMode = 'league'
-export function getPlayersViewMode() { return playersViewMode }
-export function setPlayersViewMode(mode) { playersViewMode = mode }
-
 export function renderPlayersPage() {
   const season = getActiveSeason()
   const currentLeagueId = getSelectedLeague()
   const currentLeague = getLeague(currentLeagueId)
+  const venue = getVenue(currentLeague.venueId)
   
   const displayPlayers = []
+  const standings = getStandings(currentLeagueId)
   
-  if (playersViewMode === 'league') {
-    const standings = getStandings(currentLeagueId)
-    standings.forEach(s => {
-      const roster = getTeamRoster(s.team.id)
-      roster.forEach(p => {
-        const stats = getPlayerStats(p.id)
-        displayPlayers.push({ player: p, team: s.team, league: currentLeague, ...stats })
-      })
+  standings.forEach(s => {
+    const roster = getTeamRoster(s.team.id)
+    roster.forEach(p => {
+      const stats = getPlayerStats(p.id)
+      displayPlayers.push({ player: p, team: s.team, league: currentLeague, ...stats })
     })
-  } else {
-    getAllLeagues().forEach(l => {
-      const standings = getStandings(l.id)
-      standings.forEach(s => {
-        const roster = getTeamRoster(s.team.id)
-        roster.forEach(p => {
-          const stats = getPlayerStats(p.id)
-          displayPlayers.push({ player: p, team: s.team, league: l, ...stats })
-        })
-      })
-    })
-  }
+  })
   
   displayPlayers.sort((a, b) => b.puttingPct - a.puttingPct)
 
   const rows = displayPlayers.map((e, i) => {
-    const v = getVenue(e.league.venueId)
-    const venueTag = `<span class="badge" style="background:${v.color}15;color:${v.color};border:1px solid ${v.color}25">${v.shortName}</span>`
-    
     // Top rank trophy visual indicators
     let rankDisplay = i + 1
-    if (playersViewMode === 'cross') {
-      if (i === 0) rankDisplay = '🥇'
-      else if (i === 1) rankDisplay = '🥈'
-      else if (i === 2) rankDisplay = '🥉'
-      else if (i < 10) rankDisplay = `<span style="color:var(--gold-400);font-weight:700">★</span> ${i + 1}`
-    }
+    if (i === 0) rankDisplay = '🥇'
+    else if (i === 1) rankDisplay = '🥈'
+    else if (i === 2) rankDisplay = '🥉'
+    else if (i < 10) rankDisplay = `<span style="color:var(--gold-400);font-weight:700">★</span> ${i + 1}`
     
     return `
       <tr data-nav="player/${e.player.id}" style="cursor:pointer">
         <td class="mono" style="text-align:center;font-weight:700">${rankDisplay}</td>
         <td><div class="flex items-center gap-2"><div class="roster-avatar" style="background:${e.player.avatarColor};width:28px;height:28px;font-size:10px">${e.player.name.split(' ').map(n=>n[0]).join('')}</div>${e.player.name}</div></td>
-        <td><span class="team-dot" style="background:${e.team.color}"></span> ${e.team.name}</td>
-        ${playersViewMode === 'cross' ? `<td>${venueTag}</td>` : ''}
+        <td>
+          <div style="display: flex; align-items: center; gap: var(--space-2); text-align: left">
+            <span class="team-dot" style="background:${e.team.color}; flex-shrink: 0"></span>
+            <span style="font-weight: 600; line-height: 1.25; overflow-wrap: break-word">${e.team.name}</span>
+          </div>
+        </td>
         <td class="mono" style="font-weight:700;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%</td>
         <td class="mono">${e.totalMade}/${e.totalPutts}</td>
         <td class="mono col-hide-mobile">${e.gamesPlayed}</td>
@@ -273,25 +341,20 @@ export function renderPlayersPage() {
       </tr>`
   }).join('')
 
-  const subHeader = playersViewMode === 'league' 
-    ? `${currentLeague.name} · Individual putting stats`
-    : `All 3 Breweries Combined · 54 Players Leaderboard`
+  const subHeader = `${currentLeague.name} · Individual putting stats`
 
   return `<div class="page container">
-    <div class="page-header animate-in">
-      <h1>Players</h1>
-      <p>${subHeader}</p>
+    <div class="page-header animate-in" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-4)">
+      <div>
+        <h1>Players Leaderboard</h1>
+        <p>${subHeader}</p>
+      </div>
+      <img src="/images/mobtown.jpeg" alt="Mobtown Mascot" style="height: 54px; width: 54px; border-radius: 50%; border: 1px solid var(--border-card); background: rgba(0,0,0,0.2); box-shadow: 0 0 12px rgba(233,30,139,0.15)">
     </div>
     
     <div class="flex flex-col sm-row justify-between items-center gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3); border-radius: var(--radius-xl); border: 1px solid var(--border-card)">
-      ${playersViewMode === 'league' 
-        ? `<div class="league-tabs" style="margin-bottom: 0">${leagueTabsHtml()}</div>` 
-        : `<div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.1em; text-transform: uppercase; padding-left: var(--space-2)">🏆 UNIFIED LEADERBOARD</div>`
-      }
-      <div class="view-toggle" style="margin-bottom: 0">
-        <button class="view-toggle-btn view-mode-btn ${playersViewMode === 'league' ? 'active' : ''}" data-mode="league">Current Brewery</button>
-        <button class="view-toggle-btn view-mode-btn ${playersViewMode === 'cross' ? 'active' : ''}" data-mode="cross">🏆 Cross-League</button>
-      </div>
+      <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--pink-400); letter-spacing: 0.1em; text-transform: uppercase; padding-left: var(--space-2)">🏆 Mobtown putting hierarchy</div>
+      <div class="league-venue-bar" style="margin-bottom: 0; font-size: var(--text-xs)"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted"> · Wednesday Nights</span></div>
     </div>
     
     <div class="table-wrapper animate-in delay-1">
@@ -301,7 +364,6 @@ export function renderPlayersPage() {
             <th style="text-align:center;width:60px">#</th>
             <th>Player</th>
             <th>Team</th>
-            ${playersViewMode === 'cross' ? '<th>Brewery</th>' : ''}
             <th>Accuracy</th>
             <th>Made</th>
             <th class="col-hide-mobile">Games</th>
@@ -321,9 +383,12 @@ export function renderPlayerProfile(playerId) {
   const player = getPlayer(playerId)
   if (!player) return '<div class="page container"><h1>Player not found</h1></div>'
   const stats = getPlayerStats(playerId)
-  const team = getAllMatches().length ? null : null // find via roster
+  const loggedIn = getLoggedInUser()
+  const isOwnProfile = loggedIn && loggedIn.id === playerId
+  const isAdmin = loggedIn && loggedIn.isAdmin === true
+
   let playerTeam = null
-  getStandings('l1').concat(getStandings('l2'), getStandings('l3')).forEach(s => {
+  getStandings('l1').forEach(s => {
     const r = getTeamRoster(s.team.id)
     if (r.some(p => p.id === playerId)) playerTeam = s.team
   })
@@ -348,6 +413,12 @@ export function renderPlayerProfile(playerId) {
       <span class="badge ${w.won?'badge-win':'badge-loss'}" style="font-size:9px;margin-top:2px">${w.won?'W':'L'}</span>
     </div>`).join('')
 
+  const putterName = player.putterName || 'The Baltimore Blade'
+  const putterDesc = player.putterDesc || 'A reliable steel blade putter selected to dominate the concrete brewery carpets.'
+  const putterType = player.putterType || 'blade'
+
+  const putterImageSrc = player.putterImage || `/images/putter_${putterType}.png`
+
   return `<div class="page container">
     <div class="profile-header animate-in">
       <div class="profile-avatar" style="background:${player.avatarColor}">${player.name.split(' ').map(n=>n[0]).join('')}</div>
@@ -361,17 +432,111 @@ export function renderPlayerProfile(playerId) {
       <div class="stat-card"><div class="stat-value text-gold">${stats.ballBackContributions}</div><div class="stat-label">🔥 Ball Backs</div></div>
       <div class="stat-card"><div class="stat-value">${stats.gamesPlayed}</div><div class="stat-label">Games</div></div>
     </div>
+
+    <!-- Putter Details Section -->
     <section class="animate-in delay-2" style="margin-top:var(--space-6)">
-      <div class="section-header"><h3>Hole Accuracy</h3></div>
-      <div class="card" style="padding:var(--space-4)">${holeBreakdown}</div>
-    </section>
-    ${stats.weeklyBreakdown.length?`<section class="animate-in delay-3" style="margin-top:var(--space-6)">
-      <div class="section-header"><h3>Weekly Performance</h3></div>
-      <div class="card" style="padding:var(--space-4)">
-        <div style="display:flex;gap:var(--space-4);justify-content:center;overflow-x:auto">${weeklyHtml}</div>
+      <div class="section-header">
+        <h3>🏌️‍♂️ Custom Putter Details</h3>
+        ${isOwnProfile || isAdmin ? `<button class="btn btn-secondary btn-sm" id="edit-putter-btn" style="border-color: var(--pink-400)40">🔧 Customize Putter</button>` : ''}
       </div>
-    </section>`:''}
-    <div class="mt-4"><button class="btn btn-ghost" data-nav="players">← All Players</button></div>
+      <div class="card card-glass" id="putter-details-card" style="padding: var(--space-5); display: flex; flex-direction: row; gap: var(--space-5); align-items: center; flex-wrap: wrap">
+        <div class="putter-preview-trigger" data-lightbox-player="${playerId}" style="cursor: zoom-in; flex-shrink: 0; background: rgba(0,0,0,0.25); border-radius: var(--radius-xl); padding: var(--space-2); display: flex; align-items: center; justify-content: center; width: 140px; height: 140px; border: 1px solid rgba(255,255,255,0.05); margin: 0 auto; transition: all var(--duration-fast)">
+          <img src="${putterImageSrc}" alt="${putterName}" style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(233,30,139,0.2))" />
+        </div>
+        <div style="flex: 1; text-align: left; min-width: 250px">
+          <h4 style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); color: var(--pink-400); margin-bottom: var(--space-2)">
+            ${putterName}
+          </h4>
+          <p style="font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; font-style: italic; margin-bottom: var(--space-3)">
+            "${putterDesc}"
+          </p>
+          <span class="badge" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em">
+            Style: ${putterType}
+          </span>
+        </div>
+      </div>
+
+      <!-- Customization Form (Hidden by default) -->
+      ${isOwnProfile || isAdmin ? `
+      <div class="card card-glass animate-in" id="putter-edit-form" style="padding: var(--space-5); display: none; margin-top: var(--space-3); border-color: var(--pink-400)40">
+        <h4 style="font-family: var(--font-display); font-weight: 800; color: #fff; margin-bottom: var(--space-4)">🔧 Customize Your Putter</h4>
+        <form id="putter-customize-form" style="display: flex; flex-direction: column; gap: var(--space-4)" data-player-id="${playerId}">
+          <div class="flex flex-col gap-1">
+            <label style="font-size: var(--text-xs); font-weight: 700; color: var(--text-secondary)">PUTTER NAME</label>
+            <input type="text" id="putter-name-input" style="background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: #fff; font-size: var(--text-sm)" value="${putterName.replace(/"/g, '&quot;')}" required maxLength="40" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label style="font-size: var(--text-xs); font-weight: 700; color: var(--text-secondary)">WHY DO YOU USE THIS PUTTER?</label>
+            <textarea id="putter-desc-input" style="background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: #fff; font-size: var(--text-sm); min-height: 80px; resize: vertical" required maxLength="180">${putterDesc.replace(/"/g, '&quot;')}</textarea>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label style="font-size: var(--text-xs); font-weight: 700; color: var(--text-secondary)">UPLOAD NEW PUTTER PHOTO</label>
+            <div style="display: flex; align-items: center; gap: var(--space-3); background: rgba(0,0,0,0.15); padding: var(--space-3); border-radius: var(--radius-md); border: 1px dashed rgba(255,255,255,0.1)">
+              <input type="file" id="putter-image-upload" accept="image/*" style="font-size: var(--text-xs); color: var(--text-secondary); width: 100%" />
+              <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0">
+                <img src="${putterImageSrc}" style="max-width: 100%; max-height: 100%; object-fit: contain" id="putter-upload-preview-img" />
+              </div>
+            </div>
+            <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px">Upload a custom image file (JPG/PNG). Leave empty to use standard style graphics.</div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <label style="font-size: var(--text-xs); font-weight: 700; color: var(--text-secondary)">PUTTER TYPE (SVG ILLUSTRATION STYLE)</label>
+            <input type="hidden" id="putter-type-input" value="${putterType}" />
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-2)">
+              ${[
+                { value: 'blade', label: 'Blade', emoji: '🗡️', desc: 'Sleek Modern' },
+                { value: 'mallet', label: 'Mallet', emoji: '🔨', desc: 'Heavy Perimeter' },
+                { value: 'gold', label: 'Gold', emoji: '🏆', desc: '24k Collector' },
+                { value: 'neon', label: 'Neon', emoji: '💫', desc: 'Cyberpunk' },
+                { value: 'classic', label: 'Classic', emoji: '🪵', desc: 'Hickory Wood' },
+                { value: 'stealth', label: 'Stealth', emoji: '🕶️', desc: 'Matte Black' },
+                { value: 'copper', label: 'Copper', emoji: '🏺', desc: 'Verdigris Antique' },
+                { value: 'carbon', label: 'Carbon', emoji: '🏎️', desc: 'F1 Carbon Fiber' },
+                { value: 'crystal', label: 'Crystal', emoji: '❄️', desc: 'Glacier Ice' },
+                { value: 'damascus', label: 'Damascus', emoji: '🌊', desc: 'Etched Ripples' },
+                { value: 'brass', label: 'Brass', emoji: '⚙️', desc: 'Industrial Mallet' },
+                { value: 'printed', label: 'Printed', emoji: '🖨️', desc: '3D Titanium Mesh' },
+                { value: 'nasa', label: 'NASA', emoji: '🚀', desc: 'Aerospace Ceramic' },
+                { value: 'diamond', label: 'Diamond', emoji: '💎', desc: 'Iced-Out Pavé' },
+                { value: 'obsidian', label: 'Obsidian', emoji: '🌌', desc: 'Kintsugi Glass' },
+                { value: 'platinum', label: 'Platinum', emoji: '🪙', desc: 'Satin Platinum' },
+                { value: 'bamboo', label: 'Bamboo', emoji: '🎋', desc: 'Woodland Mallet' },
+                { value: 'ruby', label: 'Ruby', emoji: '🩸', desc: 'Crimson Crystal' },
+                { value: 'emerald', label: 'Emerald', emoji: '❇️', desc: 'Imperial Gold' },
+                { value: 'titanium', label: 'Titanium', emoji: '🦾', desc: 'Rainbow Weld' },
+                { value: 'bronze', label: 'Bronze', emoji: '🟫', desc: 'Verdigris Bronze' },
+                { value: 'amber', label: 'Amber', emoji: '🍯', desc: 'Fossilized Amber' }
+              ].map(opt => `
+                <div class="putter-type-card ${putterType === opt.value ? 'active' : ''}" data-value="${opt.value}" style="cursor: pointer; padding: var(--space-3) var(--space-2); background: rgba(0,0,0,0.2); border: 1px solid ${putterType === opt.value ? 'var(--pink-400)' : 'rgba(255,255,255,0.05)'}; border-radius: var(--radius-lg); text-align: center; transition: all var(--duration-fast)">
+                  <div style="font-size: var(--text-lg); margin-bottom: 2px">${opt.emoji}</div>
+                  <div style="font-weight: 700; font-size: var(--text-xs); color: #fff; margin-bottom: 1px">${opt.label}</div>
+                  <div style="font-size: 9px; color: var(--text-muted); line-height: 1.1">${opt.desc}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div class="flex gap-3 justify-end" style="margin-top: var(--space-2)">
+            <button type="button" class="btn btn-secondary btn-sm" id="putter-edit-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm">Save Putter 🏌️‍♂️</button>
+          </div>
+        </form>
+      </div>
+      ` : ''}
+    </section>
+
+    <div class="grid-2" style="margin-top:var(--space-6); align-items:start">
+      <section class="animate-in delay-2">
+        <div class="section-header"><h3>Hole Accuracy</h3></div>
+        <div class="card" style="padding:var(--space-4)">${holeBreakdown}</div>
+      </section>
+      ${stats.weeklyBreakdown.length?`<section class="animate-in delay-3">
+        <div class="section-header"><h3>Weekly Performance</h3></div>
+        <div class="card" style="padding:var(--space-4)">
+          <div style="display:flex;gap:var(--space-4);justify-content:center;overflow-x:auto">${weeklyHtml}</div>
+        </div>
+      </section>`:''}
+    </div>
+    <div class="mt-8"><button class="btn btn-ghost" data-nav="players">← All Players</button></div>
   </div>`
 }
 
@@ -599,7 +764,7 @@ export function renderHelpPage() {
       <section class="home-section">
         <div class="section-header"><h3>🎯 Interactive Putting Board</h3></div>
         <div class="card" style="padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); justify-content: center">
-          <svg class="board-svg" viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; margin: 0 auto; display: block; filter: drop-shadow(0 0 12px rgba(251,191,36,0.08))">
+          <svg class="board-svg" viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" style="max-width: 280px; width: 100%; height: auto; margin: 0 auto; display: block; filter: drop-shadow(0 0 12px rgba(251,191,36,0.08))">
             <rect x="10" y="10" width="220" height="210" rx="14" fill="#0d1f0d" stroke="var(--gold-400)" stroke-width="2"/>
             
             <!-- Back Row -->
@@ -734,4 +899,515 @@ export function renderHelpPage() {
     <div class="mt-4"><button class="btn btn-ghost" data-nav="">← Go Home</button></div>
   </div>`
 }
+
+export function renderLoginPage() {
+  const allTeams = getStandings('l1').map(s => s.team)
+  const loggedIn = getLoggedInUser()
+
+  const teamCardsHtml = allTeams.map(t => {
+    const roster = getTeamRoster(t.id)
+    const playersHtml = roster.map(p => {
+      const isCaptain = t.captainPlayerId === p.id
+      const isCurrent = loggedIn && loggedIn.id === p.id
+      return `
+        <div class="roster-item animate-in" data-login-as="${p.id}" style="border: 1px solid ${isCurrent ? 'var(--pink-400)' : 'transparent'}; background: ${isCurrent ? 'rgba(233,30,139,0.05)' : 'rgba(255,255,255,0.01)'}; border-radius: var(--radius-lg); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2); cursor: pointer; transition: all var(--duration-fast)">
+          <div class="roster-avatar" style="background:${p.avatarColor || t.color}; width: 32px; height: 32px; font-size: var(--text-xs)">${p.name.split(' ').map(n=>n[0]).join('')}</div>
+          <div style="flex:1">
+            <div class="roster-name" style="font-weight: ${isCurrent ? '700' : '600'}; color: ${isCurrent ? 'var(--pink-400)' : 'var(--text-primary)'}">${p.name}</div>
+            <div class="roster-role" style="font-size: 10px; color: var(--text-muted)">
+              ${isCaptain ? '🧢 Captain' : 'Player'} ${isCurrent ? '· (Logged In)' : ''}
+            </div>
+          </div>
+          <div style="font-size: var(--text-xs); color: var(--pink-400); font-weight: bold; opacity: 0; transition: opacity var(--duration-fast)" class="login-arrow-hint">Log In →</div>
+        </div>`
+    }).join('')
+
+    return `
+      <div class="card animate-in" style="padding: var(--space-4); border-color: ${t.color}25; background: rgba(17,17,17,0.45)">
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm); color: ${t.color}; margin-bottom: var(--space-3); display: flex; align-items: center; gap: 8px">
+          <span class="team-dot" style="background: ${t.color}"></span>
+          ${t.name}
+        </div>
+        <div style="display: flex; flex-direction: column">${playersHtml}</div>
+      </div>`
+  }).join('')
+
+  return `
+    <div class="page container">
+      <div class="page-header animate-in text-center">
+        <h1>🔑 Choose Profile</h1>
+        <p class="text-secondary" style="max-width: 440px; margin: 0 auto; line-height: 1.5">
+          Select any player card to authenticate instantly. Test role-specific dashboards, captain administrative scoring, and 3-player turn rotations!
+        </p>
+      </div>
+
+      ${loggedIn ? `
+        <div class="card card-glass animate-in text-center" style="padding: var(--space-4); border-color: var(--pink-400)40; margin-bottom: var(--space-6); background: rgba(233,30,139,0.02)">
+          <div style="font-size: var(--text-xs); color: var(--text-muted)">CURRENT SESSION</div>
+          <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-base); color: #fff; margin-top: 2px">
+            Logged in as <span class="gradient-text">${loggedIn.name}</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="logout-btn" style="margin-top: var(--space-3)">🚪 Logout Session</button>
+        </div>` : ''}
+
+      <div class="grid-2 animate-in delay-1">${teamCardsHtml}</div>
+
+      <div class="mt-8 text-center animate-in delay-2">
+        <button class="btn btn-ghost" data-nav="">← Cancel & Go Home</button>
+      </div>
+    </div>`
+}
+
+// ─── Module State for Admin Console & Putter Gallery ───
+let activeAdminTab = 'review'
+let activeRosterTeamId = 't1'
+let editingMatchId = null
+let editingPlayerId = null
+
+export function getActiveAdminTab() { return activeAdminTab }
+export function setActiveAdminTab(tab) { activeAdminTab = tab }
+
+export function getActiveRosterTeamId() { return activeRosterTeamId }
+export function setActiveRosterTeamId(teamId) { activeRosterTeamId = teamId }
+
+export function getEditingMatchId() { return editingMatchId }
+export function setEditingMatchId(matchId) { editingMatchId = matchId }
+
+export function getEditingPlayerId() { return editingPlayerId }
+export function setEditingPlayerId(playerId) { editingPlayerId = playerId }
+
+// ─── Putter Gallery Page ───
+export function renderPutterGallery() {
+  const allPlayers = getAllPlayers()
+  const searchHtml = `
+    <div class="animate-in" style="width: 100%; display: flex; justify-content: center; margin-bottom: var(--space-6)">
+      <div style="position: relative; width: 100%; max-width: 480px">
+        <span style="position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); font-size: var(--text-sm); opacity: 0.6">🔍</span>
+        <input type="text" id="putter-gallery-search" placeholder="Search by player name, putter name, or team..." style="background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-8); border-radius: var(--radius-xl); color: #fff; font-size: var(--text-sm); width: 100%; outline: none; transition: border-color var(--duration-fast)" />
+      </div>
+    </div>
+  `
+
+  const cardsHtml = allPlayers.map(p => {
+    let playerTeam = null
+    getStandings('l1').forEach(s => {
+      const r = getTeamRoster(s.team.id)
+      if (r.some(pl => pl.id === p.id)) playerTeam = s.team
+    })
+
+    const teamName = playerTeam ? playerTeam.name : 'Independent'
+    const teamColor = playerTeam ? playerTeam.color : 'var(--text-muted)'
+
+    const putterName = p.putterName || 'The Baltimore Blade'
+    const putterDesc = p.putterDesc || 'A reliable steel blade putter selected to dominate the concrete brewery carpets.'
+    const putterType = p.putterType || 'blade'
+
+    const galleryImageSrc = p.putterImage || `/images/putter_${putterType}.png`
+    const searchString = `${p.name} ${teamName} ${putterName} ${putterType}`.replace(/"/g, '&quot;')
+
+    return `
+      <div class="card putter-gallery-card animate-in" data-search="${searchString}" style="padding: var(--space-4); display: flex; flex-direction: column; align-items: center; text-align: center; border-color: rgba(255,255,255,0.06); background: rgba(17,17,17,0.45)">
+        <div class="putter-preview-trigger" data-lightbox-player="${p.id}" style="cursor: zoom-in; flex-shrink: 0; background: rgba(0,0,0,0.2); border-radius: var(--radius-xl); padding: var(--space-2); display: flex; align-items: center; justify-content: center; width: 110px; height: 110px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: var(--space-3); transition: all var(--duration-fast)">
+          <img src="${galleryImageSrc}" alt="${putterName}" style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(233,30,139,0.25))" />
+        </div>
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm); color: var(--pink-400); margin-bottom: 2px">${putterName}</div>
+        <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-3)">Style: ${putterType}</div>
+        
+        <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.5; font-style: italic; margin-bottom: var(--space-4); flex: 1">
+          "${putterDesc}"
+        </p>
+        
+        <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.05); padding-top: var(--space-3); display: flex; align-items: center; justify-content: space-between; font-size: var(--text-xs)">
+          <span data-nav="player/${p.id}" style="font-weight: 700; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px">
+            <span class="profile-avatar-small" style="background:${p.avatarColor}; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800">${p.name.split(' ').map(n=>n[0]).join('')}</span>
+            ${p.name}
+          </span>
+          <span data-nav="team/${playerTeam?.id}" style="color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px">
+            <span class="team-dot" style="background: ${teamColor}; width: 6px; height: 6px"></span>
+            ${teamName.split(' ')[0]}
+          </span>
+        </div>
+      </div>
+    `
+  }).join('')
+
+  return `
+    <div class="page container">
+      <div class="page-header animate-in text-center" style="display: flex; flex-direction: column; align-items: center">
+        <img src="/images/mobtown.jpeg" alt="Mobtown Mascot" style="height: 64px; width: 64px; border-radius: 50%; border: 2px solid var(--border-card); background: rgba(0,0,0,0.2); margin-bottom: var(--space-3); box-shadow: 0 0 16px rgba(233,30,139,0.15)">
+        <h1>🏌️‍♂️ Putter Gallery</h1>
+        <p class="text-secondary" style="max-width: 500px; margin: 0 auto; line-height: 1.5">
+          Every Mobtown putter has a story. Browse the custom shafts and custom-weighted heads crafted to conquer Wednesday night tavern concrete!
+        </p>
+      </div>
+
+      ${searchHtml}
+
+      <div class="grid-3" id="putter-gallery-grid">${cardsHtml}</div>
+      <div class="mt-8 text-center"><button class="btn btn-ghost" data-nav="">← Go Home</button></div>
+    </div>
+  `
+}
+
+// ─── Admin Console Page ───
+export function renderAdminPage() {
+  const loggedIn = getLoggedInUser()
+  if (!loggedIn || !loggedIn.isAdmin) {
+    return `<div class="page container"><div class="card card-glass text-center" style="padding:var(--space-12)">
+      <h2>🔐 Access Denied</h2>
+      <p class="text-muted" style="margin-top:var(--space-2)">You must be a League Admin to view the Commissioner Console.</p>
+      <button class="btn btn-primary" style="margin-top:var(--space-4)" data-nav="login">Log In as Admin</button>
+    </div></div>`
+  }
+
+  // Simulated Time Travel clock states
+  const simulatedDate = getCurrentDate()
+  const simulatedEST = simulatedDate.toLocaleString("en-US", { timeZone: "America/New_York" })
+  const timeState = getTimeState()
+  const simulatedWeek = getWeekNumber()
+
+  // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
+  const tzOffset = simulatedDate.getTimezoneOffset() * 60000
+  const localISOTime = new Date(simulatedDate.getTime() - tzOffset).toISOString().slice(0, 16)
+
+  // Render sub-tabs header & time scrubber sandbox card
+  const tabsHtml = `
+    <div class="view-toggle animate-in" style="margin-bottom: var(--space-4)">
+      <button class="view-toggle-btn ${activeAdminTab === 'review' ? 'active' : ''}" data-admin-tab="review">📋 Game Review</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'roster' ? 'active' : ''}" data-admin-tab="roster">👥 Roster Controls</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'analytics' ? 'active' : ''}" data-admin-tab="analytics">📊 Cup Analytics</button>
+    </div>
+
+    <!-- Time-Travel Sandbox Scrubber Card -->
+    <div class="card card-glass animate-in" style="background: linear-gradient(135deg, rgba(20,20,20,0.85), rgba(30,10,30,0.45)); border-color: rgba(233,30,139,0.18); padding: var(--space-4); margin-bottom: var(--space-6); box-shadow: 0 8px 32px rgba(0,0,0,0.4)">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:var(--space-4); border-bottom:1px dashed rgba(255,255,255,0.06); padding-bottom:var(--space-3)">
+        <div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:var(--text-xs); color:var(--pink-400); letter-spacing:0.08em; text-transform:uppercase">🕰️ Time-Travel Simulator Sandbox</div>
+          <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-top:2px">
+            Active Phase: <span style="color:#fff; font-weight:700">${timeState.label}</span> · League Week: <span style="color:var(--gold-400); font-weight:800">${simulatedWeek}</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-mono); font-size:var(--text-xs); color:#fff; font-weight:700">${simulatedEST}</div>
+          <div style="font-size:9px; color:var(--text-muted); margin-top:2px">Baltimore Eastern Time (EST)</div>
+        </div>
+      </div>
+      
+      <!-- Quick Triggers -->
+      <div style="margin-bottom:var(--space-4)">
+        <div style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:var(--space-2)">Select Simulated League State:</div>
+        <div style="display:flex; flex-wrap:wrap; gap:var(--space-2)">
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-09T14:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">Tue Pre-Game (W1)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T17:45:00" style="font-size:10px; padding:4px 8px; font-weight:600">Wed Warmup (5:45 PM)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--pink-400)40">Wed Live Games (7:30 PM)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-10T21:45:00" style="font-size:10px; padding:4px 8px; font-weight:600">Wed After-Party (9:45 PM)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-11T09:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">Thu Recap (W1)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-13T11:00:00" style="font-size:10px; padding:4px 8px; font-weight:600">Weekend Chill (Sat)</button>
+          
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-17T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W2)</button>
+          <button class="btn btn-secondary sandbox-trigger" data-time-mock="2026-06-24T19:30:00" style="font-size:10px; padding:4px 8px; font-weight:600; border-color:var(--gold-400)30; color:var(--gold-400)">Wed Live (W3)</button>
+        </div>
+      </div>
+      
+      <!-- Date Picker & Reset -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid rgba(255,255,255,0.04); padding-top:var(--space-3)">
+        <div style="display:flex; align-items:center; gap:8px">
+          <label for="sandbox-datetime-picker" style="font-size:10px; color:var(--text-secondary); font-weight:700">Dial Custom Clock:</label>
+          <input type="datetime-local" id="sandbox-datetime-picker" value="${localISOTime}" style="background:var(--bg-input); border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius-md); padding:4px 8px; color:#fff; font-size:var(--text-xs); outline:none" />
+        </div>
+        <button class="btn btn-ghost btn-sm" id="sandbox-reset-clock" style="color:var(--pink-400); font-weight:700; font-size:var(--text-xs); padding:4px 8px; display:flex; align-items:center; gap:4px">🔄 Sync with System Clock</button>
+      </div>
+    </div>
+  `
+
+  let tabContent = ''
+
+  // 1. GAME REVIEW TAB
+  if (activeAdminTab === 'review') {
+    const pendingMatches = getAllMatches().filter(m => m.status === 'pending_review')
+    
+    if (pendingMatches.length === 0) {
+      tabContent = `
+        <div class="card card-glass text-center animate-in" style="padding: var(--space-8); background: rgba(251, 191, 36, 0.01); border-color: rgba(251, 191, 36, 0.05)">
+          <div style="font-size: var(--text-3xl); margin-bottom: var(--space-3)">🍻</div>
+          <h4 style="font-family: var(--font-display); font-weight: 800; color: #fff">All Caught Up!</h4>
+          <p class="text-secondary" style="font-size: var(--text-sm)">No pending matches require review. Pour a Natty Boh and relax!</p>
+        </div>
+      `
+    } else {
+      const reviewCards = pendingMatches.map(m => {
+        const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
+        const isEditing = editingMatchId === m.id
+        
+        return `
+          <div class="card match-card animate-in" style="padding: var(--space-5); border-color: var(--gold-400)25; background: rgba(251, 191, 36, 0.02)">
+            <div class="match-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3)">
+              <span>Week ${m.weekNumber} · ${m.timeSlot} · ${new Date(m.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>
+              <span class="badge badge-gold">⏳ PENDING VERIFICATION</span>
+            </div>
+
+            <div class="match-teams" style="margin-bottom: var(--space-4)">
+              <div class="match-team" style="font-weight: 700"><span class="team-dot" style="background:${ht.color}"></span> ${ht.name}</div>
+              
+              <div class="match-score" style="font-size: var(--text-xl); font-weight: 800; font-family: var(--font-display)">
+                ${isEditing ? `
+                  <div style="display: flex; gap: 8px; align-items: center">
+                    <input type="number" id="edit-home-score-${m.id}" value="${m.finalScore.home}" min="0" max="6" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-card); text-align: center; border-radius: var(--radius-md); padding: 4px; color:#fff" />
+                    <span class="text-muted">—</span>
+                    <input type="number" id="edit-away-score-${m.id}" value="${m.finalScore.away}" min="0" max="6" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-card); text-align: center; border-radius: var(--radius-md); padding: 4px; color:#fff" />
+                  </div>
+                ` : `
+                  <span>${m.finalScore.home}</span><span class="text-muted">—</span><span>${m.finalScore.away}</span>
+                `}
+              </div>
+
+              <div class="match-team away" style="font-weight: 700">${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
+            </div>
+
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-4); display: flex; gap: var(--space-4); align-items: center">
+              <span>Turns Played: ${m.totalTurns || m.turns?.length || 0}</span>
+              <span>Overtime: ${isEditing ? `
+                <input type="checkbox" id="edit-ot-${m.id}" ${m.overtime ? 'checked' : ''} style="transform: scale(1.1); cursor: pointer" />
+              ` : (m.overtime ? '⚡ Yes' : 'No')}</span>
+            </div>
+
+            <div class="flex gap-2 justify-end" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: var(--space-3)">
+              ${isEditing ? `
+                <button class="btn btn-secondary btn-sm" data-cancel-edit-score="${m.id}">Cancel</button>
+                <button class="btn btn-primary btn-sm" data-save-score="${m.id}">Save & Approve 🚀</button>
+              ` : `
+                <button class="btn btn-secondary btn-sm" id="play-replay-btn" data-match-id="${m.id}">📺 Audit Replay</button>
+                <button class="btn btn-secondary btn-sm" data-edit-score-btn="${m.id}">✏️ Adjust Score</button>
+                <button class="btn btn-primary btn-sm" data-approve-match="${m.id}">Approve & Publish 🚀</button>
+              `}
+            </div>
+          </div>
+        `
+      }).join('')
+
+      tabContent = `
+        <div class="flex flex-col gap-4 animate-in">
+          <div style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-2)">
+            The following matches have been recorded by their captains and are pending review. You can run the <strong>Audit Replay</strong> simulator to check the play-by-play, adjust details, or approve to commit them to the live Standings.
+          </div>
+          ${reviewCards}
+        </div>
+      `
+    }
+  }
+
+  // 2. ROSTER CONTROLS TAB
+  else if (activeAdminTab === 'roster') {
+    const activeTeam = getTeam(activeRosterTeamId)
+    const roster = getTeamRoster(activeRosterTeamId)
+    const teamSelectOptions = getStandings('l1').map(s => `
+      <option value="${s.team.id}" ${s.team.id === activeRosterTeamId ? 'selected' : ''}>${s.team.name}</option>
+    `).join('')
+
+    const rosterItemsHtml = roster.map(p => {
+      const isCaptain = activeTeam.captainPlayerId === p.id
+      const isEditing = editingPlayerId === p.id
+
+      return `
+        <div class="roster-item" style="padding: var(--space-3); border-bottom: 1px solid rgba(255,255,255,0.03)">
+          <div class="roster-avatar" style="background:${p.avatarColor}">${p.name.split(' ').map(n=>n[0]).join('')}</div>
+          <div style="flex: 1">
+            ${isEditing ? `
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+                <input type="text" id="edit-player-name-${p.id}" value="${p.name.replace(/"/g, '&quot;')}" style="background: var(--bg-input); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 4px var(--space-2); color: #fff; font-size: var(--text-sm)" required />
+                <input type="color" id="edit-player-color-${p.id}" value="${p.avatarColor}" style="width: 36px; height: 28px; border: none; padding: 0; background: transparent; cursor: pointer" />
+              </div>
+            ` : `
+              <div class="roster-name" style="font-weight: 700">${p.name}</div>
+              <div class="roster-role" style="font-size: 10px; color: var(--text-secondary)">
+                ${isCaptain ? '🧢 Captain' : 'Player'} · ${p.putterName || 'The Bmore Blade'}
+              </div>
+            `}
+          </div>
+
+          <div class="flex gap-2">
+            ${isEditing ? `
+              <button class="btn btn-secondary btn-sm" data-cancel-edit-player="${p.id}">Cancel</button>
+              <button class="btn btn-primary btn-sm" data-save-player="${p.id}">Save</button>
+            ` : `
+              ${!isCaptain ? `<button class="btn btn-secondary btn-sm" data-assign-captain="${p.id}" data-team-id="${activeTeam.id}">🧢 Make Captain</button>` : ''}
+              <button class="btn btn-secondary btn-sm" data-edit-player="${p.id}">✏️ Edit</button>
+              <button class="btn btn-ghost btn-sm" data-remove-player="${p.id}" style="color: var(--red-400)">❌ Remove</button>
+            `}
+          </div>
+        </div>
+      `
+    }).join('')
+
+    tabContent = `
+      <div class="animate-in" style="display: flex; flex-direction: column; gap: var(--space-5)">
+        <div class="card card-glass" style="position: relative; z-index: 10; padding: var(--space-4); overflow: visible">
+          <div class="flex flex-col sm-row justify-between items-center gap-3" style="position: relative">
+            <span style="font-family: var(--font-display); font-weight: 800; color: #fff">Select Team to Manage:</span>
+            
+            <div class="custom-select-container" style="position: relative; width: 100%; max-width: 240px">
+              <button id="custom-team-select-trigger" class="btn btn-secondary" style="width: 100%; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); color: #fff; font-size: var(--text-sm); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px">
+                <span style="display: flex; align-items: center; gap: 8px">
+                  <span class="team-dot" style="background:${activeTeam.color}"></span>
+                  ${activeTeam.name}
+                </span>
+                <span style="font-size: 10px; opacity: 0.7">▼</span>
+              </button>
+              
+              <div id="custom-team-select-options" class="card card-glass dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 100; max-height: 250px; overflow-y: auto; padding: 4px; background: rgba(15,15,15,0.98); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: var(--radius-md)">
+                ${getStandings('l1').map(s => `
+                  <div class="custom-select-option ${s.team.id === activeRosterTeamId ? 'active' : ''}" data-value="${s.team.id}" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 600; color: ${s.team.id === activeRosterTeamId ? '#fff' : 'var(--text-secondary)'}; background: ${s.team.id === activeRosterTeamId ? 'rgba(233,30,139,0.15)' : 'transparent'}; transition: all var(--duration-fast)">
+                    <span class="team-dot" style="background:${s.team.color}"></span>
+                    ${s.team.name}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr; md-grid-template-columns: 3fr 2fr; gap: var(--space-5); align-items: start" class="grid-2">
+          <!-- Roster List -->
+          <section>
+            <div class="section-header"><h3>👥 ${activeTeam.name} Roster</h3></div>
+            <div class="card" style="padding: 0 var(--space-2); background: rgba(17,17,17,0.45)">
+              ${rosterItemsHtml || '<div class="text-muted" style="padding: var(--space-4)">No players on roster</div>'}
+            </div>
+          </section>
+
+          <!-- Register Player Form -->
+          <section>
+            <div class="section-header"><h3>🆕 Register Player</h3></div>
+            <div class="card card-glass" style="padding: var(--space-4); border-color: rgba(255,255,255,0.04)">
+              <form id="add-player-form" style="display: flex; flex-direction: column; gap: var(--space-4)" data-team-id="${activeTeam.id}">
+                <div class="flex flex-col gap-1">
+                  <label style="font-size: 10px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.05em">FULL NAME</label>
+                  <input type="text" id="add-player-name" placeholder="First and Last Name" style="background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: #fff; font-size: var(--text-sm)" required />
+                </div>
+                <div class="flex flex-col gap-2">
+                  <label style="font-size: 10px; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.05em">AVATAR COLOR SWATCH</label>
+                  <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap" id="swatch-container">
+                    ${['#e91e8b', '#fbbf24', '#22c55e', '#22d3ee', '#a78bfa', '#ef4444', '#f97316'].map((c, i) => `
+                      <button type="button" class="add-player-color-swatch ${i===0?'active':''}" data-color="${c}" style="background:${c}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${i===0?'#fff':'transparent'}; cursor: pointer; transition: all var(--duration-fast)"></button>
+                    `).join('')}
+                    <input type="color" id="add-player-color-picker" style="width: 28px; height: 28px; padding:0; border: none; background: transparent; cursor: pointer" value="#e91e8b" />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm" style="margin-top: var(--space-2); justify-content: center">🚀 Add to Team Roster</button>
+              </form>
+            </div>
+          </section>
+        </div>
+      </div>
+    `
+  }
+
+  // 3. LEAGUE ANALYTICS TAB
+  else {
+    const completedMatches = getAllMatches().filter(m => m.status === 'completed')
+    const totalTurnsAll = completedMatches.reduce((acc, m) => acc + (m.totalTurns || 0), 0)
+    const avgTurnsAll = completedMatches.length ? (totalTurnsAll / completedMatches.length).toFixed(1) : '0'
+
+    let totalBBs = 0
+    completedMatches.forEach(m => {
+      totalBBs += Object.values(m.ballBacks || {}).reduce((a, b) => a + b, 0)
+    })
+    const doubleSinkRatio = totalTurnsAll ? (totalBBs / totalTurnsAll * 100).toFixed(1) + '%' : '0.0%'
+
+    // Calculate cup accuracy percentages
+    const cups = ['back-1', 'back-2', 'back-3', 'middle-1', 'middle-2', 'front-1']
+    const cupLabels = {
+      'back-1': 'B1 (Back Left)',
+      'back-2': 'B2 (Back Center)',
+      'back-3': 'B3 (Back Right)',
+      'middle-1': 'M1 (Middle Left)',
+      'middle-2': 'M2 (Middle Right)',
+      'front-1': 'F1 (Front Cup)'
+    }
+    
+    const cupAttempts = { 'back-1': 0, 'back-2': 0, 'back-3': 0, 'middle-1': 0, 'middle-2': 0, 'front-1': 0 }
+    const cupSinks = { 'back-1': 0, 'back-2': 0, 'back-3': 0, 'middle-1': 0, 'middle-2': 0, 'front-1': 0 }
+
+    completedMatches.forEach(m => {
+      m.turns.forEach(turn => {
+        turn.putts.forEach(putt => {
+          if (cupAttempts[putt.hole] !== undefined) {
+            cupAttempts[putt.hole]++
+            if (putt.made) {
+              cupSinks[putt.hole]++
+            }
+          }
+        })
+      })
+    })
+
+    const chartHtml = cups.map(c => {
+      const att = cupAttempts[c] || 0
+      const sink = cupSinks[c] || 0
+      const pct = att > 0 ? Math.round(sink / att * 100) : 0
+      
+      return `
+        <div style="margin-bottom: var(--space-4)">
+          <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); margin-bottom: 4px">
+            <span style="font-weight: 700; color: #fff">${cupLabels[c]}</span>
+            <span class="mono" style="color: var(--pink-400); font-weight: 800">${pct}% <span style="font-weight:normal; color:var(--text-muted)">(${sink}/${att})</span></span>
+          </div>
+          <div style="height: 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-full); overflow: hidden; border: 1px solid rgba(255,255,255,0.05)">
+            <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, var(--pink-500), var(--pink-400)); border-radius: var(--radius-full); transition: width 0.8s var(--ease-out)"></div>
+          </div>
+        </div>
+      `
+    }).join('')
+
+    tabContent = `
+      <div class="animate-in" style="display: flex; flex-direction: column; gap: var(--space-5)">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value gradient-text">${completedMatches.length}</div>
+            <div class="stat-label">Verified Matches</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value text-green">${avgTurnsAll}</div>
+            <div class="stat-label">League Turn Efficiency <span style="font-size:10px; color:var(--text-muted); font-weight:normal">(Turns/Game)</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value text-gold">${totalBBs}</div>
+            <div class="stat-label">🔥 Total Double Sinks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value text-blue">${doubleSinkRatio}</div>
+            <div class="stat-label">Double-Sink Ratio <span style="font-size:10px; color:var(--text-muted); font-weight:normal">(BBs/Turn)</span></div>
+          </div>
+        </div>
+
+        <section>
+          <div class="section-header"><h3>📊 Target Cup Success Rates</h3></div>
+          <div class="card card-glass" style="padding: var(--space-5)">
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-5)">
+              Aggregated accuracy statistics across all verified Wednesday night match turns. Compiles attempts vs successful sinks per cup position.
+            </div>
+            ${chartHtml}
+          </div>
+        </section>
+      </div>
+    `
+  }
+
+  return `
+    <div class="page container">
+      <div class="page-header animate-in" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-4)">
+        <div>
+          <h1>👑 Admin Console</h1>
+          <p class="text-secondary">Official Mobtown League Commissioner Dashboard</p>
+        </div>
+        <img src="/images/mobtown.jpeg" alt="Mobtown Mascot" style="height: 64px; width: 64px; border-radius: 50%; border: 2px solid var(--border-card); background: rgba(0,0,0,0.2); box-shadow: 0 0 16px rgba(233,30,139,0.15)">
+      </div>
+
+      ${tabsHtml}
+      ${tabContent}
+    </div>
+  `
+}
+
 

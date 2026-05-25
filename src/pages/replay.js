@@ -199,7 +199,7 @@ export function openReplayModal(match) {
         </div>
 
         <!-- Right: Interactive Vector Boards -->
-        <div class="replay-boards-container">
+        <div class="replay-boards-container" id="replay-boards-container">
           <div class="replay-board-wrapper" id="home-board-replay-slot"></div>
           <div class="replay-board-wrapper" id="away-board-replay-slot"></div>
         </div>
@@ -276,7 +276,6 @@ function updateReplayUI() {
 
   const { homeBoardClaimed, awayBoardClaimed } = getBoardStatesAt(currentShotIdx)
   
-  // Render board vectors using imported renderSingleBoard!
   const homeTeam = getTeam(replayMatch.homeTeamId)
   const awayTeam = getTeam(replayMatch.awayTeamId)
 
@@ -284,20 +283,89 @@ function updateReplayUI() {
   const activeShot = currentShotIdx >= 0 ? replayShots[currentShotIdx] : null
   const activeTeam = activeShot ? activeShot.teamId : null
 
-  const homeBoardHtml = renderSingleBoard(homeTeam.name, homeTeam.color, homeBoardClaimed, awayTeam.color, {
-    active: activeTeam === 'away', // Away is putting at Home's board
-    boardId: 'home-replay'
-  })
+  const isMobile = window.innerWidth <= 768
+  const boardsContainer = document.getElementById('replay-boards-container')
+  
+  if (boardsContainer) {
+    if (isMobile) {
+      // Mobile: Render 1 single targeted board
+      let targetTeam = awayTeam
+      let activePlayerName = 'No active shooter'
+      let activePlayerColor = 'var(--text-muted)'
+      let activeTeamName = ''
+      let claimedCups = awayBoardClaimed
+      let boardId = 'away-replay'
+      
+      if (activeShot) {
+        const player = getPlayer(activeShot.playerId)
+        const team = getTeam(activeShot.teamId)
+        activePlayerName = player ? player.name : 'Unknown'
+        activePlayerColor = team ? team.color : '#fff'
+        activeTeamName = team ? team.name : ''
+        
+        if (activeShot.teamId === replayMatch.homeTeamId) {
+          // Home team is putting at Away's board
+          targetTeam = awayTeam
+          claimedCups = awayBoardClaimed
+          boardId = 'away-replay'
+        } else {
+          // Away team is putting at Home's board
+          targetTeam = homeTeam
+          claimedCups = homeBoardClaimed
+          boardId = 'home-replay'
+        }
+      } else {
+        // Default before game starts: Home team shoots at Away's board
+        targetTeam = awayTeam
+        claimedCups = awayBoardClaimed
+        boardId = 'away-replay'
+        const firstShot = replayShots[0]
+        if (firstShot) {
+          const player = getPlayer(firstShot.playerId)
+          activePlayerName = player ? player.name : 'Unknown'
+        }
+        activePlayerColor = homeTeam.color
+        activeTeamName = homeTeam.name
+      }
+      
+      const remainingCups = 6 - claimedCups.length
+      
+      boardsContainer.innerHTML = `
+        <div class="mobile-board-wrapper animate-in" style="width: 100%; display: flex; flex-direction: column; gap: var(--space-2)">
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); text-align: center; box-shadow: inset 0 2px 8px rgba(0,0,0,0.2)">
+            <div style="font-size: 10px; font-weight: 800; color: ${targetTeam.color}; text-transform: uppercase; letter-spacing: 0.05em">
+              🎯 TARGET: ${targetTeam.name}'s board (${remainingCups} cups left)
+            </div>
+            <div style="font-size: var(--text-xs); color: #fff; margin-top: 2px">
+              🏌️‍♂️ SHOOTER: <span style="color: ${activePlayerColor}; font-weight: 700">${activePlayerName}</span> ${activeTeamName ? `(${activeTeamName})` : ''}
+            </div>
+          </div>
+          <div class="replay-board-wrapper" style="max-width: 250px; margin: 0 auto; width: 100%">
+            ${renderSingleBoard(targetTeam.name, targetTeam.color, claimedCups, activePlayerColor, {
+              active: true,
+              boardId: boardId
+            })}
+          </div>
+        </div>
+      `
+    } else {
+      // Desktop: Render both boards side-by-side
+      const homeBoardHtml = renderSingleBoard(homeTeam.name, homeTeam.color, homeBoardClaimed, awayTeam.color, {
+        active: activeTeam === 'away', // Away is putting at Home's board
+        boardId: 'home-replay'
+      })
 
-  const awayBoardHtml = renderSingleBoard(awayTeam.name, awayTeam.color, awayBoardClaimed, homeTeam.color, {
-    active: activeTeam === 'home', // Home is putting at Away's board
-    boardId: 'away-replay'
-  })
+      const awayBoardHtml = renderSingleBoard(awayTeam.name, awayTeam.color, awayBoardClaimed, homeTeam.color, {
+        active: activeTeam === 'home', // Home is putting at Away's board
+        boardId: 'away-replay'
+      })
 
-  const homeSlot = document.getElementById('home-board-replay-slot')
-  const awaySlot = document.getElementById('away-board-replay-slot')
-  if (homeSlot) homeSlot.innerHTML = homeBoardHtml
-  if (awaySlot) awaySlot.innerHTML = awayBoardHtml
+      boardsContainer.innerHTML = `
+        <div class="replay-board-wrapper" id="home-board-replay-slot">${homeBoardHtml}</div>
+        <div class="replay-board-wrapper" id="away-board-replay-slot">${awayBoardHtml}</div>
+      `
+    }
+  }
 
   // Update running scoreboard
   const homeScoreDisplay = document.getElementById('home-score-display')
