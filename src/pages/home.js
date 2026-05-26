@@ -82,14 +82,27 @@ function getRivalryScoutingReport(userStats, comparedPlayerIds) {
   
   const loggedIn = getLoggedInUser()
   
-  // Compile chart datasets
+  // Compile chart datasets with highly distinct, contrasting brand colors for clear readability
+  const chartColors = [
+    'var(--cyan-400)',  // "You" - Vibrant Electric Cyan
+    'var(--pink-400)',  // Rival 1 - Brand Hot Pink
+    'var(--gold-400)',  // Rival 2 - Warm Gold
+    'var(--green-400)'  // Rival 3 - Mint Green
+  ]
+
   const allComparedPlayers = [
-    { name: 'You', avatarColor: loggedIn ? loggedIn.avatarColor : 'var(--pink-400)', stats: userStats },
-    ...comparedPlayerIds.map(cid => {
+    { 
+      name: 'You', 
+      avatarColor: loggedIn ? loggedIn.avatarColor : 'var(--pink-400)', 
+      chartColor: chartColors[0],
+      stats: userStats 
+    },
+    ...comparedPlayerIds.map((cid, idx) => {
       const p = getPlayer(cid)
       return {
         name: p ? p.name : 'Unknown',
         avatarColor: p ? p.avatarColor : 'var(--text-muted)',
+        chartColor: chartColors[idx + 1] || 'var(--text-secondary)',
         stats: getPlayerStats(cid)
       }
     })
@@ -106,7 +119,7 @@ function getRivalryScoutingReport(userStats, comparedPlayerIds) {
       <div style="display: flex; align-items: center; gap: var(--space-2)">
         <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); width: 75px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap">${p.name}</span>
         <div style="flex: 1; height: 10px; background: rgba(255,255,255,0.02); border-radius: var(--radius-full); overflow: hidden; border: 1px solid rgba(255,255,255,0.03)">
-          <div style="width: ${p.stats.puttingPct * 100}%; height: 100%; background: ${p.avatarColor}; border-radius: var(--radius-full); transition: width 0.5s var(--ease-out)"></div>
+          <div style="width: ${p.stats.puttingPct * 100}%; height: 100%; background: ${p.chartColor}; border-radius: var(--radius-full); transition: width 0.5s var(--ease-out)"></div>
         </div>
         <span class="mono" style="font-size: 10px; font-weight: 700; color: #fff; width: 32px; text-align: right">${pct}%</span>
       </div>
@@ -121,7 +134,7 @@ function getRivalryScoutingReport(userStats, comparedPlayerIds) {
       <div style="display: flex; align-items: center; gap: var(--space-2)">
         <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); width: 75px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap">${p.name}</span>
         <div style="flex: 1; height: 10px; background: rgba(255,255,255,0.02); border-radius: var(--radius-full); overflow: hidden; border: 1px solid rgba(255,255,255,0.03)">
-          <div style="width: ${pct}%; height: 100%; background: ${p.avatarColor}; border-radius: var(--radius-full); transition: width 0.5s var(--ease-out)"></div>
+          <div style="width: ${pct}%; height: 100%; background: ${p.chartColor}; border-radius: var(--radius-full); transition: width 0.5s var(--ease-out)"></div>
         </div>
         <span class="mono" style="font-size: 10px; font-weight: 700; color: #fff; width: 32px; text-align: right">${val}</span>
       </div>
@@ -136,7 +149,7 @@ function getRivalryScoutingReport(userStats, comparedPlayerIds) {
       <div style="display: flex; align-items: center; gap: var(--space-2)">
         <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); width: 75px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap">${p.name}</span>
         <div style="flex: 1; height: 10px; background: rgba(255,255,255,0.02); border-radius: var(--radius-full); overflow: hidden; border: 1px solid rgba(255,255,255,0.03)">
-          <div style="width: ${pct}%; height: 100%; background: ${p.avatarColor}; border-radius: var(--radius-full); transition: width 0.5s var(--ease-out)"></div>
+          <div style="width: ${pct}%; height: 100%; background: ${p.chartColor}; border-radius: var(--radius-full); transition: width 0.5s var(--ease-out)"></div>
         </div>
         <span class="mono" style="font-size: 10px; font-weight: 700; color: var(--gold-400); width: 32px; text-align: right">${val}</span>
       </div>
@@ -146,7 +159,7 @@ function getRivalryScoutingReport(userStats, comparedPlayerIds) {
   // Legend
   const legendHtml = allComparedPlayers.map(p => `
     <span style="font-size: 10px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px">
-      <span style="width: 8px; height: 8px; border-radius: 50%; background: ${p.avatarColor}"></span>
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: ${p.chartColor}"></span>
       ${p.name}
     </span>
   `).join('')
