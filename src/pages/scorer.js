@@ -1,7 +1,7 @@
-import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getHoleShortName } from '../data.js'
+import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getLeagueTeams, getHoleShortName } from '../data.js'
 import { renderSingleBoard } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
-import { saveMatch, getLoggedInUser } from '../store.js'
+import { saveMatch, getLoggedInUser, createMatch } from '../store.js'
 import { getSelectedLeague, setSelectedLeague } from './home.js'
 
 let scorerState = null
@@ -195,13 +195,6 @@ export function renderScorer() {
       `
     }
 
-    // Group by week
-    const weeks = {}
-    scheduled.forEach(m => {
-      if (!weeks[m.weekNumber]) weeks[m.weekNumber] = []
-      weeks[m.weekNumber].push(m)
-    })
-
     const leagueTabs = getAllLeagues().map(l => {
       const v = getVenue(l.venueId)
       const isActive = l.id === leagueId
@@ -211,55 +204,91 @@ export function renderScorer() {
       </button>`
     }).join('')
 
-    const matchListHtml = Object.entries(weeks).sort((a,b) => a[0]-b[0]).map(([wk, matches]) => `
-      <div class="match-pick-week">
-        <div class="match-pick-week-label">Week ${wk} · ${matches[0]?.date || ''}</div>
-        ${matches.map(m => {
-          const h = getTeam(m.homeTeamId), a = getTeam(m.awayTeamId)
-          
-          let isDisabled = false
-          let badgeHtml = ''
-          let btnStyle = ''
-          
-          if (captainTeam) {
-            if (myNextMatch && m.id === myNextMatch.id) {
-              badgeHtml = `<span class="badge badge-win" style="font-size: 8px; margin-left: auto; background: var(--green-500)20; border-color: var(--green-400); color: var(--green-400)">🎯 NEXT GAME</span>`
-              btnStyle = `border: 2px solid var(--green-500); box-shadow: 0 0 12px var(--green-500)20; animation: putter-pulse 2s infinite ease-in-out`
-            } else {
-              isDisabled = true
-              badgeHtml = `<span class="badge" style="font-size: 8px; margin-left: auto; background: rgba(255,255,255,0.05); color: var(--text-muted)">🔒 Locked</span>`
-              btnStyle = `opacity: 0.45; cursor: not-allowed`
-            }
-          } else {
-            isDisabled = true
-            badgeHtml = `<span class="badge" style="font-size: 8px; margin-left: auto; background: rgba(255,255,255,0.05); color: var(--text-muted)">🔒 Locked</span>`
-            btnStyle = `opacity: 0.45; cursor: not-allowed`
-          }
+    // Open Play: Captain picks their opponent
+    let openPlayHtml = ''
+    if (captainTeam) {
+      const otherTeams = getLeagueTeams(leagueId).filter(t => t.id !== captainTeam.id)
+      openPlayHtml = `
+        <section class="animate-in delay-1" style="margin-bottom:var(--space-6)">
+          <div class="section-header"><h3>⚡ Open Play</h3><span class="badge badge-win" style="font-size:9px">Pick Opponent</span></div>
+          <div class="card" style="padding:var(--space-4);border-color:rgba(34,197,94,0.15);background:rgba(34,197,94,0.02)">
+            <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-3)">Select your opponent to start scoring immediately. No schedule needed!</p>
+            <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:8px;padding:var(--space-2) var(--space-3);background:rgba(255,255,255,0.03);border-radius:var(--radius-md);border:1px solid rgba(255,255,255,0.06)">
+                <span class="team-dot" style="background:${captainTeam.color}"></span>
+                <span style="font-weight:700;font-size:var(--text-sm)">${captainTeam.name}</span>
+                <span class="text-muted" style="font-size:var(--text-xs)">vs</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-2)">
+              ${otherTeams.map(t => `
+                <button class="match-pick-item" data-open-play-opponent="${t.id}" style="padding:var(--space-3);border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);border-radius:var(--radius-lg);cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 0.15s ease">
+                  <span class="team-dot" style="background:${t.color};width:12px;height:12px"></span>
+                  <span style="font-weight:600;font-size:var(--text-sm);color:var(--text-primary)">${t.name}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </section>
+      `
+    } else if (!loggedIn) {
+      openPlayHtml = `
+        <section class="animate-in delay-1" style="margin-bottom:var(--space-6)">
+          <div class="card" style="padding:var(--space-6);text-align:center;border-color:rgba(239,68,68,0.15);background:rgba(239,68,68,0.02)">
+            <div style="font-size:var(--text-xl);margin-bottom:var(--space-2)">🔒</div>
+            <h4 style="font-weight:800;color:#fff;margin-bottom:var(--space-1)">Log in to Score</h4>
+            <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-3)">Log in as a Team Captain to start a scoring session.</p>
+            <button class="btn btn-primary btn-sm" data-nav="login">Log In →</button>
+          </div>
+        </section>
+      `
+    } else {
+      openPlayHtml = `
+        <section class="animate-in delay-1" style="margin-bottom:var(--space-6)">
+          <div class="card" style="padding:var(--space-6);text-align:center;border-color:rgba(239,68,68,0.15);background:rgba(239,68,68,0.02)">
+            <div style="font-size:var(--text-xl);margin-bottom:var(--space-2)">🧢</div>
+            <h4 style="font-weight:800;color:#fff;margin-bottom:var(--space-1)">Captain Access Required</h4>
+            <p style="font-size:var(--text-xs);color:var(--text-secondary)">Only designated Team Captains can start scoring sessions.</p>
+          </div>
+        </section>
+      `
+    }
 
-          return `<button class="match-pick-item" data-match-id="${m.id}" ${isDisabled ? 'disabled style="pointer-events:none"' : ''} style="${btnStyle}">
-            <span class="match-pick-teams">
-              <span class="team-dot" style="background:${h.color}"></span>
-              <span class="match-pick-name">${h.name}</span>
-              <span class="match-pick-vs">vs</span>
-              <span class="match-pick-name">${a.name}</span>
-              <span class="team-dot" style="background:${a.color}"></span>
-            </span>
-            <span class="match-pick-time" style="display:flex; align-items:center; gap:8px">
-              ${badgeHtml}
-              <span>Best of 3</span>
-            </span>
-          </button>`
-        }).join('')}
-      </div>`).join('')
+    // Scheduled matches (secondary)
+    let scheduledHtml = ''
+    if (scheduled.length && captainTeam) {
+      const scheduledCards = scheduled.filter(m => 
+        m.homeTeamId === captainTeam.id || m.awayTeamId === captainTeam.id
+      ).map(m => {
+        const h = getTeam(m.homeTeamId), a = getTeam(m.awayTeamId)
+        return `<button class="match-pick-item" data-match-id="${m.id}" style="padding:var(--space-2) var(--space-3)">
+          <span class="match-pick-teams">
+            <span class="team-dot" style="background:${h.color}"></span>
+            <span class="match-pick-name">${h.name}</span>
+            <span class="match-pick-vs">vs</span>
+            <span class="match-pick-name">${a.name}</span>
+            <span class="team-dot" style="background:${a.color}"></span>
+          </span>
+          <span style="font-size:var(--text-xs);color:var(--text-muted)">Wk ${m.weekNumber}</span>
+        </button>`
+      }).join('')
 
-    const noMatches = !scheduled.length ? '<div class="text-center text-muted" style="padding:var(--space-8)">No scheduled matches for this league</div>' : ''
+      if (scheduledCards) {
+        scheduledHtml = `
+          <section class="animate-in delay-2">
+            <div class="section-header"><h3>📅 Your Scheduled Matches</h3></div>
+            <div class="match-pick-list" style="margin-top:0">${scheduledCards}</div>
+          </section>
+        `
+      }
+    }
 
     return `<div class="page container">
-      <div class="page-header animate-in"><h1>🎯 Live Scorer</h1><p>Select a match to start scoring</p></div>
+      <div class="page-header animate-in"><h1>🎯 Live Scorer</h1><p>Pick your opponent and start scoring</p></div>
       <div class="league-tabs animate-in" style="justify-content:center">${leagueTabs}</div>
       <div class="league-venue-bar animate-in delay-1"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted">· ${league.day}s</span></div>
-      ${clearanceBannerHtml}
-      <div class="match-pick-list animate-in delay-1">${matchListHtml}${noMatches}</div>
+      ${openPlayHtml}
+      ${scheduledHtml}
     </div>`
   }
 
@@ -456,6 +485,10 @@ export function renderScorer() {
       <div class="scorer-vs">—</div>
       <div class="scorer-team"><div class="scorer-team-name" style="color:${s.awayColor}">${s.awayName}</div><div class="scorer-team-score ${awayScore > homeScore ? 'text-green' : ''}">${awayScore}</div></div>
     </div>
+    <div class="animate-in" style="display:flex;align-items:center;justify-content:center;gap:var(--space-3);margin-bottom:var(--space-3)">
+      <span class="badge badge-pink" style="font-size:10px;font-weight:800">Game ${s.gameNumber} of 3</span>
+      <span style="font-size:11px;color:var(--text-muted);font-weight:700">Series: <span style="color:${s.homeColor}">${s.seriesScore.home}</span> – <span style="color:${s.awayColor}">${s.seriesScore.away}</span></span>
+    </div>
 
     ${(() => {
       const loggedIn = getLoggedInUser()
@@ -481,13 +514,39 @@ export function renderScorer() {
       return ''
     })()}
 
-    ${s.gameOver ? `
+    ${s.gameOver ? (() => {
+      const seriesDecided = s.seriesScore.home >= 2 || s.seriesScore.away >= 2
+      const seriesWinner = s.seriesScore.home >= 2 ? s.homeName : s.awayName
+      const seriesWinnerColor = s.seriesScore.home >= 2 ? s.homeColor : s.awayColor
+      return `
       <div class="card-glass animate-in text-center" style="padding:var(--space-8);margin-bottom:var(--space-6)">
-        <div style="font-size:var(--text-4xl);margin-bottom:var(--space-3)">🏆</div>
-        <h2 style="font-family:var(--font-display);font-weight:900">${s.winner} Wins!</h2>
-        <p class="text-secondary" style="margin-top:var(--space-2)">${s.turns.length} turns · ${s.totalBBs} ball backs${s.overtime ? ' · Went to OT' : ''}${s.hadRedemption ? ' · Redemption attempted' : ''}</p>
-        <button class="btn btn-primary" style="margin-top:var(--space-4)" id="scorer-save-btn">Save & Finish</button>
-      </div>` : putterDisplay}
+        <div style="font-size:var(--text-4xl);margin-bottom:var(--space-3)">${seriesDecided ? '🏆' : '🎮'}</div>
+        <h2 style="font-family:var(--font-display);font-weight:900;color:${seriesDecided ? seriesWinnerColor : '#fff'}">
+          ${seriesDecided ? `${seriesWinner} Wins the Series!` : `${s.winner} Takes Game ${s.gameNumber}!`}
+        </h2>
+        <div style="display:flex;justify-content:center;gap:var(--space-6);margin:var(--space-4) 0">
+          <div style="text-align:center">
+            <div style="font-size:var(--text-3xl);font-weight:900;color:${s.homeColor}">${s.seriesScore.home}</div>
+            <div style="font-size:var(--text-xs);color:var(--text-secondary)">${s.homeName}</div>
+          </div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);align-self:center">SERIES</div>
+          <div style="text-align:center">
+            <div style="font-size:var(--text-3xl);font-weight:900;color:${s.awayColor}">${s.seriesScore.away}</div>
+            <div style="font-size:var(--text-xs);color:var(--text-secondary)">${s.awayName}</div>
+          </div>
+        </div>
+        <p class="text-secondary" style="font-size:var(--text-xs)">
+          Game ${s.gameNumber}: ${s.turns.length} turns · ${s.totalBBs} ball backs${s.overtime ? ' · OT' : ''}
+        </p>
+        ${seriesDecided ? `
+          <button class="btn btn-primary" style="margin-top:var(--space-4)" id="scorer-save-btn">Save Series (${s.seriesScore.home}–${s.seriesScore.away})</button>
+        ` : `
+          <button class="btn btn-primary" style="margin-top:var(--space-4);animation:putter-pulse 2s infinite ease-in-out" id="scorer-next-game-btn">
+            Start Game ${s.gameNumber + 1} →
+          </button>
+        `}
+      </div>`
+    })() : putterDisplay}
 
     <div class="view-toggle animate-in">
       <button class="view-toggle-btn ${viewMode === 'side' ? 'active' : ''}" data-view="side">Side by Side</button>
@@ -715,7 +774,23 @@ export function handleScorerEvents(e) {
     const view = target.closest('.league-tab').dataset.league
     if (view) { setSelectedLeague(view); return true }
   }
-  if (target.closest('.match-pick-item')) {
+  if (target.closest('[data-open-play-opponent]') && !scorerState) {
+    const opponentId = target.closest('[data-open-play-opponent]').dataset.openPlayOpponent
+    if (opponentId) {
+      const loggedIn = getLoggedInUser()
+      const captainTeam = loggedIn ? getAllTeams().find(t => t.captainPlayerId === loggedIn.id) : null
+      if (captainTeam) {
+        const leagueId = getSelectedLeague()
+        const weekNum = 1 // Default week
+        const newMatch = createMatch(leagueId, weekNum, captainTeam.id, opponentId)
+        if (newMatch) {
+          startGame(newMatch.id)
+          return true
+        }
+      }
+    }
+  }
+  if (target.closest('.match-pick-item') && !target.closest('[data-open-play-opponent]')) {
     const matchId = target.closest('.match-pick-item').dataset.matchId
     if (matchId) { startGame(matchId); return true }
   }
@@ -781,7 +856,10 @@ export function handleScorerEvents(e) {
     recordPutt(null, false); return true
   }
   if (target.id === 'scorer-save-btn' && scorerState) {
-    saveGameResult(); scorerState = null; return true
+    saveSeriesResult(); scorerState = null; return true
+  }
+  if (target.id === 'scorer-next-game-btn' && scorerState) {
+    startNextGame(); return true
   }
   if (target.closest('.announcer-commentary-bubble') || target.id === 'scorer-commentary-reroll') {
     const s = scorerState
@@ -820,14 +898,18 @@ function startGame(matchId) {
     currentPutterIdx: 0,
     currentTurnPutts: [],
     turns: [], turnNumber: 0, totalBBs: 0,
-    phase: 'normal', // 'normal' | 'redemption' | 'overtime'
+    phase: 'normal',
     redemptionPutterIdx: 0,
-    firstToClear: null, // team that cleared first
+    firstToClear: null,
     hadRedemption: false,
     gameOver: false, winner: null, overtime: false,
     overtimeCount: 0,
-    homeStreak: 0, awayStreak: 0, // Streak tracking
-    activeCommentary: "", // Announcer speech bubble state
+    homeStreak: 0, awayStreak: 0,
+    activeCommentary: "",
+    // Series tracking
+    seriesScore: { home: 0, away: 0 },
+    gameNumber: 1,
+    completedGames: [],
   }
 
   const initialQuotes = [
@@ -909,6 +991,7 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
     if (ballBack) {
       s.gameOver = true
       s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
+      if (s.currentTeam === 'home') s.seriesScore.home++; else s.seriesScore.away++
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
 
@@ -1010,6 +1093,7 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
       // Ball back + cleared = redemption team WINS outright (no OT)
       s.gameOver = true
       s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
+      if (s.currentTeam === 'home') s.seriesScore.home++; else s.seriesScore.away++
       s.currentTurnPutts = []
       s.currentPutterIdx = 0
 
@@ -1068,6 +1152,7 @@ function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId
         // Redemption failed (missed shot and did not clear the board) → Opponent wins!
         s.gameOver = true
         s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
+        if (s.firstToClear === 'home') s.seriesScore.home++; else s.seriesScore.away++
         s.currentTurnPutts = []
         s.currentPutterIdx = 0
         showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
@@ -1115,13 +1200,12 @@ function getCurrentPutters(s, teamId) {
   return [players[1], players[2]]
 }
 
-function saveGameResult() {
-  const s = scorerState
+function buildGameResult(s) {
   const homeScore = s.awayBoardClaimed.length
   const awayScore = s.homeBoardClaimed.length
-  const loggedIn = getLoggedInUser()
-  saveMatch(s.matchId, {
-    turns: s.turns,
+  return {
+    gameNumber: s.gameNumber,
+    turns: JSON.parse(JSON.stringify(s.turns)),
     holesWon: { [s.homeTeamId]: [...s.awayBoardClaimed], [s.awayTeamId]: [...s.homeBoardClaimed] },
     finalScore: { home: homeScore, away: awayScore },
     totalTurns: s.turnNumber,
@@ -1131,10 +1215,78 @@ function saveGameResult() {
     },
     winnerId: s.winner === s.homeName ? s.homeTeamId : s.awayTeamId,
     overtime: s.overtime,
+  }
+}
+
+function startNextGame() {
+  const s = scorerState
+  // Save current game result
+  const gameResult = buildGameResult(s)
+  s.completedGames.push(gameResult)
+
+  // Update series score (already updated when gameOver was set)
+  // Reset board for next game
+  s.gameNumber++
+  s.homeBoardClaimed = []
+  s.awayBoardClaimed = []
+  s.homeBoardOpen = new Set(HOLES)
+  s.awayBoardOpen = new Set(HOLES)
+  s.currentTeam = 'home'
+  s.currentPutterIdx = 0
+  s.currentTurnPutts = []
+  s.turns = []
+  s.turnNumber = 0
+  s.totalBBs = 0
+  s.phase = 'normal'
+  s.redemptionPutterIdx = 0
+  s.firstToClear = null
+  s.hadRedemption = false
+  s.gameOver = false
+  s.winner = null
+  s.overtime = false
+  s.overtimeCount = 0
+  s.homeStreak = 0
+  s.awayStreak = 0
+
+  const gameQuotes = [
+    `Cotton McKnight: Game ${s.gameNumber} is underway! The boards are reset and the tension is THICK!`,
+    `Pepper Reddick: Fresh cups, fresh start! This is what putting is ALL about, Cotton!`,
+    `Cotton McKnight: Can they keep the momentum or will we see a comeback? Game ${s.gameNumber}, HERE WE GO!`,
+    `Pepper Reddick: Both teams resetting their boards — this series is getting SPICY!`
+  ]
+  s.activeCommentary = gameQuotes[Math.floor(Math.random() * gameQuotes.length)]
+
+  scorerHistory = []
+  pushStateSnapshot()
+  showToast(`🎮 Game ${s.gameNumber} — FIGHT!`)
+}
+
+function saveSeriesResult() {
+  const s = scorerState
+  // Add the final game
+  const finalGame = buildGameResult(s)
+  s.completedGames.push(finalGame)
+
+  const loggedIn = getLoggedInUser()
+  const seriesWinnerId = s.seriesScore.home >= 2 ? s.homeTeamId : s.awayTeamId
+
+  // Points: 2 for winner, 1 for loser if went to Game 3, else 0
+  const wentToGame3 = s.completedGames.length >= 3
+  const homeWon = seriesWinnerId === s.homeTeamId
+  const homePoints = homeWon ? 2 : (wentToGame3 ? 1 : 0)
+  const awayPoints = homeWon ? (wentToGame3 ? 1 : 0) : 2
+
+  saveMatch(s.matchId, {
+    games: s.completedGames,
+    seriesScore: { ...s.seriesScore },
+    winnerId: seriesWinnerId,
+    homePoints,
+    awayPoints,
     banterLog: s.banterLog || [],
     submittedByPlayerId: loggedIn ? loggedIn.id : null,
     submittedByPlayerName: loggedIn ? loggedIn.name : 'League Scorer',
   })
+  showToast(`🏆 Series saved! ${s.seriesScore.home}–${s.seriesScore.away}`)
 }
 
 function pushStateSnapshot() {

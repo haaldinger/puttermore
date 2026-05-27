@@ -10,12 +10,13 @@ import {
   handlePlayersEvents
 } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer, getScorerTickerData, showToast } from './pages/scorer.js'
-import { getPlayer, getPlayerTeam, getAllMatches, getStandings, getTeamRoster, getAllPlayers, getPlayerStats } from './data.js'
+import { getPlayer, getPlayerTeam, getAllMatches, getStandings, getTeamRoster, getAllPlayers, getPlayerStats, getLeaderboard, getAllLeagues, getLeague, getVenue, getTeam, getLeagueTeams } from './data.js'
 import { openReplayModal, destroyReplayModal } from './pages/replay.js'
 import { 
   getLoggedInUser, setLoggedInUser, logout,
   updatePlayerPutter, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain,
-  createMatch, deleteMatch, quickScoreMatch
+  createMatch, deleteMatch, quickScoreMatch, resetAllStats,
+  saveSnapshot
 } from './store.js'
 
 const specDetails = {
@@ -1017,6 +1018,29 @@ document.addEventListener('click', (e) => {
     return
   }
 
+  // Admin Reset All Stats (Demo Night)
+  if (e.target.id === 'admin-reset-stats-btn') {
+    if (confirm('🔄 Reset ALL match results to zero?\n\nTeams, players, and schedule will be kept.\nThis cannot be undone!')) {
+      resetAllStats()
+      showToast('🔄 All stats reset — ready for demo night!')
+      render()
+    }
+    return
+  }
+
+  // Admin Email Report
+  if (e.target.id === 'admin-email-report-btn') {
+    generateSessionReport()
+    return
+  }
+
+  // Admin Save Snapshot
+  if (e.target.id === 'admin-save-snapshot-btn') {
+    const name = saveSnapshot()
+    showToast(`💾 Snapshot saved: ${name}`)
+    return
+  }
+
   // Admin Custom Dropdown Toggle (for team selectors in match management)
   const customSelectTrigger = e.target.closest('[data-custom-select]')
   if (customSelectTrigger) {
@@ -1267,3 +1291,133 @@ setInterval(() => {
     if (sEl) sEl.textContent = String(secs).padStart(2, '0');
   });
 }, 1000);
+
+// ─── Rich HTML Session Report Generator ───
+function generateSessionReport() {
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+
+  let leagueSections = ''
+  getAllLeagues().forEach(league => {
+    const venue = getVenue(league.venueId)
+    const standings = getStandings(league.id)
+    const completedMatches = getAllMatches().filter(m => m.leagueId === league.id && m.status === 'completed')
+    const leaders = getLeaderboard(league.id).slice(0, 10)
+
+    if (!completedMatches.length && !standings.some(s => s.matchesPlayed > 0)) return
+
+    // Match Results
+    const matchRows = completedMatches.map(m => {
+      const ht = getTeam(m.homeTeamId)
+      const at = getTeam(m.awayTeamId)
+      const hw = m.winnerId === m.homeTeamId
+      const aw = m.winnerId === m.awayTeamId
+      return `<tr>
+        <td style="padding:10px 14px;border-bottom:1px solid #2a2a2a;font-weight:${hw?'800':'400'};color:${hw?'#22c55e':'#ccc'}">${ht.name}${hw?' 👑':''}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #2a2a2a;text-align:center;font-weight:800;color:#fff;font-size:18px">${m.seriesScore?.home||0} – ${m.seriesScore?.away||0}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #2a2a2a;text-align:right;font-weight:${aw?'800':'400'};color:${aw?'#22c55e':'#ccc'}">${aw?'👑 ':''}${at.name}</td>
+      </tr>`
+    }).join('')
+
+    // Standings
+    const standingsRows = standings.map((s, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`
+      return `<tr>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;font-weight:700;color:#fff">${medal}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.team.color};margin-right:8px;vertical-align:middle"></span><span style="font-weight:700;color:#fff">${s.team.name}</span></td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;text-align:center;color:#e91e8b;font-weight:800">${s.points} pts</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;text-align:center;color:#ccc">${s.wins}–${s.losses}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;text-align:center;color:#888">${s.matchesPlayed > 0 ? (s.winPct * 100).toFixed(0) + '%' : '—'}</td>
+      </tr>`
+    }).join('')
+
+    // Player Leaderboard
+    const leaderRows = leaders.map((e, i) => {
+      const medal = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`
+      return `<tr>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;font-weight:700;color:#fff">${medal}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;font-weight:600;color:#fff">${e.player.name}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;color:${e.team?.color||'#888'};font-size:12px">${e.team?.name||'—'}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;text-align:center;color:#fbbf24;font-weight:800">${(e.puttingPct * 100).toFixed(0)}%</td>
+        <td style="padding:8px 14px;border-bottom:1px solid #2a2a2a;text-align:center;color:#ccc">${e.totalMade}/${e.totalAttempts}</td>
+      </tr>`
+    }).join('')
+
+    leagueSections += `
+      <div style="margin-bottom:40px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="width:4px;height:32px;border-radius:4px;background:${venue.color}"></div>
+          <div>
+            <h2 style="margin:0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em">${venue.name}</h2>
+            <p style="margin:2px 0 0;font-size:13px;color:#888">${league.name} · ${league.day}s</p>
+          </div>
+        </div>
+
+        ${completedMatches.length ? `
+        <h3 style="font-size:14px;color:#e91e8b;text-transform:uppercase;letter-spacing:0.08em;margin:24px 0 12px;font-weight:800">🏓 Match Results</h3>
+        <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.03);border-radius:12px;overflow:hidden">
+          ${matchRows}
+        </table>` : ''}
+
+        <h3 style="font-size:14px;color:#e91e8b;text-transform:uppercase;letter-spacing:0.08em;margin:28px 0 12px;font-weight:800">📊 Standings</h3>
+        <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.03);border-radius:12px;overflow:hidden">
+          <thead><tr style="background:rgba(255,255,255,0.04)">
+            <th style="padding:10px 14px;text-align:left;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">#</th>
+            <th style="padding:10px 14px;text-align:left;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Team</th>
+            <th style="padding:10px 14px;text-align:center;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Pts</th>
+            <th style="padding:10px 14px;text-align:center;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">W–L</th>
+            <th style="padding:10px 14px;text-align:center;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Win%</th>
+          </tr></thead>
+          <tbody>${standingsRows}</tbody>
+        </table>
+
+        ${leaderRows ? `
+        <h3 style="font-size:14px;color:#e91e8b;text-transform:uppercase;letter-spacing:0.08em;margin:28px 0 12px;font-weight:800">🎯 Player Leaderboard</h3>
+        <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.03);border-radius:12px;overflow:hidden">
+          <thead><tr style="background:rgba(255,255,255,0.04)">
+            <th style="padding:10px 14px;text-align:left;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">#</th>
+            <th style="padding:10px 14px;text-align:left;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Player</th>
+            <th style="padding:10px 14px;text-align:left;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Team</th>
+            <th style="padding:10px 14px;text-align:center;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Acc%</th>
+            <th style="padding:10px 14px;text-align:center;color:#888;font-size:11px;font-weight:600;text-transform:uppercase">Made</th>
+          </tr></thead>
+          <tbody>${leaderRows}</tbody>
+        </table>` : ''}
+      </div>`
+  })
+
+  const html = `<!DOCTYPE html>
+<html><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Puttermore Session Report — ${dateStr}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;color:#ccc;font-family:Outfit,system-ui,sans-serif;-webkit-font-smoothing:antialiased">
+  <div style="max-width:640px;margin:0 auto;padding:24px 16px 60px">
+
+    <div style="text-align:center;margin-bottom:32px;padding:32px 20px;background:linear-gradient(135deg,rgba(233,30,139,0.08),rgba(251,191,36,0.06));border:1px solid rgba(233,30,139,0.15);border-radius:16px">
+      <div style="font-size:36px;margin-bottom:8px">🏓</div>
+      <h1 style="margin:0 0 4px;font-size:28px;font-weight:900;background:linear-gradient(135deg,#e91e8b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.03em">PUTTERMORE</h1>
+      <p style="margin:0;font-size:14px;color:#e91e8b;font-weight:700;letter-spacing:0.05em">SESSION REPORT</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#888">${dateStr} · ${timeStr}</p>
+    </div>
+
+    ${leagueSections || '<p style="text-align:center;color:#888;padding:40px 0">No completed matches to report.</p>'}
+
+    <div style="text-align:center;padding:24px;border-top:1px solid #1a1a1a;margin-top:32px">
+      <p style="font-size:11px;color:#555;margin:0">Generated by Puttermore · puttermore.netlify.app</p>
+    </div>
+  </div>
+</body></html>`
+
+  const reportWindow = window.open('', '_blank')
+  if (reportWindow) {
+    reportWindow.document.write(html)
+    reportWindow.document.close()
+    showToast('📧 Report opened — use Share to email it!')
+  } else {
+    showToast('⚠️ Pop-up blocked — allow pop-ups and try again')
+  }
+}

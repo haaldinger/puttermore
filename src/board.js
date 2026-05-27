@@ -40,7 +40,7 @@ export function renderSingleBoard(teamName, teamColor, claimedHoles = [], attack
       holesHtml += `<circle class="board-puck" cx="${pos.cx}" cy="${cy}" r="${PUCK_RADIUS}" fill="${attackerColor}" opacity="0.85"/>`
       holesHtml += `<text x="${pos.cx}" y="${cy + 1}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="10" font-weight="700" font-family="Outfit" pointer-events="none">✓</text>`
     } else if (interactive) {
-      holesHtml += `<circle class="board-hole" cx="${pos.cx}" cy="${cy}" r="${HOLE_RADIUS}" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4 3" data-hole="${holeId}" data-board="${boardId}" style="cursor:pointer"/>`
+      holesHtml += `<circle class="board-hole" cx="${pos.cx}" cy="${cy}" r="${HOLE_RADIUS}" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4 3" data-hole="${holeId}" data-board="${boardId}" style="cursor:pointer" pointer-events="all"/>`
     } else {
       holesHtml += `<circle cx="${pos.cx}" cy="${cy}" r="${PUCK_RADIUS}" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 3"/>`
     }

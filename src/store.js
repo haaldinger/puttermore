@@ -351,3 +351,67 @@ export function setLoggedInUser(playerId) {
 export function logout() {
   localStorage.removeItem(LOGIN_KEY)
 }
+
+// ─── Demo Night Reset ───
+export function resetAllStats() {
+  _state.matches.forEach(m => {
+    m.status = 'scheduled'
+    m.games = []
+    m.seriesScore = { home: 0, away: 0 }
+    m.winnerId = null
+    m.homePoints = 0
+    m.awayPoints = 0
+    m.banterLog = undefined
+    m.submittedByPlayerName = undefined
+  })
+  matches.length = 0
+  _state.matches.forEach(m => matches.push(m))
+  saveState()
+}
+
+// ─── Session Snapshots (mobile-friendly) ───
+const SNAPSHOT_PREFIX = 'puttermore_snap_'
+
+export function saveSnapshot(label) {
+  const now = new Date()
+  const stamp = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`
+  const name = label || `Demo ${stamp}`
+  const key = SNAPSHOT_PREFIX + Date.now()
+  const snap = { name, timestamp: now.toISOString(), state: JSON.parse(JSON.stringify(_state)) }
+  localStorage.setItem(key, JSON.stringify(snap))
+  return name
+}
+
+export function listSnapshots() {
+  const snaps = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key.startsWith(SNAPSHOT_PREFIX)) {
+      try {
+        const snap = JSON.parse(localStorage.getItem(key))
+        snaps.push({ key, name: snap.name, timestamp: snap.timestamp })
+      } catch (e) { /* skip corrupt */ }
+    }
+  }
+  return snaps.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+}
+
+export function loadSnapshot(key) {
+  try {
+    const snap = JSON.parse(localStorage.getItem(key))
+    if (!snap?.state?.matches) return false
+    Object.assign(_state, snap.state)
+    matches.length = 0
+    _state.matches.forEach(m => matches.push(m))
+    players.length = 0
+    _state.players.forEach(p => players.push(p))
+    teams.length = 0
+    _state.teams.forEach(t => teams.push(t))
+    saveState()
+    return true
+  } catch (e) { return false }
+}
+
+export function deleteSnapshot(key) {
+  localStorage.removeItem(key)
+}

@@ -1666,7 +1666,7 @@ export function renderAdminPage() {
 
     // Create match form
     const createFormHtml = `
-      <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(34,197,94,0.15);background:rgba(34,197,94,0.02)">
+      <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(34,197,94,0.15);background:rgba(34,197,94,0.02);overflow:visible;position:relative;z-index:20">
         <h4 style="font-family:var(--font-display);font-weight:800;color:var(--green-400);margin-bottom:var(--space-4)">➕ Create New Match</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:var(--space-3);align-items:end">
           <div>
@@ -1679,7 +1679,7 @@ export function renderAdminPage() {
               <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-home-team" style="width:100%;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
                 <span id="admin-home-team-label">Select Home</span> <span>▾</span>
               </button>
-              <div class="custom-select-dropdown" id="admin-home-team-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:200px;overflow-y:auto">
+              <div class="custom-select-dropdown" id="admin-home-team-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:rgba(18,18,18,0.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:250px;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.6)">
                 ${teamOptions}
               </div>
               <input type="hidden" id="admin-home-team-value" value="" />
@@ -1691,7 +1691,7 @@ export function renderAdminPage() {
               <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-away-team" style="width:100%;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
                 <span id="admin-away-team-label">Select Away</span> <span>▾</span>
               </button>
-              <div class="custom-select-dropdown" id="admin-away-team-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:200px;overflow-y:auto">
+              <div class="custom-select-dropdown" id="admin-away-team-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:rgba(18,18,18,0.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:250px;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.6)">
                 ${teamOptions}
               </div>
               <input type="hidden" id="admin-away-team-value" value="" />
@@ -1709,7 +1709,7 @@ export function renderAdminPage() {
     }).join('')
 
     const quickScoreHtml = `
-      <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(251,191,36,0.15);background:rgba(251,191,36,0.02)">
+      <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(251,191,36,0.15);background:rgba(251,191,36,0.02);overflow:visible;position:relative;z-index:10">
         <h4 style="font-family:var(--font-display);font-weight:800;color:var(--gold-400);margin-bottom:var(--space-4)">⚡ Quick Score Entry</h4>
         <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-3)">Enter results for a match played offline. Input individual game scores (Best of 3).</p>
         <div style="margin-bottom:var(--space-3)">
@@ -1718,7 +1718,7 @@ export function renderAdminPage() {
             <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-quick-match" style="width:100%;max-width:400px;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
               <span id="admin-quick-match-label">Select a match</span> <span>▾</span>
             </button>
-            <div class="custom-select-dropdown" id="admin-quick-match-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:200px;overflow-y:auto;max-width:400px">
+            <div class="custom-select-dropdown" id="admin-quick-match-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:rgba(18,18,18,0.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:250px;overflow-y:auto;max-width:400px;box-shadow:0 12px 40px rgba(0,0,0,0.6)">
               ${unplayedOptions || '<div class="text-muted" style="padding:8px 12px;font-size:var(--text-xs)">No scheduled matches</div>'}
             </div>
             <input type="hidden" id="admin-quick-match-value" value="" />
@@ -1776,6 +1776,26 @@ export function renderAdminPage() {
           <div class="section-header"><h3>📅 Scheduled Matches</h3><span class="badge badge-pink">${scheduledMatches.length}</span></div>
           <div class="card" style="padding:var(--space-4)">
             ${schedListHtml || '<div class="text-muted text-center" style="padding:var(--space-6)">No scheduled matches</div>'}
+          </div>
+        </section>
+        <section style="margin-top:var(--space-6)">
+          <div class="section-header"><h3>📊 Session Data</h3></div>
+          <div class="card" style="padding:var(--space-4)">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)">
+              <button class="btn btn-primary btn-sm" id="admin-email-report-btn" style="display:flex;align-items:center;justify-content:center;gap:6px">📧 Email Report</button>
+              <button class="btn btn-secondary btn-sm" id="admin-save-snapshot-btn" style="display:flex;align-items:center;justify-content:center;gap:6px">💾 Save Snapshot</button>
+            </div>
+          </div>
+        </section>
+        <section style="margin-top:var(--space-4)">
+          <div class="card" style="padding:var(--space-5);border-color:rgba(239,68,68,0.2);background:rgba(239,68,68,0.03)">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3)">
+              <div>
+                <h4 style="font-family:var(--font-display);font-weight:800;color:var(--red-400);margin-bottom:4px">🔄 Reset for Demo Night</h4>
+                <p style="font-size:var(--text-xs);color:var(--text-secondary);margin:0">Wipes all match results back to zero. Teams, players, and schedule stay intact.</p>
+              </div>
+              <button class="btn btn-sm" id="admin-reset-stats-btn" style="background:rgba(239,68,68,0.15);border:1px solid var(--red-400);color:var(--red-400);font-weight:700;white-space:nowrap">Reset All Stats</button>
+            </div>
           </div>
         </section>
       </div>
