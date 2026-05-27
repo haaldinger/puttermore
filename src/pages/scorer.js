@@ -170,7 +170,7 @@ export function renderScorer() {
         m.leagueId === leagueId &&
         m.status === 'scheduled' && 
         (m.homeTeamId === captainTeam.id || m.awayTeamId === captainTeam.id)
-      ).sort((a, b) => a.weekNumber - b.weekNumber || a.timeSlot.localeCompare(b.timeSlot))
+      ).sort((a, b) => a.weekNumber - b.weekNumber)
       myNextMatch = teamScheduled[0] || null
     }
 
@@ -246,7 +246,7 @@ export function renderScorer() {
             </span>
             <span class="match-pick-time" style="display:flex; align-items:center; gap:8px">
               ${badgeHtml}
-              <span>${m.timeSlot}</span>
+              <span>Best of 3</span>
             </span>
           </button>`
         }).join('')}

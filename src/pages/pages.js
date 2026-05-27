@@ -1,7 +1,7 @@
-import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams } from '../data.js'
+import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead } from '../data.js'
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
-import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter } from '../store.js'
+import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter, createMatch, updateMatchTeams, updateMatchWeek, deleteMatch, quickScoreMatch } from '../store.js'
 import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
 
 // ─── Putter SVG Renderer ───
@@ -95,6 +95,9 @@ export function renderStandings() {
     } else if (standingsSortColumn === 'team') {
       valA = a.team.name.toLowerCase()
       valB = b.team.name.toLowerCase()
+    } else if (standingsSortColumn === 'points') {
+      valA = a.points
+      valB = b.points
     } else if (standingsSortColumn === 'record') {
       valA = a.wins
       valB = b.wins
@@ -128,6 +131,7 @@ export function renderStandings() {
           <span style="font-weight: 600; line-height: 1.25; overflow-wrap: break-word">${s.team.name}</span>
         </div>
       </td>
+      <td class="mono" style="font-weight:800;color:var(--gold-400);font-size:var(--text-lg)">${s.points}</td>
       <td class="mono">${s.wins}-${s.losses}</td>
       <td class="mono">${(s.winPct * 100).toFixed(0)}%</td>
       <td class="mono">${s.holeDiff > 0 ? '+' : ''}${s.holeDiff}</td>
@@ -148,7 +152,7 @@ export function renderStandings() {
   const controlsHtml = `
     <div class="flex items-center justify-between animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card); font-size: var(--text-xs)">
       <div class="text-muted">
-        ${isSorted ? `Sorted by <strong style="color: var(--pink-400)">${standingsSortColumn === 'winPct' ? 'Win %' : standingsSortColumn === 'holeDiff' ? 'Cup Differential' : standingsSortColumn === 'ballBacks' ? 'Ball Backs' : standingsSortColumn === 'holesFor' ? 'Holes Sunk' : standingsSortColumn === 'record' ? 'Record' : standingsSortColumn}</strong> (${standingsSortDirection.toUpperCase()})` : 'Showing official standings hierarchy'}
+        ${isSorted ? `Sorted by <strong style="color: var(--pink-400)">${standingsSortColumn === 'winPct' ? 'Win %' : standingsSortColumn === 'holeDiff' ? 'Cup Differential' : standingsSortColumn === 'ballBacks' ? 'Ball Backs' : standingsSortColumn === 'holesFor' ? 'Holes Sunk' : standingsSortColumn === 'record' ? 'Record' : standingsSortColumn === 'points' ? 'Points' : standingsSortColumn}</strong> (${standingsSortDirection.toUpperCase()})` : 'Showing official standings hierarchy (Points → Win% → Cup Diff)'}
       </div>
       ${isSorted ? `
         <button class="btn btn-ghost btn-sm" id="standings-reset-btn" style="padding: var(--space-1) var(--space-3); font-size: 11px; height: auto; border: 1px dashed rgba(255,255,255,0.15)">✕ Reset Sort</button>
@@ -157,13 +161,14 @@ export function renderStandings() {
   `
 
   return `<div class="page container">
-    <div class="page-header animate-in"><h1>Season Standings</h1><p>${season.name}</p></div>
+    <div class="page-header animate-in"><h1>Season Standings</h1><p>${season.name} · Best-of-3 Series</p></div>
     <div class="league-tabs animate-in">${leagueTabsHtml()}</div>
     <div class="league-venue-bar animate-in delay-1"><span style="font-weight:700;color:${venue.color}">${venue.name}</span><span class="text-muted">· ${league.day}s</span></div>
     ${controlsHtml}
     <div class="table-wrapper animate-in delay-1"><table><thead><tr>
       <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="rank">#${sortIndicator('rank')}</th>
       <th style="cursor:pointer; user-select:none" data-standings-sort="team">Team${sortIndicator('team')}</th>
+      <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="points">Pts${sortIndicator('points')}</th>
       <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="record">Record${sortIndicator('record')}</th>
       <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="winPct">Win%${sortIndicator('winPct')}</th>
       <th style="cursor:pointer; user-select:none; text-align:center" data-standings-sort="holeDiff">+/-${sortIndicator('holeDiff')}</th>
@@ -214,21 +219,35 @@ export function renderSchedule() {
         const isPending = m.status === 'pending_review'
         const showScore = isCompleted || isPending
         const canClick = isCompleted || isPending
-        const isHomeWinner = showScore && (m.winnerId ? m.winnerId === m.homeTeamId : m.finalScore?.home > m.finalScore?.away)
-        const isAwayWinner = showScore && (m.winnerId ? m.winnerId === m.awayTeamId : m.finalScore?.away > m.finalScore?.home)
+        const isHomeWinner = showScore && m.winnerId === m.homeTeamId
+        const isAwayWinner = showScore && m.winnerId === m.awayTeamId
+        const hasOT = showScore && m.games && m.games.some(g => g.overtime)
+        const seriesLabel = showScore && m.seriesScore ? `${m.seriesScore.home}–${m.seriesScore.away}` : 'vs'
 
         return `<div class="card match-card" ${canClick ? `data-nav="match/${m.id}" style="cursor:pointer"` : ''}>
           <div class="match-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-2)">
-            <span>${m.timeSlot} · ${new Date(m.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}${m.overtime?' · ⚡OT':''}</span>
-            ${isPending ? `<span class="badge badge-gold" style="font-size:9px">⏳ PENDING</span>` : ''}
+            <span>${m.date ? new Date(m.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : 'TBD'}${hasOT?' · ⚡OT':''}</span>
+            <span style="display:flex;gap:6px;align-items:center">
+              ${isPending ? `<span class="badge badge-gold" style="font-size:9px">⏳ PENDING</span>` : ''}
+              ${isCompleted ? `<span class="badge" style="font-size:9px;background:rgba(255,255,255,0.05);color:var(--text-secondary)">Best of 3</span>` : ''}
+            </span>
           </div>
           <div class="match-teams">
             <div class="match-team${isHomeWinner ? ' winner' : ''}"><span class="team-dot" style="background:${ht.color}"></span>${ht.name}${isHomeWinner ? ' 👑' : ''}</div>
             <div class="match-score">${showScore
-              ? `<span class="${isCompleted && isHomeWinner ? 'text-green' : ''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${isCompleted && isAwayWinner ? 'text-green' : ''}">${m.finalScore.away}</span>`
+              ? `<span class="${isCompleted && isHomeWinner ? 'text-green' : ''}" style="font-size:var(--text-xl);font-weight:800">${m.seriesScore?.home || 0}</span><span class="text-muted">–</span><span class="${isCompleted && isAwayWinner ? 'text-green' : ''}" style="font-size:var(--text-xl);font-weight:800">${m.seriesScore?.away || 0}</span>`
               : '<span class="text-muted">vs</span>'}</div>
             <div class="match-team away${isAwayWinner ? ' winner' : ''}">${isAwayWinner ? '👑 ' : ''}${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
           </div>
+          ${isCompleted ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--space-2);font-size:10px;color:var(--text-muted)">
+            <span>Games: ${m.games?.length || 0}</span>
+            <span style="display:flex;gap:6px">
+              ${isHomeWinner ? `<span style="color:${ht.color};font-weight:700">${ht.name.split(' ')[0]} +${m.homePoints}pts</span>` : ''}
+              ${isAwayWinner ? `<span style="color:${at.color};font-weight:700">${at.name.split(' ')[0]} +${m.awayPoints}pts</span>` : ''}
+              ${!isHomeWinner && m.homePoints > 0 ? `<span style="color:${ht.color}">${ht.name.split(' ')[0]} +${m.homePoints}pt</span>` : ''}
+              ${!isAwayWinner && m.awayPoints > 0 ? `<span style="color:${at.color}">${at.name.split(' ')[0]} +${m.awayPoints}pt</span>` : ''}
+            </span>
+          </div>` : ''}
         </div>`}).join('')}</div>
     </section>`
   }).join('')
@@ -252,15 +271,15 @@ export function renderSchedule() {
   `).join('')
 
   const filtersHtml = `
-    <div class="flex flex-wrap items-center justify-between gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card)">
-      <div class="flex items-center gap-3" style="flex-wrap: wrap">
+    <div class="flex flex-wrap items-center justify-between gap-3 animate-in" style="margin-bottom: var(--space-4); background: rgba(255,255,255,0.02); padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); border: 1px solid var(--border-card); position: relative; z-index: 50; overflow: visible">
+      <div class="flex items-center gap-3" style="flex-wrap: wrap; overflow: visible">
         <span style="font-size: var(--text-xs); color: var(--text-secondary); font-weight: 500">Filter matches by team:</span>
         <div class="custom-select-container" style="position: relative; min-width: 200px">
           <button class="custom-select-trigger" id="schedule-team-select-trigger" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-card); border-radius: var(--radius-md); font-size: var(--text-xs); outline: none; cursor: pointer; text-align: left">
             <span>🎯 ${activeTeamName}</span>
             <span style="font-size: 8px; color: var(--text-secondary); margin-left: 8px">▼</span>
           </button>
-          <div class="custom-select-dropdown" id="schedule-team-select-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: rgba(18,18,18,0.96); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 150; max-height: 200px; overflow-y: auto; padding: 4px">
+          <div class="custom-select-dropdown" id="schedule-team-select-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: rgba(18,18,18,0.98); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 999; max-height: 350px; overflow-y: auto; padding: 4px">
             <div class="custom-select-option ${scheduleTeamFilter === '' ? 'active' : ''}" data-value="" style="padding: var(--space-2) var(--space-3); font-size: var(--text-xs); color: ${scheduleTeamFilter === '' ? 'var(--pink-400)' : 'var(--text-primary)'}; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; display: flex; align-items: center; justify-content: space-between; font-weight: ${scheduleTeamFilter === '' ? '700' : '400'}">
               <span>🎯 All Teams</span>
               ${scheduleTeamFilter === '' ? '<span style="font-weight:800; color:var(--pink-400)">✓</span>' : ''}
@@ -317,11 +336,12 @@ export function renderTeamProfile(teamId) {
   const team = getTeam(teamId)
   if (!team) return '<div class="page container"><h1>Team not found</h1></div>'
   const roster = getTeamRoster(teamId)
-  const matches = getTeamMatches(teamId)
+  const teamMatches = getTeamMatches(teamId)
   const season = getActiveSeason()
   const standings = getStandings(team.leagueId)
   const teamStanding = standings.find(s => s.team.id === teamId)
   const advanced = getTeamAdvancedStats(teamId)
+  const h2h = getHeadToHead(teamId, team.leagueId)
 
   const rosterHtml = roster.map(p => {
     const stats = getPlayerStats(p.id)
@@ -331,18 +351,37 @@ export function renderTeamProfile(teamId) {
       <div style="text-align:right"><div style="font-weight:700;color:var(--pink-400)">${(stats.puttingPct*100).toFixed(0)}%</div><div style="font-size:var(--text-xs);color:var(--text-muted)">accuracy</div></div>
     </div>`}).join('')
 
-  const matchesHtml = matches.map(m => {
+  const matchesHtml = teamMatches.map(m => {
     const opp = m.homeTeamId === teamId ? m.awayTeam : m.homeTeam
-    const teamScore = m.finalScore ? (m.homeTeamId === teamId ? m.finalScore.home : m.finalScore.away) : 0
-    const oppScore = m.finalScore ? (m.homeTeamId === teamId ? m.finalScore.away : m.finalScore.home) : 0
+    const isHome = m.homeTeamId === teamId
+    const seriesFor = m.seriesScore ? (isHome ? m.seriesScore.home : m.seriesScore.away) : 0
+    const seriesAgainst = m.seriesScore ? (isHome ? m.seriesScore.away : m.seriesScore.home) : 0
     const won = m.winnerId === teamId
-    return `<div class="card match-card">
-      <div class="match-meta">Week ${m.weekNumber} · ${m.status === 'completed' ? (won ? '✅ Win' : '❌ Loss') : 'Scheduled'}${m.overtime?' · ⚡OT':''}</div>
-      <div class="flex items-center justify-between">
+    const pts = isHome ? (m.homePoints || 0) : (m.awayPoints || 0)
+    return `<div class="card match-card" ${m.status === 'completed' ? `data-nav="match/${m.id}" style="cursor:pointer"` : ''}>
+      <div class="match-meta" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Week ${m.weekNumber} · ${m.status === 'completed' ? (won ? '✅ Win' : '❌ Loss') : 'Scheduled'}</span>
+        ${m.status === 'completed' ? `<span class="mono" style="font-weight:800;color:var(--gold-400)">+${pts}pts</span>` : ''}
+      </div>
+      <div class="flex items-center justify-between" style="margin-top:var(--space-1)">
         <span><span class="team-dot" style="background:${opp.color}"></span> vs ${opp.name}</span>
-        ${m.status === 'completed' ? `<span class="mono" style="font-weight:700">${teamScore} — ${oppScore}</span>` : `<span class="text-muted">${m.timeSlot}</span>`}
+        ${m.status === 'completed' ? `<span class="mono" style="font-weight:700">${seriesFor} – ${seriesAgainst}</span>` : `<span class="text-muted">Bo3</span>`}
       </div>
     </div>`}).join('')
+
+  // Head-to-head records
+  const h2hHtml = h2h.length ? h2h.map(record => `
+    <div class="flex items-center justify-between" style="padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)">
+      <div class="flex items-center gap-2">
+        <span class="team-dot" style="background:${record.opponent.color}"></span>
+        <span style="font-weight:600;font-size:var(--text-sm)">${record.opponent.name}</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="mono" style="font-weight:700;font-size:var(--text-sm);color:${record.wins > record.losses ? 'var(--green-400)' : record.wins < record.losses ? 'var(--red-400)' : 'var(--text-secondary)'}">${record.wins}W – ${record.losses}L</span>
+        ${record.matches === 0 ? '<span class="text-muted" style="font-size:10px">Not yet played</span>' : ''}
+      </div>
+    </div>
+  `).join('') : '<div class="text-muted text-sm">No matches played yet</div>'
 
   const holeBreakdown = advanced && advanced.holeStats ? advanced.holeStats.map(hs => {
     const pct = (hs.pct * 100).toFixed(0)
@@ -377,17 +416,21 @@ export function renderTeamProfile(teamId) {
       <div><div class="profile-name">${team.name}</div><div class="profile-meta">${season.name}</div></div>
     </div>
     ${teamStanding && advanced ? `<div class="stats-grid animate-in delay-1">
-      <div class="stat-card"><div class="stat-value">${teamStanding.wins}<span class="text-muted">-</span>${teamStanding.losses}</div><div class="stat-label">Record</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--gold-400);font-size:var(--text-3xl)">${advanced.totalPoints}</div><div class="stat-label">Points</div></div>
+      <div class="stat-card"><div class="stat-value">${teamStanding.wins}<span class="text-muted">-</span>${teamStanding.losses}</div><div class="stat-label">Series Record</div></div>
       <div class="stat-card">
         <div class="stat-value text-green">${(advanced.puttingPct*100).toFixed(0)}%</div>
         <div class="stat-label">Accuracy <span class="text-muted text-xs font-normal">(${advanced.totalMade}/${advanced.totalPutts})</span></div>
       </div>
       <div class="stat-card"><div class="stat-value text-gold">${advanced.totalBallBacks}</div><div class="stat-label">🔥 Ball Backs</div></div>
-      <div class="stat-card">
-        <div class="stat-value text-blue">${advanced.otWins}<span class="text-muted">-</span>${advanced.otLosses}</div>
-        <div class="stat-label">OT Record</div>
-      </div>
     </div>` : ''}
+
+    <section class="animate-in delay-1" style="margin-top:var(--space-6)">
+      <div class="section-header"><h3>⚔️ Head-to-Head</h3></div>
+      <div class="card" style="padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)">
+        ${h2hHtml}
+      </div>
+    </section>
 
     <div class="grid-2" style="margin-top:var(--space-6);align-items:start">
       <section class="animate-in delay-2">
@@ -410,7 +453,7 @@ export function renderTeamProfile(teamId) {
       <div class="card" style="padding:var(--space-2)">${rosterHtml}</div>
     </section>
     <section class="animate-in delay-3">
-      <div class="section-header"><h3>Matches</h3></div>
+      <div class="section-header"><h3>Match History</h3></div>
       <div class="flex flex-col gap-3">${matchesHtml}</div>
     </section>
     <div class="mt-4"><button class="btn btn-ghost" data-nav="teams">← All Teams</button></div>
@@ -1013,14 +1056,12 @@ export function renderMatchDetail(matchId) {
   const league = getLeague(match.leagueId)
   const venue = getVenue(league.venueId)
   const isCompleted = match.status === 'completed'
+  const games = match.games || []
 
-  // Dual board visualization
-  const boardHtml = isCompleted ? renderBoard(match.holesWon, match.homeTeamId, match.awayTeamId, homeTeam.color, awayTeam.color) : ''
-
-  // Player stats for this match
+  // Aggregate player stats across all games in the series
   const playerPutts = {}
-  if (match.turns) {
-    match.turns.forEach(t => {
+  games.forEach(game => {
+    ;(game.turns || []).forEach(t => {
       t.putts.forEach(p => {
         if (!playerPutts[p.playerId]) playerPutts[p.playerId] = { made: 0, total: 0, ballBacks: 0 }
         playerPutts[p.playerId].total++
@@ -1028,7 +1069,7 @@ export function renderMatchDetail(matchId) {
         if (t.ballBack) playerPutts[p.playerId].ballBacks++
       })
     })
-  }
+  })
 
   const homeRoster = getTeamRoster(match.homeTeamId)
   const awayRoster = getTeamRoster(match.awayTeamId)
@@ -1048,155 +1089,132 @@ export function renderMatchDetail(matchId) {
     }).join('')
   }
 
-  // Turn-by-turn log
-  const turnLogHtml = match.turns ? match.turns.map(t => {
-    const team = getTeam(t.teamId)
-    const phaseTag = t.redemption ? '<span class="badge badge-gold" style="font-size:8px">RDM</span> ' : t.overtime ? '<span class="badge badge-cyan" style="font-size:8px">OT</span> ' : ''
-    return `<div class="turn-entry">
-      <span class="turn-num">#${t.turnNumber}</span>
-      <span class="team-dot" style="background:${team?.color || '#666'}"></span>
-      <span style="flex:1">${phaseTag}${t.putts.map(p => {
-        const name = getPlayer(p.playerId)?.name?.split(' ')[0] || '?'
-        const holeLabel = getHoleShortName(p.hole)
-        return `${name}: ${p.made ? '✅ ' + holeLabel : '❌'}`
-      }).join(' · ')}</span>
-      ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
-    </div>`
-  }).join('') : '<div class="text-center text-muted" style="padding:var(--space-4)">No turn data available</div>'
+  // Per-game breakdowns
+  const gameBreakdownHtml = games.map((game, gi) => {
+    const gHomeScore = game.finalScore?.home || 0
+    const gAwayScore = game.finalScore?.away || 0
+    const gWinner = game.winnerId === match.homeTeamId ? homeTeam : (game.winnerId === match.awayTeamId ? awayTeam : null)
+    const gTotalTurns = game.totalTurns || (game.turns || []).length
+    let gBBs = 0
+    if (game.ballBacks) gBBs = Object.values(game.ballBacks).reduce((a, b) => a + b, 0)
 
-  // Announcer commentary/banter log
+    const turnLogHtml = (game.turns || []).map(t => {
+      const team = getTeam(t.teamId)
+      const phaseTag = t.redemption ? '<span class="badge badge-gold" style="font-size:8px">RDM</span> ' : t.overtime ? '<span class="badge badge-cyan" style="font-size:8px">OT</span> ' : ''
+      return `<div class="turn-entry">
+        <span class="turn-num">#${t.turnNumber}</span>
+        <span class="team-dot" style="background:${team?.color || '#666'}"></span>
+        <span style="flex:1">${phaseTag}${t.putts.map(p => {
+          const name = getPlayer(p.playerId)?.name?.split(' ')[0] || '?'
+          const holeLabel = getHoleShortName(p.hole)
+          return `${name}: ${p.made ? '✅ ' + holeLabel : '❌'}`
+        }).join(' · ')}</span>
+        ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
+      </div>`
+    }).join('') || '<div class="text-center text-muted" style="padding:var(--space-4)">No turn data</div>'
+
+    return `
+    <section class="animate-in delay-2">
+      <div class="section-header">
+        <h3>Game ${gi + 1}</h3>
+        <span style="display:flex;gap:8px;align-items:center">
+          <span class="mono" style="font-weight:800;font-size:var(--text-lg)">${gHomeScore} – ${gAwayScore}</span>
+          ${gWinner ? `<span class="badge badge-win" style="font-size:9px">${gWinner.name.split(' ')[0]}${game.overtime ? ' (OT)' : ''}</span>` : ''}
+        </span>
+      </div>
+      <div class="card" style="padding:var(--space-3)">
+        <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-2)">
+          <span>${gTotalTurns} turns</span><span>🔥 ${gBBs} BBs</span>${game.overtime ? '<span style="color:var(--gold-400)">⚡ OT</span>' : ''}
+        </div>
+        <div class="turn-log" style="max-height:250px">${turnLogHtml}</div>
+      </div>
+    </section>`
+  }).join('')
+
+  // Banter log
   let banterLogHtml = ''
   if (isCompleted && match.banterLog && match.banterLog.length > 0) {
     const banterItems = match.banterLog.map(b => {
       const pColor = getPlayer(b.playerId)?.avatarColor || '#fff'
-      const contextTag = b.context === 'make' ? '🟢 Make' : b.context === 'miss' ? '🔴 Miss' : b.context.startsWith('streak') ? '🔥 BB' : b.context === 'redemption' ? '⚡ RDM' : b.context === 'overtime' ? '⚡ OT' : '🎙️ Banter'
-      const timeStr = b.timestamp ? new Date(b.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'Live'
-      
+      const contextTag = b.context === 'make' ? '🟢' : b.context === 'miss' ? '🔴' : '🔥'
+      const timeStr = b.timestamp ? new Date(b.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : ''
       return `<div class="turn-entry">
-        <span class="turn-num mono text-muted" style="min-width:55px;font-size:9px">${timeStr}</span>
-        <span class="badge" style="font-size:8px;background:rgba(255,255,255,0.05);color:var(--text-secondary);padding:1px 4px">${contextTag}</span>
-        <span class="roster-name" style="color:${pColor};font-weight:700;margin:0 var(--space-1);white-space:nowrap">${b.playerName.split(' ')[0]}</span>
-        <span style="flex:1;font-style:italic;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis">"${b.quote}"</span>
+        <span class="turn-num mono text-muted" style="min-width:50px;font-size:9px">${timeStr}</span>
+        <span style="font-size:10px">${contextTag}</span>
+        <span style="color:${pColor};font-weight:700;font-size:var(--text-xs)">${b.playerName.split(' ')[0]}</span>
+        <span style="flex:1;font-style:italic;color:var(--text-primary);font-size:var(--text-xs)">"${b.quote}"</span>
       </div>`
     }).join('')
-
-    banterLogHtml = `
-      <section class="animate-in delay-3">
-        <div class="section-header"><h3>Live Announcer Banter</h3><span class="badge badge-gold">${match.banterLog.length} comments</span></div>
-        <div class="card turn-log" style="padding:var(--space-3);max-height:500px">${banterItems}</div>
-      </section>
-    `
-  } else if (isCompleted) {
-    banterLogHtml = `
-      <section class="animate-in delay-3">
-        <div class="section-header"><h3>Live Announcer Banter</h3></div>
-        <div class="card text-center text-muted" style="padding:var(--space-12);font-size:var(--text-sm)">
-          No live commentary was recorded during this match.
-        </div>
-      </section>
-    `
+    banterLogHtml = `<section class="animate-in delay-3">
+      <div class="section-header"><h3>🎙️ Broadcast History</h3><span class="badge badge-gold">${match.banterLog.length}</span></div>
+      <div class="card turn-log" style="padding:var(--space-3);max-height:500px">${banterItems}</div>
+    </section>`
   }
 
-  // Summary stats
-  const totalTurns = match.totalTurns || match.turns?.length || 0
-  const homeBBs = match.ballBacks?.[match.homeTeamId] || 0
-  const awayBBs = match.ballBacks?.[match.awayTeamId] || 0
+  // Aggregate stats
+  const totalTurns = games.reduce((acc, g) => acc + (g.totalTurns || (g.turns || []).length), 0)
+  let totalBBs = 0
+  games.forEach(g => { if (g.ballBacks) totalBBs += Object.values(g.ballBacks).reduce((a, b) => a + b, 0) })
   const winner = match.winnerId ? getTeam(match.winnerId) : null
+  const hasOT = games.some(g => g.overtime)
 
-  // Dynamic ESPN8: The Ocho Commentary generator
+  // Ocho Commentary
   let ochoCommentary = ''
-  if (isCompleted) {
-    const homeScore = match.finalScore.home
-    const awayScore = match.finalScore.away
-    const diff = Math.abs(homeScore - awayScore)
-    const winnerName = homeScore > awayScore ? homeTeam.name : awayTeam.name
-    const loserName = homeScore > awayScore ? awayTeam.name : homeTeam.name
-    const totalBBs = homeBBs + awayBBs
-    
-    let quote1 = ""
-    let quote2 = ""
-    
-    if (match.overtime) {
-      quote1 = `Cotton McKnight: "Welcome back to ESPN8: The Ocho, where we are witnessing absolute, seat-cushion-shredding drama! A nail-biting Overtime between the ${homeTeam.name} and ${awayTeam.name}!"`
-      quote2 = `Pepper Reddick: "That's right, Cotton! There is more raw friction in this brewery right now than a high-speed lawnmower race in Biloxi! Sinking those cups under this level of taproom pressure is legendary!"`
-    } else if (diff >= 4) {
-      quote1 = `Cotton McKnight: "Cotton McKnight here, and folks, we just witnessed a certified, grade-A clinic. The ${winnerName} didn't just win; they absolutely steamrolled the ${loserName} like a rogue Mr. Trash Wheel in a storm drain!"`
-      quote2 = `Pepper Reddick: "Ouch, Cotton! That was a complete physical and emotional dismantling! You could see the despair in their eyes, or maybe that was just the reflection of their empty pint glass."`
-    } else {
-      quote1 = `Cotton McKnight: "A thrilling, down-to-the-wire regulation finish, Pepper! The ${winnerName} managed to squeak out a victory over the ${loserName} by the thinnest of margins!"`
-      quote2 = `Pepper Reddick: "Unbelievable scenes, Cotton! A single cup was the difference between eternal glory and buying the next round of draft IPAs. Talk about high-stakes bar sports!"`
-    }
-    
-    let bbQuote = ""
-    if (totalBBs >= 3) {
-      bbQuote = `<div style="margin-top: var(--space-3); border-top: 1px dashed rgba(251,191,36,0.2); padding-top: var(--space-3); color: var(--gold-400)">
-        <strong>Cotton:</strong> "Pepper, the ball backs tonight were absolutely flying! A combined ${totalBBs} double-sinks!"<br/>
-        <strong>Pepper:</strong> "It was a double-sink explosion, Cotton! Bold strategy, and boy did it pay off! That's rarer than finding a free parking spot in Fells Point on a Friday!"
-      </div>`
-    }
-    
+  if (isCompleted && match.seriesScore && winner) {
+    const loserName = match.winnerId === match.homeTeamId ? awayTeam.name : homeTeam.name
+    const wasGame3 = games.length === 3
+    const q1 = wasGame3
+      ? `A FULL THREE-GAME series! The ${winner.name} edged past the ${loserName} in a best-of-three that went all the way!`
+      : `A dominant 2–0 sweep by the ${winner.name}! The ${loserName} didn't even get a chance to find their rhythm!`
+    const q2 = wasGame3
+      ? `That's the kind of drama that makes Mobtown putting legendary. Both teams left everything on the turf!`
+      : `That's what happens when you come out putting like your next pint depends on it! A masterclass!`
+
     ochoCommentary = `
-      <section class="animate-in delay-2" style="margin-bottom:var(--space-6); max-width: 600px; margin-left: auto; margin-right: auto">
-        <div class="section-header"><h3>🎙️ ESPN8: The Ocho Broadcast Desk</h3></div>
-        <div class="card" style="border: 1px dashed rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.03); padding: var(--space-4); border-radius: var(--radius-xl); box-shadow: 0 4px 24px rgba(251, 191, 36, 0.03)">
-          <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--gold-400); letter-spacing: 0.1em; margin-bottom: var(--space-3); display: flex; align-items: center; gap: 8px">
-            <span class="team-dot" style="background: var(--gold-400)"></span> LIVE FROM THE COUCH
-          </div>
-          <p style="font-style: italic; color: rgba(255,255,255,0.9); line-height: 1.6; font-size: var(--text-sm); margin: 0">
-            <strong>${quote1.split(': "')[0]}:</strong> "${quote1.split(': "')[1]}<br/><br/>
-            <strong>${quote2.split(': "')[0]}:</strong> "${quote2.split(': "')[1]}
+      <section class="animate-in delay-2" style="margin-bottom:var(--space-6);max-width:600px;margin-left:auto;margin-right:auto">
+        <div class="section-header"><h3>🎙️ ESPN8: The Ocho</h3></div>
+        <div class="card" style="border:1px dashed rgba(251,191,36,0.4);background:rgba(251,191,36,0.03);padding:var(--space-4);border-radius:var(--radius-xl)">
+          <div style="font-family:var(--font-display);font-weight:800;font-size:var(--text-xs);color:var(--gold-400);letter-spacing:0.1em;margin-bottom:var(--space-3)"><span class="team-dot" style="background:var(--gold-400)"></span> LIVE FROM THE COUCH</div>
+          <p style="font-style:italic;color:rgba(255,255,255,0.9);line-height:1.6;font-size:var(--text-sm);margin:0">
+            <strong>Cotton:</strong> "${q1}"<br/><br/><strong>Pepper:</strong> "${q2}"
           </p>
-          ${bbQuote}
         </div>
-      </section>
-    `
+      </section>`
   }
 
-    const isHomeWinner = match.winnerId ? match.winnerId === match.homeTeamId : match.finalScore.home > match.finalScore.away
-    const isAwayWinner = match.winnerId ? match.winnerId === match.awayTeamId : match.finalScore.away > match.finalScore.home
+  const isHomeWinner = match.winnerId === match.homeTeamId
+  const isAwayWinner = match.winnerId === match.awayTeamId
 
-    return `<div class="page container">
-    <div class="page-header animate-in">
-      <h1>Match Detail</h1>
-      <p>Week ${match.weekNumber} · ${league.name} · ${venue.name}</p>
-    </div>
+  return `<div class="page container">
+    <div class="page-header animate-in"><h1>Series Detail</h1><p>Week ${match.weekNumber} · ${league.name} · Best of 3</p></div>
 
     <div class="scorer-header animate-in delay-1">
       <div class="scorer-team">
         <div class="scorer-team-name" style="color:${homeTeam.color}">${homeTeam.name}</div>
-        <div class="scorer-team-score ${isHomeWinner ? 'text-green' : ''}">${match.finalScore.home}</div>
+        <div class="scorer-team-score ${isHomeWinner ? 'text-green' : ''}">${match.seriesScore?.home || 0}</div>
       </div>
-      <div class="scorer-vs">—</div>
+      <div class="scorer-vs">–</div>
       <div class="scorer-team">
         <div class="scorer-team-name" style="color:${awayTeam.color}">${awayTeam.name}</div>
-        <div class="scorer-team-score ${isAwayWinner ? 'text-green' : ''}">${match.finalScore.away}</div>
+        <div class="scorer-team-score ${isAwayWinner ? 'text-green' : ''}">${match.seriesScore?.away || 0}</div>
       </div>
     </div>
 
     ${winner ? `<div class="text-center animate-in delay-1" style="margin-bottom:var(--space-4)">
-      <span class="badge badge-win" style="font-size:var(--text-sm);padding:var(--space-1) var(--space-4)">🏆 ${winner.name} Wins${match.overtime ? ' (OT)' : ''}</span>
-    </div>` : ''}
-
-    ${isCompleted && match.turns && match.turns.length > 0 ? `
-    <div class="text-center animate-in delay-1" style="margin-bottom:var(--space-4)">
-      <button class="btn btn-secondary" id="play-replay-btn" data-match-id="${match.id}" style="border: 1px dashed var(--gold-400); color: var(--gold-400); background: rgba(251,191,36,0.06); font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(251,191,36,0.06); transition: all 0.2s ease">
-        🎬 Play Match Replay
-      </button>
+      <span class="badge badge-win" style="font-size:var(--text-sm);padding:var(--space-1) var(--space-4)">🏆 ${winner.name} Wins Series${hasOT ? ' (OT)' : ''}</span>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-1)">
+        +${isHomeWinner ? match.homePoints : match.awayPoints}pts winner · ${(isHomeWinner ? match.awayPoints : match.homePoints) > 0 ? `+${isHomeWinner ? match.awayPoints : match.homePoints}pt loser` : '0pts loser'}
+      </div>
     </div>` : ''}
 
     <div class="stats-grid animate-in delay-1" style="margin-bottom:var(--space-6)">
-      <div class="stat-card"><div class="stat-value">${totalTurns}</div><div class="stat-label">Turns</div></div>
-      <div class="stat-card"><div class="stat-value text-gold">${homeBBs + awayBBs}</div><div class="stat-label">🔥 Ball Backs</div></div>
-      <div class="stat-card"><div class="stat-value">${match.date || ''}</div><div class="stat-label">${match.timeSlot}</div></div>
-      <div class="stat-card"><div class="stat-value">${match.overtime ? '⚡' : '—'}</div><div class="stat-label">${match.overtime ? 'Overtime' : 'Regulation'}</div></div>
+      <div class="stat-card"><div class="stat-value">${games.length}</div><div class="stat-label">Games</div></div>
+      <div class="stat-card"><div class="stat-value">${totalTurns}</div><div class="stat-label">Total Turns</div></div>
+      <div class="stat-card"><div class="stat-value text-gold">${totalBBs}</div><div class="stat-label">🔥 Ball Backs</div></div>
+      <div class="stat-card"><div class="stat-value">${match.date || ''}</div><div class="stat-label">Date</div></div>
     </div>
 
     ${ochoCommentary}
-
-    ${boardHtml ? `<section class="animate-in delay-2" style="margin-bottom:var(--space-6)">
-      <div class="section-header"><h3>Board</h3></div>
-      <div style="max-width:500px;margin:0 auto">${boardHtml}</div>
-    </section>` : ''}
 
     <div class="home-grid animate-in delay-2">
       <section class="home-section">
@@ -1209,17 +1227,13 @@ export function renderMatchDetail(matchId) {
       </section>
     </div>
 
-    <div class="grid-2" style="margin-top:var(--space-4); align-items:start">
-      <section class="animate-in delay-3">
-        <div class="section-header"><h3>Shot-by-Shot</h3><span class="badge badge-pink">${totalTurns} turns</span></div>
-        <div class="card turn-log" style="padding:var(--space-3);max-height:500px">${turnLogHtml}</div>
-      </section>
-      ${banterLogHtml}
-    </div>
+    ${gameBreakdownHtml}
+    ${banterLogHtml}
 
     <div class="mt-4"><button class="btn btn-ghost" data-nav="schedule">← Schedule</button></div>
   </div>`
 }
+
 
 export function getCaddyAdvice(holeId) {
   const data = {
@@ -1567,6 +1581,7 @@ export function renderAdminPage() {
   const tabsHtml = `
     <div class="view-toggle animate-in" style="margin-bottom: var(--space-6)">
       <button class="view-toggle-btn ${activeAdminTab === 'review' ? 'active' : ''}" data-admin-tab="review">📋 Game Review</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'matches' ? 'active' : ''}" data-admin-tab="matches">📅 Matches</button>
       <button class="view-toggle-btn ${activeAdminTab === 'roster' ? 'active' : ''}" data-admin-tab="roster">👥 Roster Controls</button>
       <button class="view-toggle-btn ${activeAdminTab === 'analytics' ? 'active' : ''}" data-admin-tab="analytics">📊 Cup Analytics</button>
     </div>
@@ -1583,62 +1598,39 @@ export function renderAdminPage() {
         <div class="card card-glass text-center animate-in" style="padding: var(--space-8); background: rgba(251, 191, 36, 0.01); border-color: rgba(251, 191, 36, 0.05)">
           <div style="font-size: var(--text-3xl); margin-bottom: var(--space-3)">🍻</div>
           <h4 style="font-family: var(--font-display); font-weight: 800; color: #fff">All Caught Up!</h4>
-          <p class="text-secondary" style="font-size: var(--text-sm)">No pending matches require review. Pour a Natty Boh and relax!</p>
+          <p class="text-secondary" style="font-size: var(--text-sm)">No pending series require review. Pour a Natty Boh and relax!</p>
         </div>
       `
     } else {
       const reviewCards = pendingMatches.map(m => {
         const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
-        const isEditing = editingMatchId === m.id
-        const isHomeWinner = m.winnerId ? m.winnerId === m.homeTeamId : m.finalScore.home > m.finalScore.away
-        const isAwayWinner = m.winnerId ? m.winnerId === m.awayTeamId : m.finalScore.away > m.finalScore.home
+        const isHomeWinner = m.winnerId === m.homeTeamId
+        const isAwayWinner = m.winnerId === m.awayTeamId
+        const gamesCount = m.games?.length || 0
         
         return `
           <div class="card match-card animate-in" style="padding: var(--space-5); border-color: var(--gold-400)25; background: rgba(251, 191, 36, 0.02)">
             <div class="match-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3)">
-              <span>Week ${m.weekNumber} · ${m.timeSlot} · ${new Date(m.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>
+              <span>Week ${m.weekNumber} · Best of 3 · ${gamesCount} game${gamesCount !== 1 ? 's' : ''} played</span>
               <span class="badge badge-gold">⏳ PENDING VERIFICATION</span>
             </div>
 
             <div class="match-teams" style="margin-bottom: var(--space-4)">
               <div class="match-team${isHomeWinner ? ' winner' : ''}" style="font-weight: 700"><span class="team-dot" style="background:${ht.color}"></span> ${ht.name}${isHomeWinner ? ' 👑' : ''}</div>
-              
               <div class="match-score" style="font-size: var(--text-xl); font-weight: 800; font-family: var(--font-display)">
-                ${isEditing ? `
-                  <div style="display: flex; gap: 8px; align-items: center">
-                    <input type="number" id="edit-home-score-${m.id}" value="${m.finalScore.home}" min="0" max="6" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-card); text-align: center; border-radius: var(--radius-md); padding: 4px; color:#fff" />
-                    <span class="text-muted">—</span>
-                    <input type="number" id="edit-away-score-${m.id}" value="${m.finalScore.away}" min="0" max="6" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-card); text-align: center; border-radius: var(--radius-md); padding: 4px; color:#fff" />
-                  </div>
-                ` : `
-                  <span class="${isHomeWinner ? 'text-green' : ''}">${m.finalScore.home}</span><span class="text-muted">—</span><span class="${isAwayWinner ? 'text-green' : ''}">${m.finalScore.away}</span>
-                `}
+                <span class="${isHomeWinner ? 'text-green' : ''}">${m.seriesScore?.home || 0}</span><span class="text-muted">–</span><span class="${isAwayWinner ? 'text-green' : ''}">${m.seriesScore?.away || 0}</span>
               </div>
-
               <div class="match-team away${isAwayWinner ? ' winner' : ''}" style="font-weight: 700">${isAwayWinner ? '👑 ' : ''}${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
             </div>
 
-            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1.5)">
-              <div style="display: flex; gap: var(--space-4); align-items: center">
-                <span>Turns Played: ${m.totalTurns || m.turns?.length || 0}</span>
-                <span>Overtime: ${isEditing ? `
-                  <input type="checkbox" id="edit-ot-${m.id}" ${m.overtime ? 'checked' : ''} style="transform: scale(1.1); cursor: pointer" />
-                ` : (m.overtime ? '⚡ Yes' : 'No')}</span>
-              </div>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-bottom: var(--space-4)">
               <div style="font-size: 10px; color: var(--gold-400); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em">
                 🧢 Submitted by Captain: <span style="color: #fff">${m.submittedByPlayerName || 'Unknown Captain'}</span>
               </div>
             </div>
 
             <div class="flex gap-2 justify-end" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: var(--space-3)">
-              ${isEditing ? `
-                <button class="btn btn-secondary btn-sm" data-cancel-edit-score="${m.id}">Cancel</button>
-                <button class="btn btn-primary btn-sm" data-save-score="${m.id}">Save & Approve 🚀</button>
-              ` : `
-                <button class="btn btn-secondary btn-sm" id="play-replay-btn" data-match-id="${m.id}">📺 Audit Replay</button>
-                <button class="btn btn-secondary btn-sm" data-edit-score-btn="${m.id}">✏️ Adjust Score</button>
-                <button class="btn btn-primary btn-sm" data-approve-match="${m.id}">Approve & Publish 🚀</button>
-              `}
+              <button class="btn btn-primary btn-sm" data-approve-match="${m.id}">Approve & Publish 🚀</button>
             </div>
           </div>
         `
@@ -1647,12 +1639,147 @@ export function renderAdminPage() {
       tabContent = `
         <div class="flex flex-col gap-4 animate-in">
           <div style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-2)">
-            The following matches have been recorded by their captains and are pending review. You can run the <strong>Audit Replay</strong> simulator to check the play-by-play, adjust details, or approve to commit them to the live Standings.
+            The following series have been recorded by their captains and are pending review.
           </div>
           ${reviewCards}
         </div>
       `
     }
+  }
+
+  // 1.5 MATCH MANAGEMENT TAB
+  else if (activeAdminTab === 'matches') {
+    const allTeams = getLeagueTeams('l1')
+    const season = getActiveSeason()
+    const allMatches = getAllMatches().filter(m => m.leagueId === 'l1')
+    const scheduledMatches = allMatches.filter(m => m.status === 'scheduled')
+    const completedMatches = allMatches.filter(m => m.status === 'completed')
+
+    // Group scheduled matches by week
+    const weekGroups = {}
+    scheduledMatches.forEach(m => {
+      if (!weekGroups[m.weekNumber]) weekGroups[m.weekNumber] = []
+      weekGroups[m.weekNumber].push(m)
+    })
+
+    const teamOptions = allTeams.map(t => `<div class="custom-dropdown-option" data-value="${t.id}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-radius:var(--radius-md)"><span class="team-dot" style="background:${t.color}"></span>${t.name}</div>`).join('')
+
+    // Create match form
+    const createFormHtml = `
+      <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(34,197,94,0.15);background:rgba(34,197,94,0.02)">
+        <h4 style="font-family:var(--font-display);font-weight:800;color:var(--green-400);margin-bottom:var(--space-4)">➕ Create New Match</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:var(--space-3);align-items:end">
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Week #</label>
+            <input type="number" id="admin-new-match-week" min="1" max="${season.weeks}" value="${getWeekNumber()}" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:8px 12px;color:#fff;width:100%;font-size:var(--text-sm)" />
+          </div>
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Home Team</label>
+            <div class="custom-select-container" id="admin-home-team-select" style="position:relative">
+              <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-home-team" style="width:100%;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
+                <span id="admin-home-team-label">Select Home</span> <span>▾</span>
+              </button>
+              <div class="custom-select-dropdown" id="admin-home-team-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:200px;overflow-y:auto">
+                ${teamOptions}
+              </div>
+              <input type="hidden" id="admin-home-team-value" value="" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Away Team</label>
+            <div class="custom-select-container" id="admin-away-team-select" style="position:relative">
+              <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-away-team" style="width:100%;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
+                <span id="admin-away-team-label">Select Away</span> <span>▾</span>
+              </button>
+              <div class="custom-select-dropdown" id="admin-away-team-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:200px;overflow-y:auto">
+                ${teamOptions}
+              </div>
+              <input type="hidden" id="admin-away-team-value" value="" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="admin-create-match-btn" style="white-space:nowrap">Create Match</button>
+        </div>
+      </div>
+    `
+
+    // Quick Score Form
+    const unplayedOptions = scheduledMatches.map(m => {
+      const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
+      return `<div class="custom-dropdown-option" data-value="${m.id}" style="padding:8px 12px;cursor:pointer;border-radius:var(--radius-md)">Wk${m.weekNumber}: ${ht.name} vs ${at.name}</div>`
+    }).join('')
+
+    const quickScoreHtml = `
+      <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(251,191,36,0.15);background:rgba(251,191,36,0.02)">
+        <h4 style="font-family:var(--font-display);font-weight:800;color:var(--gold-400);margin-bottom:var(--space-4)">⚡ Quick Score Entry</h4>
+        <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-3)">Enter results for a match played offline. Input individual game scores (Best of 3).</p>
+        <div style="margin-bottom:var(--space-3)">
+          <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Select Match</label>
+          <div class="custom-select-container" id="admin-quick-match-select" style="position:relative">
+            <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-quick-match" style="width:100%;max-width:400px;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
+              <span id="admin-quick-match-label">Select a match</span> <span>▾</span>
+            </button>
+            <div class="custom-select-dropdown" id="admin-quick-match-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px;margin-top:4px;max-height:200px;overflow-y:auto;max-width:400px">
+              ${unplayedOptions || '<div class="text-muted" style="padding:8px 12px;font-size:var(--text-xs)">No scheduled matches</div>'}
+            </div>
+            <input type="hidden" id="admin-quick-match-value" value="" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)">
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Game 1 (Home–Away)</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="admin-qs-g1-home" min="0" max="6" value="0" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:6px 8px;color:#fff;width:50px;text-align:center;font-size:var(--text-sm)" />
+              <span class="text-muted">–</span>
+              <input type="number" id="admin-qs-g1-away" min="0" max="6" value="0" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:6px 8px;color:#fff;width:50px;text-align:center;font-size:var(--text-sm)" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Game 2 (Home–Away)</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="admin-qs-g2-home" min="0" max="6" value="0" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:6px 8px;color:#fff;width:50px;text-align:center;font-size:var(--text-sm)" />
+              <span class="text-muted">–</span>
+              <input type="number" id="admin-qs-g2-away" min="0" max="6" value="0" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:6px 8px;color:#fff;width:50px;text-align:center;font-size:var(--text-sm)" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Game 3 (optional)</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="admin-qs-g3-home" min="0" max="6" value="" placeholder="—" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:6px 8px;color:#fff;width:50px;text-align:center;font-size:var(--text-sm)" />
+              <span class="text-muted">–</span>
+              <input type="number" id="admin-qs-g3-away" min="0" max="6" value="" placeholder="—" style="background:var(--bg-input);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:6px 8px;color:#fff;width:50px;text-align:center;font-size:var(--text-sm)" />
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="admin-quick-score-btn">Submit Scores</button>
+      </div>
+    `
+
+    // Scheduled matches list with delete option
+    const schedListHtml = Object.entries(weekGroups).sort((a, b) => a[0] - b[0]).map(([wk, ms]) => `
+      <div style="margin-bottom:var(--space-4)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;margin-bottom:var(--space-2)">WEEK ${wk}</div>
+        ${ms.map(m => {
+          const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
+          return `<div class="flex items-center justify-between" style="padding:var(--space-2) 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+            <span style="font-size:var(--text-sm)"><span class="team-dot" style="background:${ht.color}"></span>${ht.name} vs <span class="team-dot" style="background:${at.color}"></span>${at.name}</span>
+            <button class="btn btn-ghost btn-sm" data-admin-delete-match="${m.id}" style="color:var(--red-400);font-size:10px;padding:2px 8px">✕ Delete</button>
+          </div>`
+        }).join('')}
+      </div>
+    `).join('')
+
+    tabContent = `
+      <div class="animate-in">
+        ${createFormHtml}
+        ${quickScoreHtml}
+        <section>
+          <div class="section-header"><h3>📅 Scheduled Matches</h3><span class="badge badge-pink">${scheduledMatches.length}</span></div>
+          <div class="card" style="padding:var(--space-4)">
+            ${schedListHtml || '<div class="text-muted text-center" style="padding:var(--space-6)">No scheduled matches</div>'}
+          </div>
+        </section>
+      </div>
+    `
   }
 
   // 2. ROSTER CONTROLS TAB

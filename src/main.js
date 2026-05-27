@@ -14,7 +14,8 @@ import { getPlayer, getPlayerTeam, getAllMatches, getStandings, getTeamRoster, g
 import { openReplayModal, destroyReplayModal } from './pages/replay.js'
 import { 
   getLoggedInUser, setLoggedInUser, logout,
-  updatePlayerPutter, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain
+  updatePlayerPutter, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain,
+  createMatch, deleteMatch, quickScoreMatch
 } from './store.js'
 
 const specDetails = {
@@ -967,6 +968,81 @@ document.addEventListener('click', (e) => {
       removePlayer(playerId)
       showToast('❌ Player removed from the league.')
       render()
+    }
+    return
+  }
+
+  // Admin Create Match
+  if (e.target.id === 'admin-create-match-btn') {
+    const week = parseInt(document.getElementById('admin-new-match-week')?.value)
+    const homeId = document.getElementById('admin-home-team-value')?.value
+    const awayId = document.getElementById('admin-away-team-value')?.value
+    if (!homeId || !awayId) { showToast('⚠️ Select both teams!'); return }
+    if (homeId === awayId) { showToast('⚠️ Teams must be different!'); return }
+    createMatch('l1', week, homeId, awayId)
+    showToast('✅ Match created!')
+    render()
+    return
+  }
+
+  // Admin Delete Match
+  const delMatchBtn = e.target.closest('[data-admin-delete-match]')
+  if (delMatchBtn) {
+    const matchId = delMatchBtn.dataset.adminDeleteMatch
+    if (confirm('Delete this scheduled match?')) {
+      deleteMatch(matchId)
+      showToast('❌ Match deleted')
+      render()
+    }
+    return
+  }
+
+  // Admin Quick Score Submit
+  if (e.target.id === 'admin-quick-score-btn') {
+    const matchId = document.getElementById('admin-quick-match-value')?.value
+    if (!matchId) { showToast('⚠️ Select a match first!'); return }
+    const g1h = parseInt(document.getElementById('admin-qs-g1-home')?.value || '0')
+    const g1a = parseInt(document.getElementById('admin-qs-g1-away')?.value || '0')
+    const g2h = parseInt(document.getElementById('admin-qs-g2-home')?.value || '0')
+    const g2a = parseInt(document.getElementById('admin-qs-g2-away')?.value || '0')
+    const g3hEl = document.getElementById('admin-qs-g3-home')
+    const g3aEl = document.getElementById('admin-qs-g3-away')
+    const gameScores = [{ home: g1h, away: g1a }, { home: g2h, away: g2a }]
+    if (g3hEl?.value !== '' && g3aEl?.value !== '') {
+      gameScores.push({ home: parseInt(g3hEl.value), away: parseInt(g3aEl.value) })
+    }
+    quickScoreMatch(matchId, gameScores)
+    showToast('✅ Scores submitted!')
+    render()
+    return
+  }
+
+  // Admin Custom Dropdown Toggle (for team selectors in match management)
+  const customSelectTrigger = e.target.closest('[data-custom-select]')
+  if (customSelectTrigger) {
+    const selectName = customSelectTrigger.dataset.customSelect
+    const dropdown = document.getElementById(`${selectName}-dropdown`)
+    if (dropdown) {
+      const isHidden = dropdown.style.display === 'none'
+      // Close all other dropdowns
+      document.querySelectorAll('.custom-select-dropdown').forEach(d => d.style.display = 'none')
+      dropdown.style.display = isHidden ? 'block' : 'none'
+    }
+    return
+  }
+
+  // Admin Custom Dropdown Option Selection
+  const customDropdownOption = e.target.closest('.custom-dropdown-option')
+  if (customDropdownOption) {
+    const value = customDropdownOption.dataset.value
+    const container = customDropdownOption.closest('.custom-select-container')
+    if (container) {
+      const hidden = container.querySelector('input[type="hidden"]')
+      if (hidden) hidden.value = value
+      const label = container.querySelector('[id$="-label"]')
+      if (label) label.textContent = customDropdownOption.textContent.trim()
+      const dropdown = customDropdownOption.closest('.custom-select-dropdown')
+      if (dropdown) dropdown.style.display = 'none'
     }
     return
   }

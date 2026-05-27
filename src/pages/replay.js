@@ -94,9 +94,10 @@ function getCommentary(shot, player, team) {
 // Flatten nested turns into a linear timeline of individual shots
 function flattenShots(match) {
   const list = []
-  if (!match.turns) return list
+  const allTurns = (match.games || []).flatMap(g => g.turns || [])
+  if (!allTurns.length) return list
 
-  match.turns.forEach(turn => {
+  allTurns.forEach(turn => {
     turn.putts.forEach((putt, puttIdx) => {
       list.push({
         turnNumber: turn.turnNumber,

@@ -394,11 +394,13 @@ export function getWeeklyMvp(weekNum) {
 
   const stats = {}
   matchesToScan.forEach(m => {
-    m.turns.forEach(t => {
-      t.putts.forEach(p => {
-        if (!stats[p.playerId]) stats[p.playerId] = { playerId: p.playerId, putts: 0, made: 0 }
-        stats[p.playerId].putts++
-        if (p.made) stats[p.playerId].made++
+    ;(m.games || []).forEach(game => {
+      ;(game.turns || []).forEach(t => {
+        t.putts.forEach(p => {
+          if (!stats[p.playerId]) stats[p.playerId] = { playerId: p.playerId, putts: 0, made: 0 }
+          stats[p.playerId].putts++
+          if (p.made) stats[p.playerId].made++
+        })
       })
     })
   })
@@ -451,7 +453,7 @@ export function renderHome() {
 
   const upcomingHtml = upcoming.map(m => `
     <div class="card match-card animate-in">
-      <div class="match-meta">Week ${m.weekNumber} · ${m.timeSlot}</div>
+      <div class="match-meta">Week ${m.weekNumber} · Best of 3</div>
       <div class="match-teams">
         <div class="match-team"><span class="team-dot" style="background:${m.homeTeam.color}"></span>${m.homeTeam.name}</div>
         <div class="match-score"><span class="text-muted">vs</span></div>
@@ -483,7 +485,7 @@ export function renderHome() {
     if (nextMatch && team) {
       const isHome = nextMatch.homeTeamId === team.id
       const oppTeam = isHome ? getTeam(nextMatch.awayTeamId) : getTeam(nextMatch.homeTeamId)
-      nextMatchHtml = `<strong>Week ${nextMatch.weekNumber} Matchup:</strong> vs <span style="color:${oppTeam.color};font-weight:700">${oppTeam.name}</span> · ${nextMatch.timeSlot}`
+      nextMatchHtml = `<strong>Week ${nextMatch.weekNumber} Matchup:</strong> vs <span style="color:${oppTeam.color};font-weight:700">${oppTeam.name}</span> · Best of 3`
       
       if (isCaptain && timeState.phase === 'LIVE_MATCHES') {
         captainActionHtml = `
@@ -874,9 +876,9 @@ export function renderHome() {
       
       let scoreDisplay = '<span style="font-size:var(--text-xs); color:var(--pink-400); font-weight:800" class="blink-badge">🔴 LIVE PLAY</span>'
       if (isCompleted) {
-        scoreDisplay = `<span style="font-weight:800; color:#fff">${m.finalScore.home} - ${m.finalScore.away}</span> <span style="font-size:8px; color:var(--text-muted)">(Final)</span>`
+        scoreDisplay = `<span style="font-weight:800; color:#fff">${m.seriesScore?.home || 0} – ${m.seriesScore?.away || 0}</span> <span style="font-size:8px; color:var(--text-muted)">(Final)</span>`
       } else if (isPending) {
-        scoreDisplay = `<span style="font-weight:800; color:var(--gold-400)">${m.finalScore.home} - ${m.finalScore.away}</span> <span style="font-size:8px; color:var(--gold-400)">(Pending)</span>`
+        scoreDisplay = `<span style="font-weight:800; color:var(--gold-400)">${m.seriesScore?.home || 0} – ${m.seriesScore?.away || 0}</span> <span style="font-size:8px; color:var(--gold-400)">(Pending)</span>`
       }
       
       return `
@@ -1042,18 +1044,18 @@ export function renderHome() {
         <div class="section-header"><h2>📋 Week ${lastWeek} Results</h2><button class="btn btn-ghost btn-sm" data-nav="schedule">Full Schedule →</button></div>
         <div class="flex flex-col gap-3">${lastWeekMatches.map(m => `
           <div class="card match-card" data-nav="match/${m.id}" style="cursor:pointer">
-            <div class="match-meta">${m.timeSlot}${m.overtime ? ' · ⚡OT' : ''}</div>
+            <div class="match-meta">Best of 3${m.games?.some(g => g.overtime) ? ' · ⚡OT' : ''}</div>
             <div class="match-teams">
-              <div class="match-team${m.finalScore.home > m.finalScore.away ? ' winner' : ''}">
-                <span class="team-dot" style="background:${m.homeTeam.color}"></span>${m.homeTeam.name}
+              <div class="match-team${m.winnerId === m.homeTeamId ? ' winner' : ''}">
+                <span class="team-dot" style="background:${m.homeTeam.color}"></span>${m.homeTeam.name}${m.winnerId === m.homeTeamId ? ' 👑' : ''}
               </div>
               <div class="match-score">
-                <span class="${m.finalScore.home > m.finalScore.away ? 'text-green' : ''}">${m.finalScore.home}</span>
-                <span class="text-muted">—</span>
-                <span class="${m.finalScore.away > m.finalScore.home ? 'text-green' : ''}">${m.finalScore.away}</span>
+                <span class="${m.winnerId === m.homeTeamId ? 'text-green' : ''}" style="font-weight:800">${m.seriesScore?.home || 0}</span>
+                <span class="text-muted">–</span>
+                <span class="${m.winnerId === m.awayTeamId ? 'text-green' : ''}" style="font-weight:800">${m.seriesScore?.away || 0}</span>
               </div>
-              <div class="match-team away${m.finalScore.away > m.finalScore.home ? ' winner' : ''}">
-                ${m.awayTeam.name}<span class="team-dot" style="background:${m.awayTeam.color}"></span>
+              <div class="match-team away${m.winnerId === m.awayTeamId ? ' winner' : ''}">
+                ${m.winnerId === m.awayTeamId ? '👑 ' : ''}${m.awayTeam.name}<span class="team-dot" style="background:${m.awayTeam.color}"></span>
               </div>
             </div>
           </div>`).join('')}
