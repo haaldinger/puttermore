@@ -133,9 +133,8 @@ An advanced, step-by-step match simulator that reconstructs any completed league
 3.  **🔥 Ball Back** — If both teammates sink their putts in the same turn, they trigger a Ball Back, get their balls returned, and go again.
 4.  **🏝️ Island Cup Bonus** — When a cup becomes isolated from all other remaining cups, it's marked as an "island." Sinking an island awards a free bonus cup — the putter claims any open cup of their choice.
 5.  **🏆 Instant Win** — If both teammates sink the last cup on the same turn (ball back + board cleared), they win outright. No redemption round.
-6.  **🚨 Redemption Round** — If a team clears the opponent's board *without* a ball back, the opponent gets redemption: individual putt-till-you-miss turns. If all remaining players miss, first team wins. If the board is cleared during redemption, **Sudden-Death Overtime** begins.
-7.  **⚡ Sudden-Death Overtime** — Middle and back cups pre-filled on both boards. Play scopes strictly to the front 3 cups (`F1`, `M1`, `M2`). The first team to sink any cup wins the game! If overtime also results in a board clear without a ball back, a further overtime round begins.
-8.  **Best-of-3 Series** — Matches consist of up to 3 games. First team to win 2 games wins the series. **Points**: Win = 2pts, Lose in Game 3 = 1pt, 0–2 sweep loss = 0pts.
+6.  **🚨 Redemption Round** — If a team clears the opponent's board *without* a ball back, the opponent gets redemption: each player putts in succession, shooting until they miss. A miss passes to the next player. When all players have missed, the original clearer wins. Even if the redemption team manages to clear the board, the team that cleared first is still declared the winner.
+7.  **Best-of-3 Series** — Matches consist of up to 3 games. First team to win 2 games wins the series. **Points**: Win = 2pts, Lose in Game 3 = 1pt, 0–2 sweep loss = 0pts.
 
 ---
 

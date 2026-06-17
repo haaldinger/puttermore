@@ -1368,13 +1368,7 @@ export function renderHelpPage() {
         <div class="card" style="padding: var(--space-4)">
           <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">5. 🚨 Redemption Round</h4>
           <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            Once a team clears the opponent's board (without a ball back), the losing team gets a <strong>Redemption Round</strong>: each player putts in succession — keep shooting as long as you make it! The first complete miss ends the redemption. If they clear all remaining cups, the game goes to <strong>Sudden-Death Overtime</strong>.
-          </p>
-        </div>
-        <div class="card" style="padding: var(--space-4)">
-          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">6. ⚡ Sudden-Death Overtime</h4>
-          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            Middle and back cups are reset on both boards. Only the <strong>front 3 cups</strong> (F1, M1, M2) are in play. The first team to sink any cup wins the game! If overtime also ends in a redemption tie, another overtime round begins.
+            Once a team clears the opponent's board (without a ball back), the losing team gets a <strong>Redemption Round</strong>: each player putts in succession — shoot until you miss! A made putt means the same player keeps shooting; a miss passes to the next player. When all players have missed, the <strong>original clearer wins</strong>. Even if the redemption team clears the board, the team that cleared first is still declared the winner.
           </p>
         </div>
       </div>

@@ -62,8 +62,7 @@ The Live Scorer (`src/pages/scorer.js`) supports:
 - **Quick Score Mode**: Final score entry with synthetic turn generation (~42% putting average estimate)
 - **Open Play**: Captain picks opponent for an unscheduled match; a new match record is created on save
 - **Island Cup Bonus**: Detected in `src/board.js` via `getIslandCups()` / `isIslandCup()`; awarding a free bonus cup pick
-- **Redemption Round**: Individual put-till-you-miss turns when a board is cleared without a ball back
-- **Sudden-Death Overtime**: Multiple OT rounds supported; OT cup set = front 3 (`F1`, `M1`, `M2`)
+- **Redemption Round**: Individual putt-till-you-miss turns when a board is cleared without a ball back; original clearer wins when all redemption putters have missed (or board is cleared — original clearer still wins)
 - **Best-of-3 progression**: Automatic game-to-game tracking; series decided at 2 wins
 - **Turn roster reordering**: Players can set putt order at start of each game
 - **Abandon to Quick Score**: Mid-game escape hatch to fall back to score-only entry
