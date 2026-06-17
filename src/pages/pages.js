@@ -935,6 +935,7 @@ export function renderPlayerProfile(playerId) {
       <div class="stat-card"><div class="stat-value gradient-text">${(stats.puttingPct*100).toFixed(0)}%${hasAnySyntheticData(playerId) ? '<span style="color:var(--gold-400);font-size:var(--text-sm)">*</span>' : ''}</div><div class="stat-label">Accuracy</div></div>
       <div class="stat-card"><div class="stat-value">${stats.totalMade}<span class="text-muted">/${stats.totalPutts}</span></div><div class="stat-label">Putts Made</div></div>
       <div class="stat-card"><div class="stat-value text-gold">${stats.ballBackContributions}</div><div class="stat-label">🔥 Ball Backs</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:#fbbf24">${stats.islandsSunk || 0}</div><div class="stat-label">🏝️ Islands</div></div>
       <div class="stat-card"><div class="stat-value">${stats.gamesPlayed}</div><div class="stat-label">Games</div></div>
     </div>
     ${(() => {
@@ -1067,10 +1068,11 @@ export function renderMatchDetail(matchId) {
   games.forEach(game => {
     ;(game.turns || []).forEach(t => {
       t.putts.forEach(p => {
-        if (!playerPutts[p.playerId]) playerPutts[p.playerId] = { made: 0, total: 0, ballBacks: 0 }
+        if (!playerPutts[p.playerId]) playerPutts[p.playerId] = { made: 0, total: 0, ballBacks: 0, islands: 0 }
         playerPutts[p.playerId].total++
         if (p.made) playerPutts[p.playerId].made++
         if (t.ballBack) playerPutts[p.playerId].ballBacks++
+        if (p.island) playerPutts[p.playerId].islands++
       })
     })
   })
@@ -1080,11 +1082,12 @@ export function renderMatchDetail(matchId) {
 
   function playerStatsRow(roster, teamColor) {
     return roster.map(p => {
-      const ps = playerPutts[p.id] || { made: 0, total: 0, ballBacks: 0 }
+      const ps = playerPutts[p.id] || { made: 0, total: 0, ballBacks: 0, islands: 0 }
       const pct = ps.total > 0 ? (ps.made / ps.total * 100).toFixed(0) : '—'
+      const islandBadge = ps.islands > 0 ? ` <span class="badge" style="font-size: 8px; background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3)">🏝️ ${ps.islands}</span>` : ''
       return `<div class="roster-item">
         <div class="roster-avatar" style="background:${p.avatarColor || teamColor};width:32px;height:32px;font-size:10px">${p.name.split(' ').map(n=>n[0]).join('')}</div>
-        <div style="flex:1"><div class="roster-name">${p.name}</div></div>
+        <div style="flex:1"><div class="roster-name">${p.name}${islandBadge}</div></div>
         <div style="text-align:right;display:flex;gap:var(--space-4);align-items:center">
           <span class="mono" style="font-size:var(--text-sm)">${ps.made}/${ps.total}</span>
           <span style="font-family:var(--font-display);font-weight:800;color:var(--pink-400);min-width:36px">${pct}%</span>
@@ -1105,13 +1108,15 @@ export function renderMatchDetail(matchId) {
     const turnLogHtml = (game.turns || []).map(t => {
       const team = getTeam(t.teamId)
       const phaseTag = t.redemption ? '<span class="badge badge-gold" style="font-size:8px">RDM</span> ' : t.overtime ? '<span class="badge badge-cyan" style="font-size:8px">OT</span> ' : ''
+      const islandTag = t.putts?.some(p => p.island) ? '<span class="badge" style="font-size:8px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">🏝️ ISL</span> ' : ''
       return `<div class="turn-entry">
         <span class="turn-num">#${t.turnNumber}</span>
         <span class="team-dot" style="background:${team?.color || '#666'}"></span>
-        <span style="flex:1">${phaseTag}${t.putts.map(p => {
+        <span style="flex:1">${phaseTag}${islandTag}${t.putts.map(p => {
           const name = getPlayer(p.playerId)?.name?.split(' ')[0] || '?'
           const holeLabel = getHoleShortName(p.hole)
-          return `${name}: ${p.made ? '✅ ' + holeLabel : '❌'}`
+          const bonusLabel = p.bonusCup ? ` <span style="color:#fbbf24;font-size:9px">(+${getHoleShortName(p.bonusCup)})</span>` : ''
+          return `${name}: ${p.made ? '✅ ' + holeLabel + bonusLabel : '❌'}`
         }).join(' · ')}</span>
         ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
       </div>`

@@ -162,7 +162,7 @@ export function getHeadToHead(teamId, leagueId) {
 
 // ─── Player Stats (iterates games[]) ───
 export function getPlayerStats(playerId) {
-  let totalPutts = 0, totalMade = 0, holesMade = {}, ballBackContributions = 0, gamesPlayed = 0
+  let totalPutts = 0, totalMade = 0, holesMade = {}, ballBackContributions = 0, gamesPlayed = 0, islandsSunk = 0
   const weeklyData = {}
 
   matches.filter(m => m.status === 'completed').forEach(m => {
@@ -179,6 +179,7 @@ export function getPlayerStats(playerId) {
             totalPutts++
             if (putt.made) { totalMade++; holesMade[putt.hole] = (holesMade[putt.hole] || 0) + 1 }
             if (turn.ballBack) ballBackContributions++
+            if (putt.island) islandsSunk++
           }
         })
       })
@@ -204,10 +205,15 @@ export function getPlayerStats(playerId) {
   return {
     playerId, gamesPlayed, totalPutts, totalMade,
     puttingPct: totalPutts > 0 ? totalMade / totalPutts : 0,
-    holesMade, ballBackContributions,
+    holesMade, ballBackContributions, islandsSunk,
     weeklyBreakdown: Object.values(weeklyData).sort((a, b) => a.week - b.week),
     bestHole: Object.entries(holesMade).sort((a, b) => b[1] - a[1])[0]?.[0] || null,
   }
+}
+
+export function getPlayerIslandCount(playerId) {
+  const stats = getPlayerStats(playerId)
+  return stats.islandsSunk || 0
 }
 
 // ─── Leaderboard (league-scoped) ───
