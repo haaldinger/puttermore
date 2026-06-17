@@ -468,21 +468,21 @@ export function renderScorer() {
 
   // Render boards — invert bottom board when stacked so cups face each other
   const isStacked = viewMode === 'stacked'
-  // Compute island cups for the active target board
-  const targetOpenCups = targetBoardId === 'home' ? s.homeBoardOpen : s.awayBoardOpen
-  const activeIslandCups = (!s.gameOver && !s.pendingIslandBonus) ? new Set(getIslandCups(targetOpenCups)) : new Set()
+  // Compute island cups for both boards
+  const homeIslandCups = (!s.gameOver && !s.pendingIslandBonus) ? new Set(getIslandCups(s.homeBoardOpen)) : new Set()
+  const awayIslandCups = (!s.gameOver && !s.pendingIslandBonus) ? new Set(getIslandCups(s.awayBoardOpen)) : new Set()
 
   const homeBoardHtml = renderSingleBoard(s.homeName, s.homeColor, s.homeBoardClaimed, s.awayColor, {
     interactive: !s.gameOver && !s.pendingIslandBonus && targetBoardId === 'home',
     active: !s.gameOver && targetBoardId === 'home', overtime: isOT, boardId: 'home',
-    islandCups: targetBoardId === 'home' ? activeIslandCups : new Set(),
+    islandCups: homeIslandCups,
     bonusPickMode: s.pendingIslandBonus && targetBoardId === 'home',
   })
   const awayBoardHtml = renderSingleBoard(s.awayName, s.awayColor, s.awayBoardClaimed, s.homeColor, {
     interactive: !s.gameOver && !s.pendingIslandBonus && targetBoardId === 'away',
     active: !s.gameOver && targetBoardId === 'away', overtime: isOT, boardId: 'away',
     inverted: isStacked,
-    islandCups: targetBoardId === 'away' ? activeIslandCups : new Set(),
+    islandCups: awayIslandCups,
     bonusPickMode: s.pendingIslandBonus && targetBoardId === 'away',
   })
 
