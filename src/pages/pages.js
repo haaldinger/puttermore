@@ -1344,27 +1344,85 @@ export function renderHelpPage() {
         <div class="card" style="padding: var(--space-4)">
           <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">1. Match Setup</h4>
           <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            Two team putting boards are set facing each other exactly 20 to 30 feet apart (adjusted for brewery space!). Each board starts fully open with a pyramid layout of 6 cups: 3 Back (B1-B3), 2 Middle (M1-M2), and 1 Front (F1).
+            Two team putting boards are set facing each other 20–30 feet apart (adjusted for brewery space). Each board starts fully open with a pyramid layout of <strong>6 cups</strong>: 3 Back (B1–B3), 2 Middle (M1–M2), and 1 Front (F1). Matches are played as a <strong>Best-of-3 series</strong>. First team to win 2 games wins the match.
           </p>
         </div>
         <div class="card" style="padding: var(--space-4)">
           <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">2. Team Rotation</h4>
           <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            Teams consist of multiple registered players. Captains alternate putting turns. Each team gets exactly two putts per active regulation turn. Individual players must alternate putting roles so every player gets a piece of the pressure!
+            Teams consist of 2–3 registered players. Teams alternate turns. Each team gets exactly <strong>2 putts per turn</strong>. For 3-player teams, the app auto-cycles pairings (P1+P2 → P1+P3 → P2+P3) so every player stays active.
           </p>
         </div>
         <div class="card" style="padding: var(--space-4)">
           <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">3. 🔥 Ball Backs</h4>
           <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            If both putters of the active team successfully sink their targets in the same turn, they trigger a **Double Sink Ball Back**! Both putters get their balls returned to take another set of consecutive shots, unlocking massive table swings!
+            If <strong>both putters</strong> of the active team successfully sink their targets in the same turn, they trigger a <strong>Ball Back</strong>! Both balls are returned and the team shoots again — unlocking massive momentum swings and potential winning streaks.
           </p>
         </div>
         <div class="card" style="padding: var(--space-4)">
-          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">4. Redemption</h4>
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">4. 🏝️ Island Cup Bonus</h4>
           <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            Once a team sinks the final cup, the opposing team gets one final <strong>Redemption Turn</strong> to attempt to clear their remaining cups. In redemption, they putt until they miss. If they clear the board, the <strong>original clearing team</strong> wins — they cleared first and sealed the deal. No overtime.
+            When a cup becomes <strong>isolated</strong> — completely surrounded by already-sunk cups — it glows gold as an "island." Sink an island cup and you earn a <strong>free bonus cup</strong>: tap any remaining open cup on the opponent's board to claim it instantly!
           </p>
         </div>
+        <div class="card" style="padding: var(--space-4)">
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">5. 🚨 Redemption Round</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            Once a team clears the opponent's board (without a ball back), the losing team gets a <strong>Redemption Round</strong>: each player putts in succession — keep shooting as long as you make it! The first complete miss ends the redemption. If they clear all remaining cups, the game goes to <strong>Sudden-Death Overtime</strong>.
+          </p>
+        </div>
+        <div class="card" style="padding: var(--space-4)">
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">6. ⚡ Sudden-Death Overtime</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            Middle and back cups are reset on both boards. Only the <strong>front 3 cups</strong> (F1, M1, M2) are in play. The first team to sink any cup wins the game! If overtime also ends in a redemption tie, another overtime round begins.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scoring Modes -->
+    <section class="animate-in delay-2" style="margin-bottom: var(--space-8)">
+      <div class="section-header"><h3>🎯 Scoring Modes</h3></div>
+      <div class="home-grid">
+        <div class="card" style="padding: var(--space-4); border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.02)">
+          <h4 style="color: #22c55e; font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">🎯 Live Score — Shot by Shot</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            The full experience. Tap the <strong>Made It</strong> or <strong>Miss</strong> buttons for each individual putt. The board updates in real time, ball backs are detected automatically, island cups glow gold, and every turn is logged. Unlocks full replay in the Ocho Simulator and the richest individual player stats.
+          </p>
+        </div>
+        <div class="card" style="padding: var(--space-4); border-color: rgba(251,191,36,0.2); background: rgba(251,191,36,0.02)">
+          <h4 style="color: var(--gold-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">📋 Quick Score — Final Scores Only</h4>
+          <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
+            Streamlined entry for when shot-by-shot tracking isn't practical. Enter who won each game and how many cups the losing team sank. Stats are <strong>estimated</strong> from the final scores and marked with a gold <strong style="color:var(--gold-400)">*</strong> asterisk. You can also abandon live scoring mid-game and fall back to Quick Score if things get hectic.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Points System -->
+    <section class="animate-in delay-2" style="margin-bottom: var(--space-8)">
+      <div class="section-header"><h3>🏅 Series Points System</h3></div>
+      <div class="card" style="padding: var(--space-4)">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); text-align: center">
+          <div style="padding: var(--space-3); background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: var(--radius-lg)">
+            <div style="font-size: var(--text-2xl); font-weight: 900; color: #22c55e; font-family: var(--font-display)">2</div>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px">Points</div>
+            <div style="font-size: 10px; color: #22c55e; font-weight: 700; margin-top: 4px">Series Win (2–0 or 2–1)</div>
+          </div>
+          <div style="padding: var(--space-3); background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); border-radius: var(--radius-lg)">
+            <div style="font-size: var(--text-2xl); font-weight: 900; color: var(--gold-400); font-family: var(--font-display)">1</div>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px">Point</div>
+            <div style="font-size: 10px; color: var(--gold-400); font-weight: 700; margin-top: 4px">Series Loss in Game 3</div>
+          </div>
+          <div style="padding: var(--space-3); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-lg)">
+            <div style="font-size: var(--text-2xl); font-weight: 900; color: var(--text-muted); font-family: var(--font-display)">0</div>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px">Points</div>
+            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; margin-top: 4px">0–2 Sweep Loss</div>
+          </div>
+        </div>
+        <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6; margin-top: var(--space-3); text-align: center">
+          Standings are ranked by total points. Tiebreakers: Win% → Cup differential → Team name.
+        </p>
       </div>
     </section>
 
@@ -1375,12 +1433,12 @@ export function renderHelpPage() {
         
         <div class="faq-item card">
           <div class="faq-item-header">
-            <span>🎯 How do I record scoring updates in real-time?</span>
+            <span>🎯 How do I start a scoring session as Captain?</span>
             <span class="faq-toggle-icon">＋</span>
           </div>
           <div class="faq-item-body">
             <p>
-              Captains can tap the **"Score"** tab in the main menu to launch the Ocho Live Desk. Make sure to select the correct league, match, and rosters. During the game, tap **"Made"** or **"Miss"** for each player's putt, and the board will automatically map the remaining cups! Tap **"Submit Turn"** to finalize the step.
+              Log in with your registered email (a Magic Link will be sent to your inbox). Once logged in, tap the <strong>🎯 Scorer</strong> tab. You'll see your team's scheduled matches and an <strong>⚡ Open Play</strong> section. Select your opponent, choose your scoring mode (Live or Quick Score), and the board loads instantly. During Live Scoring, tap <strong>Made It</strong> or <strong>Miss</strong> for each player's putt — the boards update automatically!
             </p>
           </div>
         </div>
@@ -1392,31 +1450,7 @@ export function renderHelpPage() {
           </div>
           <div class="faq-item-body">
             <p>
-              Don't panic! The Live Scorer has an in-place **"Undo Turn"** action button at the bottom of the scoreboard. Tapping it rolls back the database logs by exactly one turn, letting you re-record the putts without losing the rest of your match data.
-            </p>
-          </div>
-        </div>
-
-        <div class="faq-item card">
-          <div class="faq-item-header">
-            <span>🛡️ Do bounce-out putts count as a made sink?</span>
-            <span class="faq-toggle-icon">＋</span>
-          </div>
-          <div class="faq-item-body">
-            <p>
-              According to the Puttermore Rulebook, Section 4.2: A ball must **come to complete rest inside the target cup** to count as a made sink. Balls that strike the inner cup but bounce or roll back out onto the brewery turf are officially marked as a **Miss (❌)**.
-            </p>
-          </div>
-        </div>
-
-        <div class="faq-item card">
-          <div class="faq-item-header">
-            <span>🔥 How do tie-breakers work in the Standings?</span>
-            <span class="faq-toggle-icon">＋</span>
-          </div>
-          <div class="faq-item-body">
-            <p>
-              Leagues determine rank by Match Wins first. If teams are tied, Puttermore ranks them by **Double Sink Ball Backs** (valuing aggressive play!), followed by **Average Turns to Victory** (valuing efficiency!). If they are still tied, the captain who drank the most stout during the season wins.
+              Don't panic! The Live Scorer has an <strong>↩️ Undo Turn</strong> button at the bottom of the scoreboard. Tapping it rolls back the game state by exactly one full turn, letting you re-record putts without losing the rest of your match data. Only full turns — not individual putts — can be rolled back.
             </p>
           </div>
         </div>
@@ -1428,7 +1462,67 @@ export function renderHelpPage() {
           </div>
           <div class="faq-item-body">
             <p>
-              Quick Score lets captains enter just the <strong>final game scores</strong> (e.g. 6–3, 6–5) without tracking every individual putt. Use it when your team doesn't want shot-by-shot detail, or if you lose track mid-game. Stats are estimated from the final scores and marked with a gold <strong style="color:var(--gold-400)">*</strong> asterisk so everyone knows they're approximated. You can also <strong>abandon live scoring mid-game</strong> and switch to Quick Score if things get hectic.
+              Quick Score lets captains enter just the <strong>final game scores</strong> (e.g. 6–3, 6–5) without tracking every individual putt. Use it when your team doesn't want shot-by-shot detail, or if you lose track mid-game. Stats are estimated from the final scores and marked with a gold <strong style="color:var(--gold-400)">*</strong> asterisk so everyone knows they're approximated. You can also <strong>abandon live scoring mid-game</strong> and switch to Quick Score using the "⚠️ Abandon Shot Tracking" button.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>⚡ What is Open Play mode?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              Open Play lets Team Captains start a scoring session against <strong>any opponent</strong> without needing a scheduled match. It's perfect for scrimmages, practice rounds, or off-week sessions. Simply pick your opponent from the grid and choose your scoring mode. If you save the match, a new match record is created (marked as pending review) so Commissioners can approve and include the stats.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🏝️ What is an Island Cup and how does the bonus work?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              An Island Cup is a cup that has become <strong>completely isolated</strong> — all cups adjacent to it are already sunk. Island cups glow with a gold shimmer on the board. Sink an island cup, and you earn a <strong>free bonus cup pick</strong>: tap any remaining open cup on the opponent's board to claim it for free. Island bonuses are tracked in player and match stats.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🛡️ Do bounce-out putts count as a made sink?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              According to the Puttermore Rulebook, a ball must <strong>come to complete rest inside the target cup</strong> to count as a made sink. Balls that strike the inner cup wall but bounce or roll back out onto the turf are officially marked as a <strong>Miss (❌)</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>🔥 How does the Standings tiebreaker work?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              Standings are ranked by <strong>total points</strong> first (Win=2, Game-3-Loss=1, 0-2-Loss=0). If teams are tied on points, Puttermore ranks by <strong>Win Percentage</strong>, then <strong>Cup Differential</strong> (total cups sunk minus total cups allowed), then alphabetically by team name. If they're still tied after all that, the captain who drank the most stout during the season wins.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>👑 How do Admins approve and publish match results?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              After a captain saves a completed match, it moves to <strong>Pending Review</strong> status. League Commissioners (J-MO Boh & Shane OldBay) log into the <strong>👑 Admin Console</strong> and open the <strong>📋 Game Review</strong> tab. They can review the match details and click <strong>Approve & Publish 🚀</strong> to commit the result, instantly updating standings, player stats, and the schedule.
             </p>
           </div>
         </div>
@@ -1444,16 +1538,16 @@ export function renderHelpPage() {
           <span style="font-family:var(--font-display);font-weight:900;font-size:var(--text-3xl);background:linear-gradient(135deg,var(--pink-400),var(--gold-400));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px">PUTTERMORE</span>
         </div>
         <p style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.7;max-width:500px;margin:0 auto var(--space-3)">
-          The definitive social athletics platform for Mobtown Bar Putting League. Real-time live scoring, ESPN8-grade commentary from Cotton McKnight & Pepper Reddick, rivalry analytics, and weekly recaps — all from the brewery floor.
+          The definitive social putting league platform for Mobtown Bar Putting at Mobtown Brewing Co. Real-time live scoring, Best-of-3 series tracking, ESPN8-grade commentary from Cotton McKnight &amp; Pepper Reddick, rivalry analytics, island cup bonuses, and weekly recaps — all from the brewery floor.
         </p>
         <div style="font-size:10px;color:var(--text-muted);border-top:1px dashed rgba(255,255,255,0.06);padding-top:var(--space-3);margin-top:var(--space-3)">
-          Crafted with 🍺 & obsessive attention to detail<br>
-          <span style="opacity:0.4;font-size:9px">© 2025 HAA · v1.0</span>
+          Crafted with 🍺 &amp; obsessive attention to detail<br>
+          <span style="opacity:0.4;font-size:9px">© 2026 HAA · v2.0 · Supabase-powered</span>
         </div>
         <div id="haa-easter-egg" style="display:none;margin-top:var(--space-4);padding:var(--space-4);background:linear-gradient(135deg,rgba(233,30,139,0.08),rgba(251,191,36,0.08));border:1px dashed var(--gold-400);border-radius:var(--radius-xl);animation:fadeIn 0.5s ease">
           <div style="font-family:var(--font-display);font-weight:900;font-size:var(--text-sm);color:var(--gold-400);margin-bottom:var(--space-2)">🏆 ACHIEVEMENT UNLOCKED</div>
           <div style="font-size:var(--text-xs);color:var(--text-primary);line-height:1.6">
-            You found the secret! This entire platform — every animation, every Cotton & Pepper quip, every ball-back algorithm — was built by <strong style="color:var(--pink-400)">Heath Aldinger</strong> (HAA).<br>
+            You found the secret! This entire platform — every animation, every Cotton &amp; Pepper quip, every island cup detection algorithm — was built by <strong style="color:var(--pink-400)">Heath Aldinger</strong> (HAA).<br>
             <span style="font-style:italic;color:var(--text-muted)">"If you're reading this, you owe me a stout." — H</span>
           </div>
         </div>
