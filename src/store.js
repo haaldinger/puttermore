@@ -1,8 +1,5 @@
-/**
- * Store — localStorage-backed persistence for Puttermore V2
- * Best-of-3 series format with match management
- */
 import { players as seedPlayers, teams as seedTeams, seasons as seedSeasons, matches as seedMatches, venues as seedVenues, leagues as seedLeagues } from './seed.js'
+import { supabase } from './supabase.js'
 
 const STORE_KEY = 'puttermore_store'
 const STORE_VERSION = 9
@@ -52,27 +49,310 @@ export const matches = _state.matches
 export const venues = _state.venues
 export const leagues = _state.leagues
 
+function replaceArr(target, source) {
+  target.length = 0
+  source.forEach(item => target.push(item))
+}
+
+export function syncExportedArrays() {
+  replaceArr(players, _state.players)
+  replaceArr(teams, _state.teams)
+  replaceArr(seasons, _state.seasons)
+  replaceArr(matches, _state.matches)
+  replaceArr(venues, _state.venues)
+  replaceArr(leagues, _state.leagues)
+}
+
+export async function initializeRemoteStore() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.log('🔌 Supabase credentials missing. Falling back to local storage.')
+    _state = loadState() || getDefaultState()
+    syncExportedArrays()
+    return true
+  }
+
+  try {
+    console.log('🔌 Initializing Remote Store from Supabase...')
+    
+    // Fetch all tables in parallel
+    const [
+      { data: playersData, error: playersErr },
+      { data: teamsData, error: teamsErr },
+      { data: seasonsData, error: seasonsErr },
+      { data: matchesData, error: matchesErr },
+      { data: venuesData, error: venuesErr },
+      { data: leaguesData, error: leaguesErr }
+    ] = await Promise.all([
+      supabase.from('players').select('*'),
+      supabase.from('teams').select('*, season_roster(*, players(*))'),
+      supabase.from('seasons').select('*'),
+      supabase.from('matches').select('*, games(*, turns(*, putts(*)))'),
+      supabase.from('venues').select('*'),
+      supabase.from('leagues').select('*')
+    ])
+
+    if (playersErr || teamsErr || seasonsErr || matchesErr || venuesErr || leaguesErr) {
+      throw new Error(
+        'Supabase query failed: ' +
+        (playersErr?.message || teamsErr?.message || seasonsErr?.message || matchesErr?.message || venuesErr?.message || leaguesErr?.message)
+      )
+    }
+
+    // Process players
+    const mappedPlayers = playersData.map(p => ({
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      avatarColor: p.avatar_color,
+      putterName: p.putter_name,
+      putterDesc: p.putter_desc,
+      putterType: p.putter_type,
+      putterImage: p.putter_image_url,
+      isAdmin: p.role === 'admin'
+    }))
+
+    // Process teams & rosters
+    const mappedTeams = teamsData.map(t => {
+      const roster = (t.season_roster || []).map((r, i) => ({
+        playerId: r.player_id,
+        order: r.order || (i + 1)
+      }))
+      const captain = t.season_roster?.find(r => r.is_captain)
+      return {
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        leagueId: 'l1', // Default league id
+        captainPlayerId: captain?.player_id || null,
+        roster
+      }
+    })
+
+    // Process matches & games
+    const mappedMatches = matchesData.map(m => {
+      const games = (m.games || []).map(g => {
+        const turns = (g.turns || []).map(t => {
+          const putts = (t.putts || []).map(p => ({
+            playerId: p.player_id,
+            hole: p.hole,
+            made: p.made,
+            ...(p.island !== undefined && { island: p.island }),
+            ...(p.bonus_cup !== null && { bonusCup: p.bonus_cup }),
+            ...(p.synthetic !== undefined && { synthetic: p.synthetic })
+          }))
+
+          return {
+            turnNumber: t.turn_number,
+            teamId: t.team_id,
+            putters: t.putts?.map(p => p.player_id) || [],
+            putts,
+            ballBack: t.ball_back,
+            overtime: t.overtime || false,
+            redemption: t.redemption || false,
+            ...(t.synthetic !== undefined && { synthetic: t.synthetic })
+          }
+        }).sort((a, b) => a.turnNumber - b.turnNumber)
+
+        const holesWon = {
+          [m.home_team_id]: turns.filter(t => t.teamId === m.away_team_id).flatMap(t => t.putts).filter(p => p.made).map(p => p.hole),
+          [m.away_team_id]: turns.filter(t => t.teamId === m.home_team_id).flatMap(t => t.putts).filter(p => p.made).map(p => p.hole)
+        }
+
+        return {
+          turns,
+          scoringMode: g.scoringMode || m.scoring_mode || 'live',
+          holesWon,
+          finalScore: { home: g.final_score_home, away: g.final_score_away },
+          totalTurns: g.total_turns || turns.length,
+          ballBacks: {
+            [m.home_team_id]: turns.filter(t => t.teamId === m.home_team_id && t.ballBack).length,
+            [m.away_team_id]: turns.filter(t => t.teamId === m.away_team_id && t.ballBack).length
+          },
+          winnerId: g.winner_id,
+          overtime: g.overtime
+        }
+      }).sort((a, b) => a.gameNumber - b.gameNumber)
+
+      return {
+        id: m.id,
+        leagueId: m.leagueId || 'l1',
+        seasonId: m.season_id,
+        weekNumber: m.week_number,
+        date: m.scheduled_time ? new Date(m.scheduled_time).toISOString().split('T')[0] : '',
+        venueId: m.venueId || 'v1',
+        homeTeamId: m.home_team_id,
+        awayTeamId: m.away_team_id,
+        status: m.status,
+        games,
+        seriesScore: { home: m.series_score_home, away: m.series_score_away },
+        winnerId: m.winner_id,
+        homePoints: m.home_points || 0,
+        awayPoints: m.away_points || 0,
+        scoringMode: m.scoring_mode
+      }
+    })
+
+    // Process seasons, venues, leagues
+    const mappedSeasons = seasonsData.map(s => ({
+      id: s.id,
+      name: s.name,
+      weeks: s.weeks || 6,
+      startDate: s.start_date,
+      endDate: s.end_date,
+      status: s.status
+    }))
+
+    const mappedVenues = venuesData.map(v => ({
+      id: v.id,
+      name: v.name,
+      address: v.address,
+      shortName: v.name.split(' ')[0],
+      color: '#e91e8b',
+      status: 'active'
+    }))
+
+    const mappedLeagues = leaguesData.map(l => ({
+      id: l.id,
+      name: l.name,
+      seasonId: l.season_id,
+      venueId: l.venue_id,
+      day: 'Wednesday',
+      status: 'active'
+    }))
+
+    // Update the local store cache
+    _state.players = mappedPlayers
+    _state.teams = mappedTeams
+    _state.seasons = mappedSeasons
+    _state.matches = mappedMatches
+    _state.venues = mappedVenues
+    _state.leagues = mappedLeagues
+
+    syncExportedArrays()
+    console.log('🔌 Remote Store initialized successfully!')
+    return true
+  } catch (e) {
+    console.error('🔌 Failed to fetch Remote Store, falling back to local:', e)
+    _state = loadState() || getDefaultState()
+    syncExportedArrays()
+    return false
+  }
+}
+
 // ─── Match Persistence (Series Format) ───
 
-export function saveMatch(matchId, result) {
+export async function saveMatch(matchId, result) {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
+
   Object.assign(match, result, { status: 'pending_review' })
-  saveState()
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      // 1. Update the match status, series score, and winner
+      const { error: matchErr } = await supabase.from('matches').update({
+        status: 'pending_review',
+        series_score_home: result.seriesScore.home,
+        series_score_away: result.seriesScore.away,
+        winner_id: result.winnerId,
+        home_points: result.homePoints,
+        away_points: result.awayPoints,
+        scoring_mode: result.scoringMode
+      }).eq('id', matchId)
+
+      if (matchErr) throw matchErr
+
+      // 2. Delete any existing games/turns/putts for this match to overwrite them
+      await supabase.from('games').delete().eq('match_id', matchId)
+
+      // 3. Insert the games, turns, and putts
+      for (const [idx, g] of result.games.entries()) {
+        const { data: gameData, error: gameErr } = await supabase.from('games').insert({
+          match_id: matchId,
+          game_number: idx + 1,
+          winner_id: g.winnerId,
+          final_score_home: g.finalScore.home,
+          final_score_away: g.finalScore.away,
+          overtime: g.overtime
+        }).select().single()
+
+        if (gameErr) throw gameErr
+
+        // Insert turns & putts for this game
+        for (const t of g.turns) {
+          const { data: turnData, error: turnErr } = await supabase.from('turns').insert({
+            game_id: gameData.id,
+            turn_number: t.turnNumber,
+            team_id: t.teamId,
+            ball_back: t.ballBack
+          }).select().single()
+
+          if (turnErr) throw turnErr
+
+          // Insert putts
+          const puttsToInsert = t.putts.map(p => ({
+            turn_id: turnData.id,
+            player_id: p.playerId,
+            hole: p.hole,
+            made: p.made,
+            island: p.island || false,
+            bonus_cup: p.bonusCup || null,
+            synthetic: p.synthetic || false
+          }))
+
+          if (puttsToInsert.length > 0) {
+            const { error: puttsErr } = await supabase.from('putts').insert(puttsToInsert)
+            if (puttsErr) throw puttsErr
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync match save to Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
   return match
 }
 
-export function approveMatch(matchId) {
+export async function approveMatch(matchId) {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
+
   match.status = 'completed'
-  saveState()
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('matches')
+        .update({ status: 'completed' })
+        .eq('id', matchId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to approve match on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
   return match
 }
 
-export function updateMatch(matchId, updates) {
+export async function updateMatch(matchId, updates) {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
+
   // Support updating series score, games, winner, points
   if (updates.seriesScore) match.seriesScore = updates.seriesScore
   if (updates.games) match.games = updates.games
@@ -80,9 +360,9 @@ export function updateMatch(matchId, updates) {
   if (updates.homePoints !== undefined) match.homePoints = updates.homePoints
   if (updates.awayPoints !== undefined) match.awayPoints = updates.awayPoints
   if (updates.overtime !== undefined) match.overtime = updates.overtime
+
   // Legacy single-game support for admin score adjustment
   if (updates.finalScore) {
-    // Update the relevant game's finalScore
     if (match.games && match.games.length > 0) {
       const lastGame = match.games[match.games.length - 1]
       lastGame.finalScore = updates.finalScore
@@ -93,14 +373,80 @@ export function updateMatch(matchId, updates) {
       }
     }
   }
-  saveState()
+
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const matchUpdate = {}
+      if (updates.winnerId !== undefined) matchUpdate.winner_id = updates.winnerId
+      if (updates.homePoints !== undefined) matchUpdate.home_points = updates.homePoints
+      if (updates.awayPoints !== undefined) matchUpdate.away_points = updates.awayPoints
+      if (updates.seriesScore) {
+        matchUpdate.series_score_home = updates.seriesScore.home
+        matchUpdate.series_score_away = updates.seriesScore.away
+      }
+
+      if (Object.keys(matchUpdate).length > 0) {
+        const { error } = await supabase.from('matches').update(matchUpdate).eq('id', matchId)
+        if (error) throw error
+      }
+
+      if (updates.games) {
+        await supabase.from('games').delete().eq('match_id', matchId)
+        for (const [idx, g] of updates.games.entries()) {
+          const { data: gameData, error: gameErr } = await supabase.from('games').insert({
+            match_id: matchId,
+            game_number: idx + 1,
+            winner_id: g.winnerId,
+            final_score_home: g.finalScore.home,
+            final_score_away: g.finalScore.away,
+            overtime: g.overtime
+          }).select().single()
+
+          if (gameErr) throw gameErr
+
+          for (const t of g.turns) {
+            const { data: turnData, error: turnErr } = await supabase.from('turns').insert({
+              game_id: gameData.id,
+              turn_number: t.turnNumber,
+              team_id: t.teamId,
+              ball_back: t.ballBack
+            }).select().single()
+
+            if (turnErr) throw turnErr
+
+            const puttsToInsert = t.putts.map(p => ({
+              turn_id: turnData.id,
+              player_id: p.playerId,
+              hole: p.hole,
+              made: p.made,
+              island: p.island || false,
+              bonus_cup: p.bonusCup || null,
+              synthetic: p.synthetic || false
+            }))
+
+            if (puttsToInsert.length > 0) {
+              const { error: puttsErr } = await supabase.from('putts').insert(puttsToInsert)
+              if (puttsErr) throw puttsErr
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update match on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
   return match
 }
 
-// ─── Admin Match Management ───
-
-export function createMatch(leagueId, weekNumber, homeTeamId, awayTeamId) {
-  // Generate unique ID
+export async function createMatch(leagueId, weekNumber, homeTeamId, awayTeamId) {
   const existingIds = _state.matches
     .filter(m => m.leagueId === leagueId)
     .map(m => {
@@ -108,8 +454,8 @@ export function createMatch(leagueId, weekNumber, homeTeamId, awayTeamId) {
       return isNaN(num) ? 0 : num
     })
   const nextId = existingIds.length ? Math.max(...existingIds) + 1 : 0
+  const matchIdStr = `${leagueId}-m${nextId}`
 
-  // Find the date for this week
   const season = _state.seasons.find(s => s.status === 'active')
   let date = ''
   if (season && season.startDate) {
@@ -119,7 +465,7 @@ export function createMatch(leagueId, weekNumber, homeTeamId, awayTeamId) {
   }
 
   const newMatch = {
-    id: `${leagueId}-m${nextId}`,
+    id: matchIdStr,
     leagueId,
     seasonId: season?.id || 's1',
     weekNumber,
@@ -136,46 +482,113 @@ export function createMatch(leagueId, weekNumber, homeTeamId, awayTeamId) {
   }
 
   _state.matches.push(newMatch)
-  if (matches !== _state.matches && !matches.some(m => m.id === newMatch.id)) {
-    matches.push(newMatch)
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { data, error } = await supabase.from('matches').insert({
+        season_id: season?.id || 's1',
+        home_team_id: homeTeamId,
+        away_team_id: awayTeamId,
+        week_number: weekNumber,
+        scheduled_time: date ? `${date}T19:00:00Z` : null,
+        status: 'scheduled'
+      }).select().single()
+
+      if (error) throw error
+      newMatch.id = data.id
+      syncExportedArrays()
+    } catch (e) {
+      console.error('Failed to create match on Supabase:', e)
+    }
+  } else {
+    saveState()
   }
-  saveState()
+
   return newMatch
 }
 
-export function updateMatchTeams(matchId, homeTeamId, awayTeamId) {
+export async function updateMatchTeams(matchId, homeTeamId, awayTeamId) {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
   if (homeTeamId) match.homeTeamId = homeTeamId
   if (awayTeamId) match.awayTeamId = awayTeamId
-  saveState()
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('matches').update({
+        home_team_id: homeTeamId,
+        away_team_id: awayTeamId
+      }).eq('id', matchId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to update match teams on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
   return match
 }
 
-export function updateMatchWeek(matchId, weekNumber) {
+export async function updateMatchWeek(matchId, weekNumber) {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
   match.weekNumber = weekNumber
-  // Recalculate date
   const season = _state.seasons.find(s => s.status === 'active')
   if (season && season.startDate) {
     const start = new Date(season.startDate + 'T12:00:00')
     const weekDate = new Date(start.getTime() + (weekNumber - 1) * 7 * 24 * 60 * 60 * 1000)
     match.date = weekDate.toISOString().split('T')[0]
   }
-  saveState()
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('matches').update({
+        week_number: weekNumber,
+        scheduled_time: match.date ? `${match.date}T19:00:00Z` : null
+      }).eq('id', matchId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to update match week on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
   return match
 }
 
-export function deleteMatch(matchId) {
+export async function deleteMatch(matchId) {
   const idx = _state.matches.findIndex(m => m.id === matchId)
   if (idx === -1) return false
   _state.matches.splice(idx, 1)
-  if (matches !== _state.matches) {
-    const mIdx = matches.findIndex(m => m.id === matchId)
-    if (mIdx !== -1) matches.splice(mIdx, 1)
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('matches').delete().eq('id', matchId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to delete match on Supabase:', e)
+      return false
+    }
+  } else {
+    saveState()
   }
-  saveState()
+
   return true
 }
 
@@ -356,7 +769,7 @@ export function quickScoreMatch(matchId, gameScores, scoringMode = 'override') {
 
 // ─── Player Management ───
 
-export function addPlayer(teamId, name, color) {
+export async function addPlayer(teamId, name, color) {
   const team = _state.teams.find(t => t.id === teamId)
   if (!team) return null
 
@@ -376,63 +789,170 @@ export function addPlayer(teamId, name, color) {
   }
 
   _state.players.push(newPlayer)
+  if (team) {
+    const nextOrder = team.roster.length ? Math.max(...team.roster.map(r => r.order || 0)) + 1 : 1
+    team.roster.push({ playerId: newPlayerId, order: nextOrder })
+  }
+  syncExportedArrays()
 
-  if (players !== _state.players && !players.some(p => p.id === newPlayerId)) {
-    players.push(newPlayer)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const generatedId = crypto.randomUUID()
+      const { error: playerErr } = await supabase.from('players').insert({
+        id: generatedId,
+        name,
+        email: `${name.toLowerCase().replace(/\s+/g, '')}_${newNumId}@puttermore.com`,
+        avatar_color: color || '#e91e8b',
+        role: 'player'
+      })
+
+      if (playerErr) throw playerErr
+
+      const season = _state.seasons.find(s => s.status === 'active')
+      const nextOrder = team ? (team.roster.length ? Math.max(...team.roster.map(r => r.order || 0)) + 1 : 1) : 1
+      const { error: rosterErr } = await supabase.from('season_roster').insert({
+        season_id: season?.id || 's1',
+        team_id: teamId,
+        player_id: generatedId,
+        order: nextOrder
+      })
+
+      if (rosterErr) throw rosterErr
+
+      newPlayer.id = generatedId
+      if (team) {
+        const rItem = team.roster.find(r => r.playerId === newPlayerId)
+        if (rItem) rItem.playerId = generatedId
+      }
+      syncExportedArrays()
+    } catch (e) {
+      console.error('Failed to add player on Supabase:', e)
+    }
+  } else {
+    saveState()
   }
 
-  const nextOrder = team.roster.length ? Math.max(...team.roster.map(r => r.order || 0)) + 1 : 1
-  team.roster.push({ playerId: newPlayerId, order: nextOrder })
-
-  saveState()
   return newPlayer
 }
 
-export function removePlayer(playerId) {
+export async function removePlayer(playerId) {
   const idx = _state.players.findIndex(p => p.id === playerId)
   if (idx === -1) return false
 
   _state.players.splice(idx, 1)
-
-  if (players !== _state.players) {
-    const pIdx = players.findIndex(p => p.id === playerId)
-    if (pIdx !== -1) players.splice(pIdx, 1)
-  }
-
   _state.teams.forEach(t => {
     t.roster = t.roster.filter(r => r.playerId !== playerId)
     if (t.captainPlayerId === playerId) {
       t.captainPlayerId = t.roster.length ? t.roster[0].playerId : null
     }
   })
+  syncExportedArrays()
 
-  saveState()
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('players').delete().eq('id', playerId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to remove player on Supabase:', e)
+      return false
+    }
+  } else {
+    saveState()
+  }
+
   return true
 }
 
-export function updatePlayer(playerId, name, color) {
+export async function updatePlayer(playerId, name, color) {
   const player = _state.players.find(p => p.id === playerId)
   if (!player) return null
   if (name) player.name = name
   if (color) player.avatarColor = color
-  saveState()
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('players').update({
+        name: player.name,
+        avatar_color: player.avatarColor
+      }).eq('id', playerId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to update player on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
   return player
 }
 
-export function updatePlayerPutter(playerId, putterName, putterDesc, putterType, putterImage) {
+export async function updatePlayerPutter(playerId, putterName, putterDesc, putterType, putterImage) {
   const player = _state.players.find(p => p.id === playerId)
   if (!player) return null
   player.putterName = putterName || player.putterName || 'The Bmore Blade'
   player.putterDesc = putterDesc || player.putterDesc || 'Sinks putts like a dream.'
   player.putterType = putterType || player.putterType || 'blade'
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
   if (putterImage !== undefined) {
     player.putterImage = putterImage
   }
-  saveState()
+  syncExportedArrays()
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      let publicUrl = putterImage
+      if (putterImage && putterImage.startsWith('data:image')) {
+        const response = await fetch(putterImage)
+        const blob = await response.blob()
+        const filePath = `putters/${playerId}-${Date.now()}.webp`
+        
+        const { error: uploadErr } = await supabase.storage
+          .from('putter-photos')
+          .upload(filePath, blob, { contentType: 'image/webp', cacheControl: '3600', upsert: true })
+
+        if (uploadErr) throw uploadErr
+
+        const { data: urlData } = supabase.storage
+          .from('putter-photos')
+          .getPublicUrl(filePath)
+        
+        publicUrl = urlData.publicUrl
+        player.putterImage = publicUrl
+        syncExportedArrays()
+      }
+
+      const { error } = await supabase.from('players').update({
+        putter_name: player.putterName,
+        putter_desc: player.putterDesc,
+        putter_type: player.putterType,
+        putter_image_url: publicUrl
+      }).eq('id', playerId)
+
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to update player putter on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
   return player
 }
 
-export function assignCaptain(teamId, playerId) {
+export async function assignCaptain(teamId, playerId) {
   const team = _state.teams.find(t => t.id === teamId)
   if (!team) return false
 
@@ -440,24 +960,43 @@ export function assignCaptain(teamId, playerId) {
   if (!inRoster) return false
 
   team.captainPlayerId = playerId
-  saveState()
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const season = _state.seasons.find(s => s.status === 'active')
+      const { error: resetErr } = await supabase.from('season_roster')
+        .update({ is_captain: false })
+        .eq('team_id', teamId)
+        .eq('season_id', season?.id || 's1')
+
+      if (resetErr) throw resetErr
+
+      const { error: setErr } = await supabase.from('season_roster')
+        .update({ is_captain: true })
+        .eq('team_id', teamId)
+        .eq('player_id', playerId)
+        .eq('season_id', season?.id || 's1')
+
+      if (setErr) throw setErr
+    } catch (e) {
+      console.error('Failed to assign captain on Supabase:', e)
+      return false
+    }
+  } else {
+    saveState()
+  }
+
   return true
 }
 
 export function resetStore() {
   _state = getDefaultState()
-  replaceArr(players, _state.players)
-  replaceArr(teams, _state.teams)
-  replaceArr(seasons, _state.seasons)
-  replaceArr(matches, _state.matches)
-  replaceArr(venues, _state.venues)
-  replaceArr(leagues, _state.leagues)
+  syncExportedArrays()
   saveState()
-}
-
-function replaceArr(target, source) {
-  target.length = 0
-  source.forEach(item => target.push(item))
 }
 
 const LOGIN_KEY = 'puttermore_logged_in_player_id'
@@ -476,8 +1015,45 @@ export function setLoggedInUser(playerId) {
   }
 }
 
-export function logout() {
+export async function logout() {
   localStorage.removeItem(LOGIN_KEY)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (supabaseUrl && supabaseAnonKey) {
+    await supabase.auth.signOut()
+  }
+}
+
+export async function getSessionUser() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (supabaseUrl && supabaseAnonKey) {
+    const { data } = await supabase.auth.getUser()
+    if (data?.user) {
+      const player = _state.players.find(p => p.id === data.user.id)
+      if (player) {
+        localStorage.setItem(LOGIN_KEY, player.id)
+        return player
+      }
+    }
+  }
+  return null
+}
+
+export async function loginWithEmail(email) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (supabaseUrl && supabaseAnonKey) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    })
+    if (error) throw error
+    return true
+  }
+  return false
 }
 
 // ─── Demo Night Reset ───

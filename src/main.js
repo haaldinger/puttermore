@@ -16,8 +16,9 @@ import {
   getLoggedInUser, setLoggedInUser, logout,
   updatePlayerPutter, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain,
   createMatch, deleteMatch, quickScoreMatch, resetAllStats,
-  saveSnapshot
+  saveSnapshot, initializeRemoteStore, getSessionUser, loginWithEmail
 } from './store.js'
+import { supabase } from './supabase.js'
 
 const specDetails = {
   classic: {
@@ -732,6 +733,12 @@ document.addEventListener('click', (e) => {
   // Login As profile card click
   const loginAs = e.target.closest('[data-login-as]')
   if (loginAs) {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (supabaseUrl && supabaseAnonKey) {
+      showToast('🔒 Please sign in securely via the email login form above.', 'error')
+      return
+    }
     const playerId = loginAs.dataset.loginAs
     setLoggedInUser(playerId)
     const player = getPlayer(playerId)
@@ -740,12 +747,45 @@ document.addEventListener('click', (e) => {
     return
   }
 
+  // Send magic link email click
+  const sendMagicLinkBtn = e.target.closest('#send-magic-link-btn')
+  if (sendMagicLinkBtn) {
+    const emailInput = document.getElementById('login-email-input')
+    const email = emailInput?.value?.trim()
+    if (!email) {
+      showToast('⚠️ Please enter a valid email address.', 'error')
+      return
+    }
+
+    sendMagicLinkBtn.disabled = true
+    sendMagicLinkBtn.textContent = 'Sending...'
+    
+    loginWithEmail(email)
+      .then(() => {
+        showToast('✉️ Magic Link sent! Check your inbox.')
+        sendMagicLinkBtn.textContent = 'Sent!'
+      })
+      .catch((err) => {
+        console.error(err)
+        showToast('❌ Failed to send Magic Link: ' + err.message, 'error')
+        sendMagicLinkBtn.disabled = false
+        sendMagicLinkBtn.textContent = 'Send Code'
+      })
+    return
+  }
+
   // Logout button click
   const logoutBtn = e.target.closest('#logout-btn')
   if (logoutBtn) {
     logout()
-    showToast('🚪 Logged out successfully!')
-    navigate('home')
+      .then(() => {
+        showToast('🚪 Logged out successfully!')
+        navigate('home')
+      })
+      .catch(() => {
+        showToast('🚪 Logged out locally!')
+        navigate('home')
+      })
     return
   }
 
@@ -1229,10 +1269,62 @@ window.addEventListener('puttermore-time-shifted', render)
 
 // ─── Router ───
 window.addEventListener('hashchange', render)
-window.addEventListener('DOMContentLoaded', render)
 
-// Initial render
-render()
+// ─── Realtime Subscriptions ───
+function setupRealtimeSubscriptions() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) return
+
+  // Subscribe to changes on matches, games, turns, putts
+  supabase
+    .channel('public:matches')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => handleRemoteChange())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => handleRemoteChange())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'turns' }, () => handleRemoteChange())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'putts' }, () => handleRemoteChange())
+    .subscribe()
+}
+
+let throttleTimeout = null
+function handleRemoteChange() {
+  if (throttleTimeout) return
+  throttleTimeout = setTimeout(async () => {
+    throttleTimeout = null
+    console.log('🔄 Remote change detected! Syncing store...')
+    await initializeRemoteStore()
+    render()
+  }, 300)
+}
+
+async function initApp() {
+  const app = document.getElementById('app')
+  if (app) {
+    app.innerHTML = `
+      <div style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-4); background:var(--bg-app); color:#fff; font-family:var(--font-display)">
+        <div class="loader-spinner" style="width:40px; height:40px; border:4px solid rgba(255,255,255,0.05); border-top-color:var(--pink-400); border-radius:50%; animation:spin 1s linear infinite"></div>
+        <div style="font-size:var(--text-sm); font-weight:800; letter-spacing:1px; color:var(--text-secondary)">Hydrating Puttermore Database...</div>
+      </div>
+      <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+    `
+  }
+
+  // Hydrate local cache from Supabase
+  await initializeRemoteStore()
+  
+  // Verify active user session if remote authentication exists
+  await getSessionUser()
+
+  // Setup live scoring websockets sync
+  setupRealtimeSubscriptions()
+
+  // Render the actual app content
+  render()
+}
+
+window.addEventListener('DOMContentLoaded', initApp)
 
 // ─── HAA Signature ───
 document.head.insertAdjacentHTML('beforeend', '<!-- Puttermore v1.0 · Engineered by HAA · "Sink it or stout it" -->')

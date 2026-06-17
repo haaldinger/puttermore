@@ -1468,6 +1468,23 @@ export function renderLoginPage() {
   const allTeams = getStandings('l1').map(s => s.team)
   const loggedIn = getLoggedInUser()
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const hasSupabase = !!(supabaseUrl && supabaseAnonKey)
+
+  const loginFormHtml = hasSupabase ? `
+    <div class="card card-glass animate-in" style="padding: var(--space-4); border-color: rgba(255,255,255,0.08); margin-bottom: var(--space-6); max-width: 480px; margin-left: auto; margin-right: auto; background: rgba(255,255,255,0.01)">
+      <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm); color: var(--pink-400); margin-bottom: var(--space-2)">🚀 SECURE LEAGUE SIGN-IN</div>
+      <p class="text-secondary" style="font-size: 11px; margin-bottom: var(--space-3); line-height: 1.4">
+        Enter your registered email below. We'll send you a passwordless Magic Link to sign in securely.
+      </p>
+      <div style="display: flex; gap: var(--space-2)">
+        <input type="email" id="login-email-input" placeholder="you@example.com" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); color: #fff; font-size: var(--text-sm); outline: none" />
+        <button class="btn btn-primary btn-sm" id="send-magic-link-btn" style="min-width: 120px">Send Code</button>
+      </div>
+    </div>
+  ` : ''
+
   const teamCardsHtml = allTeams.map(t => {
     const roster = getTeamRoster(t.id)
     const playersHtml = roster.map(p => {
@@ -1501,7 +1518,9 @@ export function renderLoginPage() {
       <div class="page-header animate-in text-center">
         <h1>🔑 Choose Profile</h1>
         <p class="text-secondary" style="max-width: 440px; margin: 0 auto; line-height: 1.5">
-          Select any player card to authenticate instantly. Test role-specific dashboards, captain administrative scoring, and 3-player turn rotations!
+          ${hasSupabase 
+            ? 'Sign in securely using your email address, or explore other team rosters below.'
+            : 'Select any player card to authenticate instantly. Test role-specific dashboards, captain administrative scoring, and 3-player turn rotations!'}
         </p>
       </div>
 
@@ -1513,6 +1532,8 @@ export function renderLoginPage() {
           </div>
           <button class="btn btn-secondary btn-sm" id="logout-btn" style="margin-top: var(--space-3)">🚪 Logout Session</button>
         </div>` : ''}
+
+      ${loginFormHtml}
 
       <div class="grid-2 animate-in delay-1">${teamCardsHtml}</div>
 
