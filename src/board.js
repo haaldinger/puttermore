@@ -16,6 +16,29 @@ const HOLE_POSITIONS = {
 const HOLE_RADIUS = 22
 const PUCK_RADIUS = 18
 
+// ─── Island Mode: Adjacency Graph ───
+export const ADJACENCY = {
+  'back-1':   ['back-2', 'middle-1'],
+  'back-2':   ['back-1', 'back-3', 'middle-1', 'middle-2'],
+  'back-3':   ['back-2', 'middle-2'],
+  'middle-1': ['back-1', 'back-2', 'middle-2', 'front-1'],
+  'middle-2': ['back-2', 'back-3', 'middle-1', 'front-1'],
+  'front-1':  ['middle-1', 'middle-2'],
+}
+
+export function isIslandCup(holeId, openCups) {
+  // Must have more than 1 cup open (last cup can't be island)
+  if (openCups.size <= 1) return false
+  // Cup must be open
+  if (!openCups.has(holeId)) return false
+  // All neighbors must be claimed (not in openCups)
+  return ADJACENCY[holeId].every(neighbor => !openCups.has(neighbor))
+}
+
+export function getIslandCups(openCups) {
+  return [...openCups].filter(id => isIslandCup(id, openCups))
+}
+
 /**
  * Render a SINGLE team's board (their cups)
  * claimedHoles = holes the OPPONENT has sunk on this board
@@ -23,7 +46,7 @@ const PUCK_RADIUS = 18
  * interactive = can tap to claim holes (when opponent is putting)
  */
 export function renderSingleBoard(teamName, teamColor, claimedHoles = [], attackerColor = '#fff', opts = {}) {
-  const { interactive = false, active = false, overtime = false, boardId = 'board', inverted = false } = opts
+  const { interactive = false, active = false, overtime = false, boardId = 'board', inverted = false, islandCups = new Set(), bonusPickMode = false } = opts
   const claimed = new Set(claimedHoles)
 
   // When inverted, flip Y so F1 is at top and back row at bottom (like facing the other board)
@@ -39,8 +62,17 @@ export function renderSingleBoard(teamName, teamColor, claimedHoles = [], attack
     if (isClaimed) {
       holesHtml += `<circle class="board-puck" cx="${pos.cx}" cy="${cy}" r="${PUCK_RADIUS}" fill="${attackerColor}" opacity="0.85"/>`
       holesHtml += `<text x="${pos.cx}" y="${cy + 1}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="10" font-weight="700" font-family="Outfit" pointer-events="none">✓</text>`
+    } else if (bonusPickMode) {
+      // Bonus pick mode: all open cups glow as tappable targets
+      holesHtml += `<circle cx="${pos.cx}" cy="${cy}" r="${HOLE_RADIUS}" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="6 3" data-bonus-pick="${holeId}" data-board="${boardId}" style="cursor:pointer;animation:island-pulse 1s ease-in-out infinite" pointer-events="all"/>`
+      holesHtml += `<circle cx="${pos.cx}" cy="${cy}" r="${PUCK_RADIUS - 2}" fill="rgba(251,191,36,0.04)" pointer-events="none"/>`
     } else if (interactive) {
-      holesHtml += `<circle class="board-hole" cx="${pos.cx}" cy="${cy}" r="${HOLE_RADIUS}" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="4 3" data-hole="${holeId}" data-board="${boardId}" style="cursor:pointer" pointer-events="all"/>`
+      // Island indicator: pulsing gold ring on island cups
+      const isIsland = islandCups.has(holeId)
+      if (isIsland) {
+        holesHtml += `<circle cx="${pos.cx}" cy="${cy}" r="${HOLE_RADIUS + 3}" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5 3" style="animation:island-pulse 1.2s ease-in-out infinite" pointer-events="none"/>`
+      }
+      holesHtml += `<circle class="board-hole" cx="${pos.cx}" cy="${cy}" r="${HOLE_RADIUS}" fill="${isIsland ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.05)'}" stroke="${isIsland ? '#fbbf24' : 'rgba(255,255,255,0.2)'}" stroke-width="1.5" stroke-dasharray="4 3" data-hole="${holeId}" data-board="${boardId}" style="cursor:pointer" pointer-events="all"/>`
     } else {
       holesHtml += `<circle cx="${pos.cx}" cy="${cy}" r="${PUCK_RADIUS}" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 3"/>`
     }
@@ -48,7 +80,11 @@ export function renderSingleBoard(teamName, teamColor, claimedHoles = [], attack
     if (!isClaimed) {
       const row = holeId.startsWith('back') ? 'B' : holeId.startsWith('mid') ? 'M' : 'F'
       const num = holeId.split('-')[1]
-      holesHtml += `<text x="${pos.cx}" y="${cy + 1}" text-anchor="middle" dominant-baseline="central" fill="rgba(255,255,255,0.2)" font-size="9" font-weight="600" font-family="Inter" pointer-events="none">${row}${num}</text>`
+      const isIsland = islandCups.has(holeId)
+      holesHtml += `<text x="${pos.cx}" y="${cy + (bonusPickMode || isIsland ? -2 : 1)}" text-anchor="middle" dominant-baseline="central" fill="${isIsland || bonusPickMode ? 'rgba(251,191,36,0.7)' : 'rgba(255,255,255,0.2)'}" font-size="9" font-weight="${isIsland ? '800' : '600'}" font-family="Inter" pointer-events="none">${row}${num}</text>`
+      if (isIsland && !bonusPickMode) {
+        holesHtml += `<text x="${pos.cx}" y="${cy + 10}" text-anchor="middle" dominant-baseline="central" fill="rgba(251,191,36,0.5)" font-size="7" font-weight="700" font-family="Inter" pointer-events="none">🏝️</text>`
+      }
     }
   })
 

@@ -1,4 +1,4 @@
-import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead } from '../data.js'
+import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead, hasAnySyntheticData, getPlayerSyntheticGameCount, isOverrideGame } from '../data.js'
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
 import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter, createMatch, updateMatchTeams, updateMatchWeek, deleteMatch, quickScoreMatch } from '../store.js'
@@ -590,7 +590,7 @@ export function renderPlayersPage() {
             <span style="font-weight: 600; line-height: 1.25; overflow-wrap: break-word">${e.team.name}</span>
           </div>
         </td>
-        <td class="mono" style="font-weight:700;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%</td>
+        <td class="mono" style="font-weight:700;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%${hasAnySyntheticData(e.player.id) ? '<span style="color:var(--gold-400);font-size:9px">*</span>' : ''}</td>
         <td class="mono">${e.totalMade}/${e.totalPutts}</td>
         <td class="mono col-hide-mobile">${e.gamesPlayed}</td>
         <td class="col-hide-mobile">${e.bestHole||'—'}</td>
@@ -932,11 +932,15 @@ export function renderPlayerProfile(playerId) {
       </div>
     </div>
     <div class="stats-grid animate-in delay-1">
-      <div class="stat-card"><div class="stat-value gradient-text">${(stats.puttingPct*100).toFixed(0)}%</div><div class="stat-label">Accuracy</div></div>
+      <div class="stat-card"><div class="stat-value gradient-text">${(stats.puttingPct*100).toFixed(0)}%${hasAnySyntheticData(playerId) ? '<span style="color:var(--gold-400);font-size:var(--text-sm)">*</span>' : ''}</div><div class="stat-label">Accuracy</div></div>
       <div class="stat-card"><div class="stat-value">${stats.totalMade}<span class="text-muted">/${stats.totalPutts}</span></div><div class="stat-label">Putts Made</div></div>
       <div class="stat-card"><div class="stat-value text-gold">${stats.ballBackContributions}</div><div class="stat-label">🔥 Ball Backs</div></div>
       <div class="stat-card"><div class="stat-value">${stats.gamesPlayed}</div><div class="stat-label">Games</div></div>
     </div>
+    ${(() => {
+      const syntheticCount = getPlayerSyntheticGameCount(playerId)
+      return syntheticCount > 0 ? `<div class="animate-in delay-1" style="text-align:center;font-size:10px;color:var(--text-muted);font-style:italic;margin-top:calc(-1 * var(--space-2));margin-bottom:var(--space-2)">* Includes estimated data from ${syntheticCount} quick-scored game${syntheticCount > 1 ? 's' : ''}</div>` : ''
+    })()}
 
     <!-- Putter Details Section -->
     <section class="animate-in delay-2" style="margin-top:var(--space-6)">
@@ -1124,7 +1128,7 @@ export function renderMatchDetail(matchId) {
       </div>
       <div class="card" style="padding:var(--space-3)">
         <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-2)">
-          <span>${gTotalTurns} turns</span><span>🔥 ${gBBs} BBs</span>${game.overtime ? '<span style="color:var(--gold-400)">⚡ OT</span>' : ''}
+          <span>${gTotalTurns} turns</span><span>🔥 ${gBBs} BBs</span>${game.overtime ? '<span style="color:var(--gold-400)">⚡ OT</span>' : ''}${game.scoringMode === 'override' ? '<span style="color:var(--gold-400)">📋 Quick Scored</span>' : ''}
         </div>
         <div class="turn-log" style="max-height:250px">${turnLogHtml}</div>
       </div>
@@ -1202,8 +1206,10 @@ export function renderMatchDetail(matchId) {
 
     ${winner ? `<div class="text-center animate-in delay-1" style="margin-bottom:var(--space-4)">
       <span class="badge badge-win" style="font-size:var(--text-sm);padding:var(--space-1) var(--space-4)">🏆 ${winner.name} Wins Series${hasOT ? ' (OT)' : ''}</span>
+      ${match.scoringMode === 'override' ? '<span class="badge badge-gold" style="font-size:var(--text-xs);margin-left:var(--space-2)">📋 Quick Scored*</span>' : ''}
       <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-1)">
         +${isHomeWinner ? match.homePoints : match.awayPoints}pts winner · ${(isHomeWinner ? match.awayPoints : match.homePoints) > 0 ? `+${isHomeWinner ? match.awayPoints : match.homePoints}pt loser` : '0pts loser'}
+        ${match.scoringMode === 'override' ? '<br><span style="font-style:italic;color:var(--gold-400)">* Stats estimated from final scores</span>' : ''}
       </div>
     </div>` : ''}
 
@@ -1349,9 +1355,9 @@ export function renderHelpPage() {
           </p>
         </div>
         <div class="card" style="padding: var(--space-4)">
-          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">4. Redemption & OT</h4>
+          <h4 style="color: var(--pink-400); font-family: var(--font-display); font-weight: 800; margin-bottom: var(--space-2)">4. Redemption</h4>
           <p style="font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.6">
-            Once a team sinks the final cup, the opposing team gets one final **Redemption Turn** to attempt to sink all their remaining cups. If they succeed, the match goes to **Sudden Death Overtime**—the first team to sink any cup wins the match!
+            Once a team sinks the final cup, the opposing team gets one final <strong>Redemption Turn</strong> to attempt to clear their remaining cups. In redemption, they putt until they miss. If they clear the board, the <strong>original clearing team</strong> wins — they cleared first and sealed the deal. No overtime.
           </p>
         </div>
       </div>
@@ -1410,6 +1416,42 @@ export function renderHelpPage() {
           </div>
         </div>
 
+        <div class="faq-item card">
+          <div class="faq-item-header">
+            <span>📋 What is Quick Score and when should I use it?</span>
+            <span class="faq-toggle-icon">＋</span>
+          </div>
+          <div class="faq-item-body">
+            <p>
+              Quick Score lets captains enter just the <strong>final game scores</strong> (e.g. 6–3, 6–5) without tracking every individual putt. Use it when your team doesn't want shot-by-shot detail, or if you lose track mid-game. Stats are estimated from the final scores and marked with a gold <strong style="color:var(--gold-400)">*</strong> asterisk so everyone knows they're approximated. You can also <strong>abandon live scoring mid-game</strong> and switch to Quick Score if things get hectic.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="animate-in delay-3" style="margin-bottom: var(--space-6)">
+      <div class="section-header"><h3>🍺 About Puttermore</h3></div>
+      <div class="card" style="padding: var(--space-5); text-align: center">
+        <div id="haa-logo" style="cursor:pointer;display:inline-block;margin-bottom:var(--space-3);user-select:none;transition:transform 0.3s var(--ease-out)" title="Tap me...">
+          <span style="font-family:var(--font-display);font-weight:900;font-size:var(--text-3xl);background:linear-gradient(135deg,var(--pink-400),var(--gold-400));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px">PUTTERMORE</span>
+        </div>
+        <p style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.7;max-width:500px;margin:0 auto var(--space-3)">
+          The definitive social athletics platform for Mobtown Bar Putting League. Real-time live scoring, ESPN8-grade commentary from Cotton McKnight & Pepper Reddick, rivalry analytics, and weekly recaps — all from the brewery floor.
+        </p>
+        <div style="font-size:10px;color:var(--text-muted);border-top:1px dashed rgba(255,255,255,0.06);padding-top:var(--space-3);margin-top:var(--space-3)">
+          Crafted with 🍺 & obsessive attention to detail<br>
+          <span style="opacity:0.4;font-size:9px">© 2025 HAA · v1.0</span>
+        </div>
+        <div id="haa-easter-egg" style="display:none;margin-top:var(--space-4);padding:var(--space-4);background:linear-gradient(135deg,rgba(233,30,139,0.08),rgba(251,191,36,0.08));border:1px dashed var(--gold-400);border-radius:var(--radius-xl);animation:fadeIn 0.5s ease">
+          <div style="font-family:var(--font-display);font-weight:900;font-size:var(--text-sm);color:var(--gold-400);margin-bottom:var(--space-2)">🏆 ACHIEVEMENT UNLOCKED</div>
+          <div style="font-size:var(--text-xs);color:var(--text-primary);line-height:1.6">
+            You found the secret! This entire platform — every animation, every Cotton & Pepper quip, every ball-back algorithm — was built by <strong style="color:var(--pink-400)">Heath Aldinger</strong> (HAA).<br>
+            <span style="font-style:italic;color:var(--text-muted)">"If you're reading this, you owe me a stout." — H</span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1712,7 +1754,7 @@ export function renderAdminPage() {
       <div class="card animate-in" style="padding:var(--space-5);margin-bottom:var(--space-6);border-color:rgba(251,191,36,0.15);background:rgba(251,191,36,0.02);overflow:visible;position:relative;z-index:10">
         <h4 style="font-family:var(--font-display);font-weight:800;color:var(--gold-400);margin-bottom:var(--space-4)">⚡ Quick Score Entry</h4>
         <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-3)">Enter results for a match played offline. Input individual game scores (Best of 3).</p>
-        <div style="margin-bottom:var(--space-3)">
+        <div style="margin-bottom:var(--space-3);position:relative;z-index:100">
           <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Select Match</label>
           <div class="custom-select-container" id="admin-quick-match-select" style="position:relative">
             <button class="custom-select-trigger btn btn-secondary btn-sm" data-custom-select="admin-quick-match" style="width:100%;max-width:400px;text-align:left;display:flex;align-items:center;gap:8px;justify-content:space-between">
@@ -1724,7 +1766,7 @@ export function renderAdminPage() {
             <input type="hidden" id="admin-quick-match-value" value="" />
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);position:relative;z-index:1">
           <div>
             <label style="font-size:var(--text-xs);color:var(--text-secondary);display:block;margin-bottom:4px">Game 1 (Home–Away)</label>
             <div style="display:flex;gap:4px;align-items:center">
@@ -1909,12 +1951,16 @@ export function renderAdminPage() {
   // 3. LEAGUE ANALYTICS TAB
   else {
     const completedMatches = getAllMatches().filter(m => m.status === 'completed')
-    const totalTurnsAll = completedMatches.reduce((acc, m) => acc + (m.totalTurns || 0), 0)
+    const totalTurnsAll = completedMatches.reduce((acc, m) => {
+      return acc + (m.games || []).reduce((ga, g) => ga + (g.totalTurns || (g.turns || []).length), 0)
+    }, 0)
     const avgTurnsAll = completedMatches.length ? (totalTurnsAll / completedMatches.length).toFixed(1) : '0'
 
     let totalBBs = 0
     completedMatches.forEach(m => {
-      totalBBs += Object.values(m.ballBacks || {}).reduce((a, b) => a + b, 0)
+      ;(m.games || []).forEach(g => {
+        totalBBs += Object.values(g.ballBacks || {}).reduce((a, b) => a + b, 0)
+      })
     })
     const doubleSinkRatio = totalTurnsAll ? (totalBBs / totalTurnsAll * 100).toFixed(1) + '%' : '0.0%'
 
@@ -1933,14 +1979,16 @@ export function renderAdminPage() {
     const cupSinks = { 'back-1': 0, 'back-2': 0, 'back-3': 0, 'middle-1': 0, 'middle-2': 0, 'front-1': 0 }
 
     completedMatches.forEach(m => {
-      m.turns.forEach(turn => {
-        turn.putts.forEach(putt => {
-          if (cupAttempts[putt.hole] !== undefined) {
-            cupAttempts[putt.hole]++
-            if (putt.made) {
-              cupSinks[putt.hole]++
+      ;(m.games || []).forEach(game => {
+        ;(game.turns || []).forEach(turn => {
+          turn.putts.forEach(putt => {
+            if (cupAttempts[putt.hole] !== undefined) {
+              cupAttempts[putt.hole]++
+              if (putt.made) {
+                cupSinks[putt.hole]++
+              }
             }
-          }
+          })
         })
       })
     })

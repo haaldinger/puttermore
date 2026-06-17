@@ -348,3 +348,37 @@ export function getHoleShortName(hole) {
   }
   return map[hole] || hole
 }
+
+// ─── Synthetic / Override Scoring Helpers ───
+
+export function hasAnySyntheticData(playerId) {
+  return matches.filter(m => m.status === 'completed').some(m => {
+    if (!m.games || !m.games.length) return false
+    return m.games.some(game =>
+      game.scoringMode === 'override' &&
+      (game.turns || []).some(turn =>
+        turn.putts.some(p => p.playerId === playerId)
+      )
+    )
+  })
+}
+
+export function getPlayerSyntheticGameCount(playerId) {
+  let count = 0
+  matches.filter(m => m.status === 'completed').forEach(m => {
+    if (!m.games || !m.games.length) return
+    m.games.forEach(game => {
+      if (game.scoringMode === 'override') {
+        const playerInGame = (game.turns || []).some(turn =>
+          turn.putts.some(p => p.playerId === playerId)
+        )
+        if (playerInGame) count++
+      }
+    })
+  })
+  return count
+}
+
+export function isOverrideGame(game) {
+  return game && game.scoringMode === 'override'
+}

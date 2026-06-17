@@ -824,6 +824,22 @@ document.addEventListener('click', (e) => {
     return
   }
 
+  // HAA Easter Egg — tap the PUTTERMORE logo 7 times on About section
+  const haaLogo = e.target.closest('#haa-logo')
+  if (haaLogo) {
+    haaLogo._clicks = (haaLogo._clicks || 0) + 1
+    haaLogo.style.transform = `rotate(${haaLogo._clicks * 15}deg) scale(${1 + haaLogo._clicks * 0.02})`
+    if (haaLogo._clicks >= 7) {
+      const egg = document.getElementById('haa-easter-egg')
+      if (egg) { egg.style.display = 'block' }
+      haaLogo.style.transform = 'rotate(360deg) scale(1.1)'
+      showToast('🏆 Achievement Unlocked: You found the creator!')
+    } else if (haaLogo._clicks >= 4) {
+      showToast(`🤔 ${7 - haaLogo._clicks} more...`)
+    }
+    return
+  }
+
 
   // Scorer-specific events
   if (handleScorerEvents(e)) {
@@ -1217,6 +1233,45 @@ window.addEventListener('DOMContentLoaded', render)
 
 // Initial render
 render()
+
+// ─── HAA Signature ───
+document.head.insertAdjacentHTML('beforeend', '<!-- Puttermore v1.0 · Engineered by HAA · "Sink it or stout it" -->')
+
+// ─── Konami Code Easter Egg (↑↑↓↓←→←→BA) ───
+;(() => {
+  const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a']
+  let pos = 0
+  document.addEventListener('keydown', (e) => {
+    if (e.key === code[pos] || e.key.toLowerCase() === code[pos]) {
+      pos++
+      if (pos >= code.length) {
+        pos = 0
+        showToast('🎮 KONAMI CODE ACTIVATED!')
+        // Spawn confetti burst
+        const colors = ['#e91e8b', '#fbbf24', '#10b981', '#06b6d4', '#fff']
+        for (let i = 0; i < 60; i++) {
+          const dot = document.createElement('div')
+          dot.style.cssText = `position:fixed;top:50%;left:50%;width:8px;height:8px;border-radius:50%;background:${colors[i % colors.length]};pointer-events:none;z-index:99999;opacity:1;transition:all 1.2s cubic-bezier(.17,.67,.21,.97)`
+          document.body.appendChild(dot)
+          requestAnimationFrame(() => {
+            dot.style.transform = `translate(${(Math.random()-0.5)*window.innerWidth}px, ${(Math.random()-0.5)*window.innerHeight}px) scale(0)`
+            dot.style.opacity = '0'
+          })
+          setTimeout(() => dot.remove(), 1400)
+        }
+        // Cotton & Pepper HAA shoutout
+        setTimeout(() => {
+          showToast('🎙️ Cotton: "Pepper, someone just activated the secret HAA protocol!"')
+          setTimeout(() => {
+            showToast('🌶️ Pepper: "That\'s Heath Aldinger\'s personal cheat code, Cotton! Legend!"')
+          }, 2000)
+        }, 800)
+      }
+    } else {
+      pos = 0
+    }
+  })
+})()
 
 // ─── High-Performance Active Light-Follow Cards ───
 document.addEventListener('mousemove', (e) => {

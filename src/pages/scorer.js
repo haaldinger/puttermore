@@ -1,12 +1,14 @@
 import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getLeagueTeams, getHoleShortName } from '../data.js'
-import { renderSingleBoard } from '../board.js'
+import { renderSingleBoard, isIslandCup, getIslandCups } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
-import { saveMatch, getLoggedInUser, createMatch } from '../store.js'
+import { saveMatch, getLoggedInUser, createMatch, quickScoreMatch } from '../store.js'
 import { getSelectedLeague, setSelectedLeague } from './home.js'
 
 let scorerState = null
 let scorerHistory = []
 let viewMode = 'side'
+let pendingMatchId = null    // Set when captain picks opponent but hasn't chosen scoring mode
+let quickScoreState = null   // Set when in quick score entry mode
 
 export function getScorerTickerData() {
   const s = scorerState
@@ -155,6 +157,16 @@ export function initScorer() {
 }
 
 export function renderScorer() {
+  // ─── Quick Score Entry Mode ───
+  if (quickScoreState) {
+    return renderQuickScoreEntry()
+  }
+
+  // ─── Scoring Mode Choice ───
+  if (pendingMatchId) {
+    return renderScoringModeChoice()
+  }
+
   if (!scorerState) {
     const leagueId = getSelectedLeague()
     const league = getLeague(leagueId)
@@ -306,19 +318,36 @@ export function renderScorer() {
   // Current putters
   let putterDisplay = ''
   let activePutterName = ''
-  if (!s.gameOver) {
+  if (s.pendingIslandBonus) {
+    const bonusPutter = getPlayer(s.islandPutterId)
+    const bonusName = bonusPutter?.name?.split(' ')[0] || '?'
+    activePutterName = bonusName
+    putterDisplay = `<div class="turn-indicator animate-in" style="--team-color: #fbbf24">
+      <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-bottom:var(--space-2)">
+        <span class="blink-badge"></span>
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#fbbf24; font-weight:800">🏝️ ISLAND BONUS</span>
+      </div>
+      <h2 style="font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); color:#fbbf24; margin:0 0 var(--space-1) 0; line-height:1.2">
+        TAP A CUP TO CLAIM!
+      </h2>
+      <div style="font-size:var(--text-sm); font-weight:600; color:var(--text-primary); margin-bottom:var(--space-2)">
+        ${bonusName} sank the island <strong style="color:#fbbf24">${getHoleShortName(s.islandHoleMade)}</strong> — pick any open cup as a bonus!
+      </div>
+    </div>`
+  } else if (!s.gameOver) {
     const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
     const currentPutter = putters[s.currentPutterIdx] || putters[0]
     activePutterName = currentPutter ? currentPutter.name.split(' ')[0] : '?'
 
     if (isRedemption) {
-      const nextPutter = putters[s.currentPutterIdx]?.name || '?'
+      const activePutterIdx = s.redemptionPutterIdx % putters.length
+      const activeRedemptionPutter = putters[activePutterIdx]
       const putterListHtml = putters.map((p, idx) => {
-        const isActive = idx === s.currentPutterIdx
-        return `<span class="putter-badge ${isActive ? 'active-putter' : ''}" style="${isActive ? `--team-color:${currentColor}` : 'opacity:0.5'}">
-          ${isActive ? '🎯 ' : ''}${p.name}
+        const isActive = idx === activePutterIdx
+        return `<span class="putter-badge ${isActive ? 'active-putter' : ''}" style="${isActive ? `--team-color:${currentColor}` : 'opacity:0.35'}">
+          ${isActive ? '🎯 ' : ''}${p.name}${isActive ? '' : ''}
         </span>`
-      }).join(' <span class="text-muted" style="font-size:10px;margin:0 4px">and</span> ')
+      }).join(' <span class="text-muted" style="font-size:10px;margin:0 4px">→</span> ')
 
       const commentaryHtml = s.activeCommentary ? `
         <div class="announcer-commentary-bubble" id="scorer-commentary-trigger">
@@ -333,7 +362,7 @@ export function renderScorer() {
       putterDisplay = `<div class="turn-indicator animate-in" style="--team-color: var(--gold-400)">
         <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-bottom:var(--space-2)">
           <span class="blink-badge"></span>
-          <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold-400); font-weight:800">⚡ REDEMPTION ROUND</span>
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold-400); font-weight:800">⚡ REDEMPTION — SHOOT TIL YOU MISS</span>
         </div>
         <h2 style="font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); color:${currentColor}; text-shadow:0 0 16px ${currentColor}25; margin:0 0 var(--space-1) 0; line-height:1.2">
           ${currentTeamName.toUpperCase()}
@@ -345,16 +374,15 @@ export function renderScorer() {
           ${putterListHtml}
         </div>
         <div style="font-size:11px; color:var(--text-secondary); margin-top:var(--space-2); font-weight:600">
-          Up Next: <span style="color:${currentColor}; font-weight:800">${nextPutter}</span>
+          🎯 Now Putting: <span style="color:${currentColor}; font-weight:800">${activeRedemptionPutter?.name || '?'}</span>
         </div>
         <div style="font-size:var(--text-xs); color:var(--gold-400); margin-top:var(--space-3); font-weight:700">
-          ⚠️ Goal: Both players make it = 🔥 Ball Back = Redemption Survives!
+          ⚠️ Make it = shoot again! Miss = next player. All miss = game over!
         </div>
         ${commentaryHtml}
       </div>`
     } else {
       const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
-      const isStartOfOT = s.phase === 'overtime' && s.otStartSelect
       let selectorHtml = ''
       if (isStartOfGame) {
         const renderOrderList = (teamId, teamName, teamColor, players) => {
@@ -394,16 +422,6 @@ export function renderScorer() {
             </div>
           </div>
         `
-      } else if (isStartOfOT) {
-        selectorHtml = `
-          <div style="margin-top:var(--space-4); padding-top:var(--space-3); border-top:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3)">
-            <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2)">
-              <span style="font-size:var(--text-xs); color:var(--gold-400); font-weight:700">⚡ OT DECIDER: Which team goes first?</span>
-              <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6'}">${s.homeName}</button>
-              <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6'}">${s.awayName}</button>
-            </div>
-          </div>
-        `
       }
 
       const nextPutter = putters[s.currentPutterIdx]?.name || '?'
@@ -428,7 +446,7 @@ export function renderScorer() {
         <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-bottom:var(--space-2)">
           <span class="blink-badge"></span>
           <span style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); font-weight:800">ACTIVE TURN STATE</span>
-          ${isOT ? `<span class="badge badge-gold" style="font-size:9px">⚡ ${s.overtimeCount > 1 ? (s.overtimeCount === 2 ? 'DOUBLE OVERTIME' : s.overtimeCount === 3 ? 'TRIPLE OVERTIME' : `${s.overtimeCount}x OVERTIME`) : 'OVERTIME'}</span>` : ''}
+
         </div>
         <h2 style="font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); color:${currentColor}; text-shadow:0 0 16px ${currentColor}25; margin:0 0 var(--space-1) 0; line-height:1.2">
           ${currentTeamName.toUpperCase()}
@@ -450,14 +468,22 @@ export function renderScorer() {
 
   // Render boards — invert bottom board when stacked so cups face each other
   const isStacked = viewMode === 'stacked'
+  // Compute island cups for the active target board
+  const targetOpenCups = targetBoardId === 'home' ? s.homeBoardOpen : s.awayBoardOpen
+  const activeIslandCups = (!s.gameOver && !s.pendingIslandBonus) ? new Set(getIslandCups(targetOpenCups)) : new Set()
+
   const homeBoardHtml = renderSingleBoard(s.homeName, s.homeColor, s.homeBoardClaimed, s.awayColor, {
-    interactive: !s.gameOver && targetBoardId === 'home',
-    active: !s.gameOver && targetBoardId === 'home', overtime: isOT, boardId: 'home'
+    interactive: !s.gameOver && !s.pendingIslandBonus && targetBoardId === 'home',
+    active: !s.gameOver && targetBoardId === 'home', overtime: isOT, boardId: 'home',
+    islandCups: targetBoardId === 'home' ? activeIslandCups : new Set(),
+    bonusPickMode: s.pendingIslandBonus && targetBoardId === 'home',
   })
   const awayBoardHtml = renderSingleBoard(s.awayName, s.awayColor, s.awayBoardClaimed, s.homeColor, {
-    interactive: !s.gameOver && targetBoardId === 'away',
+    interactive: !s.gameOver && !s.pendingIslandBonus && targetBoardId === 'away',
     active: !s.gameOver && targetBoardId === 'away', overtime: isOT, boardId: 'away',
-    inverted: isStacked
+    inverted: isStacked,
+    islandCups: targetBoardId === 'away' ? activeIslandCups : new Set(),
+    bonusPickMode: s.pendingIslandBonus && targetBoardId === 'away',
   })
 
   const viewClass = viewMode === 'focused' ? 'focused' : viewMode === 'stacked' ? 'stacked' : ''
@@ -466,13 +492,15 @@ export function renderScorer() {
   const turnLogHtml = s.turns.slice().reverse().slice(0, 12).map(t => {
     const team = getTeam(t.teamId)
     const phaseTag = t.redemption ? '<span class="badge badge-gold" style="font-size:8px">RDM</span> ' : t.overtime ? '<span class="badge badge-cyan" style="font-size:8px">OT</span> ' : ''
+    const islandTag = t.putts?.some(p => p.island) ? '<span class="badge" style="font-size:8px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">🏝️ ISL</span> ' : ''
     return `<div class="turn-entry">
       <span class="turn-num">#${t.turnNumber}</span>
       <span class="team-dot" style="background:${team.color}"></span>
-      <span style="flex:1">${phaseTag}${t.putts.map(p => {
+      <span style="flex:1">${phaseTag}${islandTag}${t.putts.map(p => {
         const name = getPlayer(p.playerId)?.name?.split(' ')[0] || '?'
         const holeLabel = getHoleShortName(p.hole)
-        return `${name}: ${p.made ? '✅ ' + holeLabel : '❌'}`
+        const bonusLabel = p.bonusCup ? ` <span style="color:#fbbf24;font-size:9px">(+${getHoleShortName(p.bonusCup)})</span>` : ''
+        return `${name}: ${p.made ? '✅ ' + holeLabel + bonusLabel : '❌'}`
       }).join(' · ')}</span>
       ${t.ballBack ? '<span class="badge badge-gold" style="font-size:9px">🔥BB</span>' : ''}
     </div>`
@@ -580,7 +608,169 @@ export function renderScorer() {
       ${!s.gameOver && (s.turns.length > 0 || s.currentTurnPutts.length > 0) ? `
         <button class="btn btn-ghost" id="scorer-undo-btn" style="border-color: rgba(255,255,255,0.15); color: var(--text-secondary)">↩️ Undo Turn</button>
       ` : ''}
+      ${!s.gameOver && s.turns.length >= 1 ? `
+        <button class="btn btn-ghost" id="scorer-abandon-btn" style="border-color: rgba(239,68,68,0.25); color: var(--red-400); font-size:var(--text-xs)">⚠️ Abandon Shot Tracking</button>
+      ` : ''}
       <button class="btn btn-ghost" id="scorer-reset-btn">← New Game</button>
+    </div>
+  </div>`
+}
+
+// ─── Scoring Mode Choice Screen ───
+function renderScoringModeChoice() {
+  const match = getAllMatches().find(m => m.id === pendingMatchId)
+  if (!match) { pendingMatchId = null; return renderScorer() }
+
+  const ht = getTeam(match.homeTeamId), at = getTeam(match.awayTeamId)
+
+  return `<div class="page container">
+    <div class="page-header animate-in"><h1>🎯 Live Scorer</h1></div>
+    <div class="card-glass animate-in" style="padding:var(--space-6);max-width:520px;margin:0 auto;text-align:center">
+      <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-3);margin-bottom:var(--space-4)">
+        <div style="text-align:center">
+          <span class="team-dot" style="background:${ht.color};width:14px;height:14px"></span>
+          <div style="font-weight:800;font-size:var(--text-sm);color:${ht.color};margin-top:4px">${ht.name}</div>
+        </div>
+        <span style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700">vs</span>
+        <div style="text-align:center">
+          <span class="team-dot" style="background:${at.color};width:14px;height:14px"></span>
+          <div style="font-weight:800;font-size:var(--text-sm);color:${at.color};margin-top:4px">${at.name}</div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-display);font-weight:900;color:#fff;margin-bottom:var(--space-2)">How do you want to score?</h3>
+      <p style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-5)">Choose your scoring method for this match</p>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+        <button id="scorer-mode-live" class="card" style="padding:var(--space-4);cursor:pointer;border-color:rgba(34,197,94,0.2);background:rgba(34,197,94,0.03);text-align:left;transition:all 0.15s ease">
+          <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <span style="font-size:var(--text-2xl)">🎯</span>
+            <div>
+              <div style="font-weight:800;color:#fff;font-size:var(--text-sm)">Live Score — Shot by Shot</div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:2px">Track every putt, see ball backs, full stats and replay</div>
+            </div>
+          </div>
+        </button>
+
+        <button id="scorer-mode-quick" class="card" style="padding:var(--space-4);cursor:pointer;border-color:rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);text-align:left;transition:all 0.15s ease">
+          <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <span style="font-size:var(--text-2xl)">📋</span>
+            <div>
+              <div style="font-weight:800;color:#fff;font-size:var(--text-sm)">Quick Score — Final Scores Only</div>
+              <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-top:2px">Just enter who won each game. Stats will be estimated*</div>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <button class="btn btn-ghost" id="scorer-mode-cancel" style="margin-top:var(--space-4);font-size:var(--text-xs)">← Back</button>
+    </div>
+  </div>`
+}
+
+// ─── Quick Score Entry Form ───
+function renderQuickScoreEntry() {
+  const qs = quickScoreState
+  const match = getAllMatches().find(m => m.id === qs.matchId)
+  if (!match) { quickScoreState = null; return renderScorer() }
+
+  const ht = getTeam(match.homeTeamId), at = getTeam(match.awayTeamId)
+  const seriesHome = qs.games.filter(g => g.winner === 'home').length
+  const seriesAway = qs.games.filter(g => g.winner === 'away').length
+  const seriesDecided = seriesHome >= 2 || seriesAway >= 2
+  const needsMoreGames = !seriesDecided && qs.games.length < 3
+  const currentGameNum = qs.games.length + 1
+
+  const completedGamesHtml = qs.games.map((g, idx) => {
+    const winnerName = g.winner === 'home' ? ht.name : at.name
+    const winnerColor = g.winner === 'home' ? ht.color : at.color
+    return `
+      <div class="card" style="padding:var(--space-3);border-color:${winnerColor}25;background:${winnerColor}08">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:var(--text-xs);font-weight:800;color:var(--text-secondary)">Game ${idx + 1}</span>
+          <span class="badge" style="background:${winnerColor}20;color:${winnerColor};font-size:9px;font-weight:800">${winnerName} Wins</span>
+        </div>
+        <div style="display:flex;justify-content:center;gap:var(--space-4);margin-top:var(--space-2)">
+          <div style="text-align:center"><div style="font-weight:900;font-size:var(--text-lg);color:${ht.color}">${g.homeScore}</div><div style="font-size:10px;color:var(--text-muted)">${ht.name}</div></div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);align-self:center">—</div>
+          <div style="text-align:center"><div style="font-weight:900;font-size:var(--text-lg);color:${at.color}">${g.awayScore}</div><div style="font-size:10px;color:var(--text-muted)">${at.name}</div></div>
+        </div>
+      </div>
+    `
+  }).join('')
+
+  let entryFormHtml = ''
+  if (needsMoreGames) {
+    const cupOptions = [0,1,2,3,4,5].map(n =>
+      `<button class="btn btn-secondary btn-sm qs-cup-btn ${qs.currentLoserCups === n ? 'active' : ''}" data-qs-cups="${n}" style="min-width:36px;${qs.currentLoserCups === n ? 'background:var(--pink-400);color:#000;border-color:var(--pink-400)' : ''}">${n}</button>`
+    ).join('')
+
+    entryFormHtml = `
+      <div class="card" style="padding:var(--space-4);border-color:rgba(255,255,255,0.1);margin-top:var(--space-3)">
+        <div style="font-size:var(--text-xs);font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:var(--space-3)">Game ${currentGameNum}</div>
+
+        <div style="margin-bottom:var(--space-3)">
+          <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-2);font-weight:600">Who won this game?</div>
+          <div style="display:flex;gap:var(--space-2);justify-content:center">
+            <button class="btn btn-sm qs-winner-btn ${qs.currentWinner === 'home' ? '' : 'btn-secondary'}" data-qs-winner="home" style="${qs.currentWinner === 'home' ? `background:${ht.color};color:#fff;border-color:${ht.color}` : ''}">🏠 ${ht.name}</button>
+            <button class="btn btn-sm qs-winner-btn ${qs.currentWinner === 'away' ? '' : 'btn-secondary'}" data-qs-winner="away" style="${qs.currentWinner === 'away' ? `background:${at.color};color:#fff;border-color:${at.color}` : ''}">🏁 ${at.name}</button>
+          </div>
+        </div>
+
+        ${qs.currentWinner ? `
+          <div style="margin-bottom:var(--space-3)">
+            <div style="font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:var(--space-2);font-weight:600">
+              How many cups did <strong style="color:${qs.currentWinner === 'home' ? at.color : ht.color}">${qs.currentWinner === 'home' ? at.name : ht.name}</strong> sink? (loser's score)
+            </div>
+            <div style="display:flex;gap:var(--space-1);justify-content:center;flex-wrap:wrap">${cupOptions}</div>
+          </div>
+
+          ${qs.currentLoserCups !== null ? `
+            <div style="display:flex;justify-content:center;gap:var(--space-3);margin-top:var(--space-2);padding:var(--space-2);background:rgba(255,255,255,0.02);border-radius:var(--radius-md)">
+              <span style="color:${ht.color};font-weight:800;font-size:var(--text-base)">${qs.currentWinner === 'home' ? 6 : qs.currentLoserCups}</span>
+              <span style="color:var(--text-muted);font-size:var(--text-xs);align-self:center">—</span>
+              <span style="color:${at.color};font-weight:800;font-size:var(--text-base)">${qs.currentWinner === 'away' ? 6 : qs.currentLoserCups}</span>
+            </div>
+            <button class="btn btn-primary btn-sm" id="qs-confirm-game" style="margin-top:var(--space-3);width:100%">Confirm Game ${currentGameNum} →</button>
+          ` : ''}
+        ` : ''}
+      </div>
+    `
+  }
+
+  return `<div class="page container">
+    <div class="page-header animate-in"><h1>📋 Quick Score</h1></div>
+    <div style="max-width:480px;margin:0 auto">
+      <div class="card-glass animate-in" style="padding:var(--space-4);margin-bottom:var(--space-4)">
+        <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-4);margin-bottom:var(--space-3)">
+          <div style="text-align:center"><span class="team-dot" style="background:${ht.color};width:12px;height:12px"></span><div style="font-weight:800;font-size:var(--text-xs);color:${ht.color};margin-top:2px">${ht.name}</div></div>
+          <span style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700">vs</span>
+          <div style="text-align:center"><span class="team-dot" style="background:${at.color};width:12px;height:12px"></span><div style="font-weight:800;font-size:var(--text-xs);color:${at.color};margin-top:2px">${at.name}</div></div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:var(--space-4);margin-bottom:var(--space-2)">
+          <div style="text-align:center"><div style="font-size:var(--text-2xl);font-weight:900;color:${ht.color}">${seriesHome}</div><div style="font-size:9px;color:var(--text-muted)">SERIES</div></div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);align-self:center">—</div>
+          <div style="text-align:center"><div style="font-size:var(--text-2xl);font-weight:900;color:${at.color}">${seriesAway}</div><div style="font-size:9px;color:var(--text-muted)">SERIES</div></div>
+        </div>
+      </div>
+
+      <div class="animate-in delay-1" style="display:flex;flex-direction:column;gap:var(--space-2)">
+        ${completedGamesHtml}
+        ${entryFormHtml}
+      </div>
+
+      ${seriesDecided ? `
+        <div class="card-glass animate-in delay-2" style="padding:var(--space-5);text-align:center;margin-top:var(--space-4)">
+          <div style="font-size:var(--text-3xl);margin-bottom:var(--space-2)">🏆</div>
+          <h3 style="font-family:var(--font-display);font-weight:900;color:${seriesHome >= 2 ? ht.color : at.color}">${seriesHome >= 2 ? ht.name : at.name} Wins the Series!</h3>
+          <p style="font-size:var(--text-xs);color:var(--text-secondary);margin:var(--space-2) 0 var(--space-4)">Series: ${seriesHome}–${seriesAway} · Stats will be estimated from final scores*</p>
+          <button class="btn btn-primary" id="qs-save-series">Save Series (${seriesHome}–${seriesAway}) →</button>
+        </div>
+      ` : ''}
+
+      <div style="text-align:center;margin-top:var(--space-4)">
+        <button class="btn btn-ghost" id="qs-cancel" style="font-size:var(--text-xs)">← Cancel</button>
+      </div>
     </div>
   </div>`
 }
@@ -784,7 +974,7 @@ export function handleScorerEvents(e) {
         const weekNum = 1 // Default week
         const newMatch = createMatch(leagueId, weekNum, captainTeam.id, opponentId)
         if (newMatch) {
-          startGame(newMatch.id)
+          pendingMatchId = newMatch.id
           return true
         }
       }
@@ -792,12 +982,88 @@ export function handleScorerEvents(e) {
   }
   if (target.closest('.match-pick-item') && !target.closest('[data-open-play-opponent]')) {
     const matchId = target.closest('.match-pick-item').dataset.matchId
-    if (matchId) { startGame(matchId); return true }
+    if (matchId) { pendingMatchId = matchId; return true }
+  }
+  // ─── Scoring Mode Choice Handlers ───
+  if (target.closest('#scorer-mode-live') && pendingMatchId) {
+    startGame(pendingMatchId)
+    pendingMatchId = null
+    return true
+  }
+  if (target.closest('#scorer-mode-quick') && pendingMatchId) {
+    quickScoreState = {
+      matchId: pendingMatchId,
+      games: [],
+      currentWinner: null,
+      currentLoserCups: null,
+    }
+    pendingMatchId = null
+    return true
+  }
+  if (target.id === 'scorer-mode-cancel') {
+    pendingMatchId = null
+    return true
+  }
+  // ─── Quick Score Form Handlers ───
+  if (target.closest('.qs-winner-btn') && quickScoreState) {
+    quickScoreState.currentWinner = target.closest('.qs-winner-btn').dataset.qsWinner
+    quickScoreState.currentLoserCups = null
+    return true
+  }
+  if (target.closest('.qs-cup-btn') && quickScoreState) {
+    quickScoreState.currentLoserCups = parseInt(target.closest('.qs-cup-btn').dataset.qsCups)
+    return true
+  }
+  if (target.id === 'qs-confirm-game' && quickScoreState) {
+    const qs = quickScoreState
+    if (qs.currentWinner && qs.currentLoserCups !== null) {
+      const homeScore = qs.currentWinner === 'home' ? 6 : qs.currentLoserCups
+      const awayScore = qs.currentWinner === 'away' ? 6 : qs.currentLoserCups
+      qs.games.push({ winner: qs.currentWinner, homeScore, awayScore })
+      qs.currentWinner = null
+      qs.currentLoserCups = null
+    }
+    return true
+  }
+  if (target.id === 'qs-save-series' && quickScoreState) {
+    const qs = quickScoreState
+    const gameScores = qs.games.map(g => ({ home: g.homeScore, away: g.awayScore }))
+    quickScoreMatch(qs.matchId, gameScores, 'override')
+    showToast(`🏆 Series saved! Stats estimated from final scores.`)
+    quickScoreState = null
+    return true
+  }
+  if (target.id === 'qs-cancel') {
+    quickScoreState = null
+    return true
+  }
+  // ─── Mid-Game Abandon Handler ───
+  if (target.id === 'scorer-abandon-btn' && scorerState) {
+    // Switch from live scoring to quick score entry, discarding shot data
+    const matchId = scorerState.matchId
+    const seriesScore = { ...scorerState.seriesScore }
+    const completedGames = [...(scorerState.completedGames || [])]
+    const gameNumber = scorerState.gameNumber
+    scorerState = null
+    quickScoreState = {
+      matchId,
+      games: completedGames.map(g => {
+        const homeWon = g.winnerId === getAllMatches().find(m => m.id === matchId)?.homeTeamId
+        return {
+          winner: homeWon ? 'home' : 'away',
+          homeScore: g.finalScore.home,
+          awayScore: g.finalScore.away,
+        }
+      }),
+      currentWinner: null,
+      currentLoserCups: null,
+    }
+    showToast('⚠️ Switched to Quick Score. Enter the final scores.')
+    return true
   }
   if (target.closest('#scorer-start-home') && scorerState) {
     const isStartOfGame = scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0
-    const isStartOfOT = scorerState.phase === 'overtime' && scorerState.otStartSelect
-    if (isStartOfGame || isStartOfOT) {
+    if (isStartOfGame) {
       scorerState.currentTeam = 'home'
       scorerState.currentPutterIdx = 0
       return true
@@ -805,8 +1071,7 @@ export function handleScorerEvents(e) {
   }
   if (target.closest('#scorer-start-away') && scorerState) {
     const isStartOfGame = scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0
-    const isStartOfOT = scorerState.phase === 'overtime' && scorerState.otStartSelect
-    if (isStartOfGame || isStartOfOT) {
+    if (isStartOfGame) {
       scorerState.currentTeam = 'away'
       scorerState.currentPutterIdx = 0
       return true
@@ -832,6 +1097,15 @@ export function handleScorerEvents(e) {
           activePlayers[idx + 1] = temp
         }
       }
+      return true
+    }
+  }
+  // Island Mode: Bonus cup pick
+  const bonusPick = target.closest('[data-bonus-pick]')
+  if (bonusPick && scorerState?.pendingIslandBonus) {
+    const bonusHoleId = bonusPick.dataset.bonusPick
+    if (bonusHoleId) {
+      claimIslandBonus(bonusHoleId)
       return true
     }
   }
@@ -875,7 +1149,7 @@ export function handleScorerEvents(e) {
     undoScorerTurn()
     return true
   }
-  if (target.id === 'scorer-reset-btn') { scorerState = null; return true }
+  if (target.id === 'scorer-reset-btn') { scorerState = null; pendingMatchId = null; quickScoreState = null; return true }
   return false
 }
 
@@ -910,6 +1184,10 @@ function startGame(matchId) {
     seriesScore: { home: 0, away: 0 },
     gameNumber: 1,
     completedGames: [],
+    // Island mode
+    pendingIslandBonus: false,
+    islandPutterId: null,
+    islandHoleMade: null,
   }
 
   const initialQuotes = [
@@ -951,12 +1229,24 @@ function recordPutt(hole, made) {
   const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
 
   if (made) {
+    // Check island BEFORE removing from board (cup is still in openCups at check time)
+    const wasIsland = isIslandCup(hole, boardOpen)
     if (hole && boardOpen.has(hole)) {
       boardOpen.delete(hole)
       boardClaimed.push(hole)
     }
     s[streakKey]++
     triggerTrashTalk('make', putter.id)
+
+    // If this was an island and there are still open cups to pick as bonus
+    if (wasIsland && boardOpen.size > 0) {
+      s.pendingIslandBonus = true
+      s.islandPutterId = putter.id
+      s.islandHoleMade = hole
+      showToast('<div class="toast-title">🏝️ ISLAND MODE!</div><div class="toast-detail">Pick a bonus cup to claim!</div>', 'streak')
+      // Don't advance putter — wait for bonus pick
+      return
+    }
   } else {
     s[streakKey] = 0
     triggerTrashTalk('miss', putter.id)
@@ -1009,8 +1299,9 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
     s.firstToClear = s.currentTeam
     s.phase = 'redemption'
     s.hadRedemption = true
-    s.currentTeam = s.currentTeam === 'home' ? 'away' : 'home'
     s.redemptionPutterIdx = 0
+    s.redemptionMissCount = 0
+    s.currentTeam = s.currentTeam === 'home' ? 'away' : 'home'
     s.currentTurnPutts = []
     s.currentPutterIdx = 0
     triggerTrashTalk('redemption', putters[putters.length - 1].id)
@@ -1044,119 +1335,165 @@ function finishTurn(putters, boardClaimed, targetBoardId) {
 function recordRedemptionPutt(hole, made, boardOpen, boardClaimed, targetBoardId) {
   const s = scorerState
   if (!s) return
-  if (s.currentTurnPutts.length === 0) {
-    pushStateSnapshot()
-  }
-  const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
+  pushStateSnapshot()
 
-  const putter = putters[s.currentPutterIdx]
+  const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
+  const putter = putters[s.redemptionPutterIdx % putters.length]
 
   const putt = { playerId: putter.id, hole: hole || 'miss', made, board: targetBoardId }
-  s.currentTurnPutts.push(putt)
-
   const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
 
   if (made) {
+    // Check island BEFORE removing from board
+    const wasIsland = isIslandCup(hole, boardOpen)
     if (hole && boardOpen.has(hole)) {
       boardOpen.delete(hole)
       boardClaimed.push(hole)
     }
     s[streakKey]++
     triggerTrashTalk('make', putter.id)
+
+    // If island and open cups remain, pause for bonus pick
+    if (wasIsland && boardOpen.size > 0) {
+      s.pendingIslandBonus = true
+      s.islandPutterId = putter.id
+      s.islandHoleMade = hole
+      showToast('<div class="toast-title">🏝️ ISLAND MODE!</div><div class="toast-detail">Pick a bonus cup to claim!</div>', 'streak')
+      return
+    }
   } else {
+    // Missed
     s[streakKey] = 0
     triggerTrashTalk('miss', putter.id)
   }
 
-  s.currentPutterIdx++
+  // Each redemption putt is its own turn (shoot-til-you-miss, one at a time)
+  s.turnNumber++
+  s.turns.push({
+    turnNumber: s.turnNumber,
+    teamId: s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId,
+    putters: [putter.id],
+    putts: [putt],
+    ballBack: false, overtime: s.overtime, redemption: true,
+  })
 
-  // Wait for both putters to finish the turn
-  if (s.currentPutterIdx >= putters.length) {
+  const targetCount = 6
+  const boardCleared = boardClaimed.length >= targetCount
+
+  if (made) {
+    // Made it! Check if board is cleared
+    if (boardCleared) {
+      // Redemption team cleared the board → original clearer still wins (no OT)
+      s.gameOver = true
+      s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
+      if (s.firstToClear === 'home') s.seriesScore.home++
+      else s.seriesScore.away++
+      s.currentTurnPutts = []
+      s.currentPutterIdx = 0
+      showToast(`<div class="toast-title">🏆 GAME OVER</div><div class="toast-detail">${s.winner.toUpperCase()} cleared first and wins!</div>`, 'winner')
+      return
+    }
+
+    // Board not cleared — SAME putter shoots again (shoot til you miss!)
+    s.currentTurnPutts = []
+
+    const streak = s[streakKey]
+    if (streak >= 4 && streak % 2 === 0) {
+      showToast(`<div class="toast-title">⚡ ${streak} IN A ROW!</div><div class="toast-detail">🔥 ${putter.name.split(' ')[0]} keeps shooting!</div>`, 'streak')
+      if (streak === 4) triggerTrashTalk('streak_4', putter.id)
+      else if (streak === 6) triggerTrashTalk('streak_6', putter.id)
+    } else {
+      showToast(`<div class="toast-title">✅ MADE!</div><div class="toast-detail">${putter.name.split(' ')[0]} shoots again!</div>`)
+    }
+    checkCloseGameBanter()
+  } else {
+    // Missed! Advance to next putter
+    if (!s.redemptionMissCount) s.redemptionMissCount = 0
+    s.redemptionMissCount++
+
+    if (s.redemptionMissCount >= putters.length) {
+      // All putters have missed → Redemption over, original clearer wins
+      s.gameOver = true
+      s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
+      if (s.firstToClear === 'home') s.seriesScore.home++; else s.seriesScore.away++
+      s.currentTurnPutts = []
+      s.currentPutterIdx = 0
+      showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
+    } else {
+      // Next putter takes over
+      s.redemptionPutterIdx++
+      s.currentPutterIdx = s.redemptionPutterIdx % putters.length
+      s.currentTurnPutts = []
+      const nextPutter = putters[s.currentPutterIdx]
+      showToast(`<div class="toast-title">❌ MISS!</div><div class="toast-detail">${nextPutter.name.split(' ')[0]} takes over!</div>`)
+    }
+  }
+}
+
+// ─── Island Mode: Claim Bonus Cup ───
+export function claimIslandBonus(bonusHoleId) {
+  const s = scorerState
+  if (!s || !s.pendingIslandBonus) return
+
+  const targetBoardId = s.currentTeam === 'home' ? 'away' : 'home'
+  const boardOpen = targetBoardId === 'home' ? s.homeBoardOpen : s.awayBoardOpen
+  const boardClaimed = targetBoardId === 'home' ? s.homeBoardClaimed : s.awayBoardClaimed
+
+  // Claim the bonus cup
+  if (boardOpen.has(bonusHoleId)) {
+    boardOpen.delete(bonusHoleId)
+    boardClaimed.push(bonusHoleId)
+  }
+
+  // Tag the most recent putt with island + bonus info
+  const lastPutt = s.currentTurnPutts[s.currentTurnPutts.length - 1]
+  if (lastPutt) {
+    lastPutt.island = true
+    lastPutt.bonusCup = bonusHoleId
+  }
+
+  // Clear island state
+  const islandHole = s.islandHoleMade
+  s.pendingIslandBonus = false
+  s.islandPutterId = null
+  s.islandHoleMade = null
+
+  const bonusLabel = getHoleShortName(bonusHoleId)
+  const islandLabel = getHoleShortName(islandHole)
+  showToast(`<div class="toast-title">🏝️ 2-FOR-1!</div><div class="toast-detail">${islandLabel} + ${bonusLabel} claimed!</div>`, 'streak')
+
+  // Check if board is now cleared after the bonus
+  const targetCount = 6
+  const boardCleared = boardClaimed.length >= targetCount
+
+  if (s.phase === 'redemption') {
+    // In redemption: log the turn, then check board/continue
     s.turnNumber++
-    const ballBack = s.currentTurnPutts.length >= 2 && s.currentTurnPutts.every(p => p.made)
-    const anyMade = s.currentTurnPutts.some(p => p.made)
-
+    const putterId = lastPutt?.playerId
     s.turns.push({
       turnNumber: s.turnNumber,
       teamId: s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId,
-      putters: putters.map(p => p.id),
-      putts: [...s.currentTurnPutts],
-      ballBack, overtime: s.overtime, redemption: true,
+      putters: [putterId],
+      putts: [lastPutt],
+      ballBack: false, overtime: s.overtime, redemption: true,
     })
+    s.currentTurnPutts = []
 
-    if (ballBack) { s.totalBBs++ }
-
-    const targetCount = 6
-    const boardCleared = boardClaimed.length >= targetCount
-
-    if (boardCleared && ballBack) {
-      // Ball back + cleared = redemption team WINS outright (no OT)
+    if (boardCleared) {
       s.gameOver = true
-      s.winner = s.currentTeam === 'home' ? s.homeName : s.awayName
-      if (s.currentTeam === 'home') s.seriesScore.home++; else s.seriesScore.away++
-      s.currentTurnPutts = []
+      s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
+      if (s.firstToClear === 'home') s.seriesScore.home++; else s.seriesScore.away++
       s.currentPutterIdx = 0
-
-      const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
-      const streak = s[streakKey]
-      if (streak === 6) {
-        showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🏆 ${s.winner.toUpperCase()} WINS!</div>`, 'winner')
-        triggerTrashTalk('streak_6', putters[putters.length - 1].id)
-      } else {
-        showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
-      }
-      return
+      showToast(`<div class="toast-title">🏆 GAME OVER</div><div class="toast-detail">${s.winner.toUpperCase()} cleared first and wins!</div>`, 'winner')
     }
+    // Otherwise same putter keeps shooting (shoot til you miss continues)
+  } else {
+    // Regulation: advance putter, then check if turn is done
+    s.currentPutterIdx++
+    const putters = getCurrentPutters(s, s.currentTeam === 'home' ? s.homeTeamId : s.awayTeamId)
 
-    if (boardCleared && !ballBack) {
-      // Cleared but no ball back → TIE → Overtime
-      s.phase = 'overtime'
-      s.overtime = true
-      if (!s.overtimeCount) s.overtimeCount = 0
-      s.overtimeCount++
-      s.homeBoardClaimed = ['back-1', 'back-2', 'back-3']
-      s.awayBoardClaimed = ['back-1', 'back-2', 'back-3']
-      s.homeBoardOpen = new Set(OT_HOLES)
-      s.awayBoardOpen = new Set(OT_HOLES)
-      s.currentTeam = s.firstToClear === 'home' ? 'away' : 'home'
-      s.currentPutterIdx = 0
-      s.currentTurnPutts = []
-      s.firstToClear = null
-      s.otStartSelect = true
-      triggerTrashTalk('overtime', putters[putters.length - 1].id)
-      return
-    }
-
-    if (!boardCleared) {
-      if (ballBack) {
-        // Kept alive by earning a ball back! They get another turn to keep putting
-        s.currentTurnPutts = []
-        s.currentPutterIdx = 0
-        const streakKey = s.currentTeam === 'home' ? 'homeStreak' : 'awayStreak'
-        const streak = s[streakKey]
-        if (streak === 4) {
-          showToast(`<div class="toast-title">⚡ UNSTOPPABLE! 4 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
-          triggerTrashTalk('streak_4', putters[putters.length - 1].id)
-        } else if (streak === 6) {
-          showToast(`<div class="toast-title">👑 PERFECT BOARD! 6 IN A ROW!</div><div class="toast-detail">🔥 BALL BACK!</div>`, "streak")
-          triggerTrashTalk('streak_6', putters[putters.length - 1].id)
-        } else if (streak > 6 && streak % 2 === 0) {
-          showToast(`<div class="toast-title">🔥 BALL BACK!</div><div class="toast-detail">${streak} IN A ROW!</div>`, "streak")
-          triggerTrashTalk('streak_2', putters[putters.length - 1].id)
-        } else {
-          showToast('<div class="toast-title">🔥 BALL BACK!</div>')
-          triggerTrashTalk('ballback', putters[putters.length - 1].id)
-        }
-        checkCloseGameBanter()
-      } else {
-        // Redemption failed (missed shot and did not clear the board) → Opponent wins!
-        s.gameOver = true
-        s.winner = s.firstToClear === 'home' ? s.homeName : s.awayName
-        if (s.firstToClear === 'home') s.seriesScore.home++; else s.seriesScore.away++
-        s.currentTurnPutts = []
-        s.currentPutterIdx = 0
-        showToast(`<div class="toast-title">🏆 GAME SET MATCH!</div><div class="toast-detail">${s.winner.toUpperCase()} WINS!</div>`, 'winner')
-      }
+    if (s.currentPutterIdx >= putters.length) {
+      finishTurn(putters, boardClaimed, targetBoardId)
     }
   }
 }
@@ -1215,6 +1552,7 @@ function buildGameResult(s) {
     },
     winnerId: s.winner === s.homeName ? s.homeTeamId : s.awayTeamId,
     overtime: s.overtime,
+    scoringMode: 'live',
   }
 }
 
@@ -1247,6 +1585,9 @@ function startNextGame() {
   s.overtimeCount = 0
   s.homeStreak = 0
   s.awayStreak = 0
+  s.pendingIslandBonus = false
+  s.islandPutterId = null
+  s.islandHoleMade = null
 
   const gameQuotes = [
     `Cotton McKnight: Game ${s.gameNumber} is underway! The boards are reset and the tension is THICK!`,

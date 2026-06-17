@@ -179,8 +179,121 @@ export function deleteMatch(matchId) {
   return true
 }
 
-// Quick score entry — admin enters series results manually
-export function quickScoreMatch(matchId, gameScores) {
+// ─── Synthetic Turn Generation for Override Scoring ───
+
+function generateSyntheticTurns(homeTeamId, awayTeamId, homeScore, awayScore) {
+  // homeScore = cups home team sank on away board, awayScore = cups away team sank on home board
+  // Winner always has 6. Loser has 0-5.
+  const homeTeam = _state.teams.find(t => t.id === homeTeamId)
+  const awayTeam = _state.teams.find(t => t.id === awayTeamId)
+  if (!homeTeam || !awayTeam) return []
+
+  const homePlayers = homeTeam.roster.slice(0, 2).map(r => r.playerId)
+  const awayPlayers = awayTeam.roster.slice(0, 2).map(r => r.playerId)
+  if (homePlayers.length === 0 || awayPlayers.length === 0) return []
+
+  const holes = ['back-1', 'back-2', 'back-3', 'middle-1', 'middle-2', 'front-1']
+
+  // Build a sequence of makes for each team
+  // Winner made all 6 holes, loser made N holes (in order)
+  const homeMadeHoles = holes.slice(0, homeScore)
+  const awayMadeHoles = holes.slice(0, awayScore)
+
+  // Estimate total putts using ~42% league average
+  const puttingAvg = 0.42
+  const homeTotalPutts = homeScore > 0 ? Math.max(homeScore, Math.round(homeScore / puttingAvg)) : Math.round(3 / puttingAvg)
+  const awayTotalPutts = awayScore > 0 ? Math.max(awayScore, Math.round(awayScore / puttingAvg)) : Math.round(3 / puttingAvg)
+
+  // Build per-team putt sequences (list of {playerId, hole, made})
+  function buildPuttSequence(players, madeHoles, totalPutts) {
+    const putts = []
+    const missCount = totalPutts - madeHoles.length
+    let holeIdx = 0, playerToggle = 0
+
+    // Interleave makes and misses to create a realistic-looking sequence
+    // Each "turn" = 2 putts (one per player)
+    const turnCount = Math.ceil(totalPutts / 2)
+
+    for (let turn = 0; turn < turnCount; turn++) {
+      for (let p = 0; p < Math.min(players.length, 2); p++) {
+        if (putts.length >= totalPutts) break
+        const playerId = players[p]
+
+        // Decide: make or miss?
+        const remainingMakes = madeHoles.length - putts.filter(x => x.made).length
+        const remainingPutts = totalPutts - putts.length
+        const makeProb = remainingPutts > 0 ? remainingMakes / remainingPutts : 0
+
+        // Use a deterministic pattern (alternating) to distribute makes evenly
+        const shouldMake = remainingMakes > 0 && (Math.random() < makeProb || remainingPutts <= remainingMakes)
+
+        if (shouldMake && holeIdx < madeHoles.length) {
+          putts.push({ playerId, hole: madeHoles[holeIdx], made: true, synthetic: true })
+          holeIdx++
+        } else {
+          putts.push({ playerId, hole: 'miss', made: false, synthetic: true })
+        }
+      }
+    }
+    return putts
+  }
+
+  const homePutts = buildPuttSequence(homePlayers, homeMadeHoles, homeTotalPutts)
+  const awayPutts = buildPuttSequence(awayPlayers, awayMadeHoles, awayTotalPutts)
+
+  // Interleave into turns (home turn, away turn, ...)
+  const turns = []
+  let turnNum = 0
+  const homeTurns = []
+  const awayTurns = []
+
+  // Group putts into turns of 2
+  for (let i = 0; i < homePutts.length; i += 2) {
+    homeTurns.push(homePutts.slice(i, i + 2))
+  }
+  for (let i = 0; i < awayPutts.length; i += 2) {
+    awayTurns.push(awayPutts.slice(i, i + 2))
+  }
+
+  const maxTurns = Math.max(homeTurns.length, awayTurns.length)
+  for (let i = 0; i < maxTurns; i++) {
+    if (i < homeTurns.length) {
+      turnNum++
+      const turnPutts = homeTurns[i]
+      const ballBack = turnPutts.length >= 2 && turnPutts.every(p => p.made)
+      turns.push({
+        turnNumber: turnNum,
+        teamId: homeTeamId,
+        putters: turnPutts.map(p => p.playerId),
+        putts: turnPutts,
+        ballBack,
+        overtime: false,
+        redemption: false,
+        synthetic: true,
+      })
+    }
+    if (i < awayTurns.length) {
+      turnNum++
+      const turnPutts = awayTurns[i]
+      const ballBack = turnPutts.length >= 2 && turnPutts.every(p => p.made)
+      turns.push({
+        turnNumber: turnNum,
+        teamId: awayTeamId,
+        putters: turnPutts.map(p => p.playerId),
+        putts: turnPutts,
+        ballBack,
+        overtime: false,
+        redemption: false,
+        synthetic: true,
+      })
+    }
+  }
+
+  return turns
+}
+
+// Quick score entry — captain or admin enters series results manually
+export function quickScoreMatch(matchId, gameScores, scoringMode = 'override') {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
 
@@ -189,12 +302,26 @@ export function quickScoreMatch(matchId, gameScores) {
 
   for (const gs of gameScores) {
     const winnerId = gs.home > gs.away ? match.homeTeamId : match.awayTeamId
+    const syntheticTurns = scoringMode === 'override'
+      ? generateSyntheticTurns(match.homeTeamId, match.awayTeamId, gs.home, gs.away)
+      : []
+
+    const homeMadeHoles = ['back-1', 'back-2', 'back-3', 'middle-1', 'middle-2', 'front-1'].slice(0, gs.home)
+    const awayMadeHoles = ['back-1', 'back-2', 'back-3', 'middle-1', 'middle-2', 'front-1'].slice(0, gs.away)
+
     games.push({
-      turns: [],
-      holesWon: {},
+      turns: syntheticTurns,
+      scoringMode: scoringMode, // 'live' | 'override'
+      holesWon: {
+        [match.homeTeamId]: awayMadeHoles, // home team's cups sunk = away board claimed
+        [match.awayTeamId]: homeMadeHoles,
+      },
       finalScore: { home: gs.home, away: gs.away },
-      totalTurns: 0,
-      ballBacks: {},
+      totalTurns: syntheticTurns.length || 0,
+      ballBacks: {
+        [match.homeTeamId]: syntheticTurns.filter(t => t.teamId === match.homeTeamId && t.ballBack).length,
+        [match.awayTeamId]: syntheticTurns.filter(t => t.teamId === match.awayTeamId && t.ballBack).length,
+      },
       winnerId,
       overtime: false,
     })
@@ -220,7 +347,8 @@ export function quickScoreMatch(matchId, gameScores) {
   match.winnerId = winnerId
   match.homePoints = homePoints
   match.awayPoints = awayPoints
-  match.status = 'completed'
+  match.status = 'pending_review'
+  match.scoringMode = scoringMode
 
   saveState()
   return match

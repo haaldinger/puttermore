@@ -1,4 +1,4 @@
-import { getActiveSeason, getStandings, getRecentResults, getUpcomingMatches, getLeaderboard, getTeam, getAllLeagues, getLeague, getVenue, getPlayerStats, getPlayerTeam, getTeamRoster, getPlayer, getAllPlayers, getAllMatches } from '../data.js'
+import { getActiveSeason, getStandings, getRecentResults, getUpcomingMatches, getLeaderboard, getTeam, getAllLeagues, getLeague, getVenue, getPlayerStats, getPlayerTeam, getTeamRoster, getPlayer, getAllPlayers, getAllMatches, hasAnySyntheticData } from '../data.js'
 import { getLoggedInUser } from '../store.js'
 import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
 
@@ -372,7 +372,9 @@ const phaseTickerQuotes = {
     "Cotton McKnight: Audit the replay play-by-plays now to see every single ball-back double sink.",
     "Pepper Reddick: Standings climbs are locked. Crab Cake Closers are standard closer-elite!",
     "Cotton McKnight: Roster matchups are set. Polish your shafts, folks, it is go-time!",
-    "Pepper Reddick: I hear J-MO Boh has been putting blindfolded to practice, Cotton! Staggering commitment!"
+    "Pepper Reddick: I hear J-MO Boh has been putting blindfolded to practice, Cotton! Staggering commitment!",
+    "Cotton McKnight: Pepper, rumor has it some guy named Heath built this entire scoreboard system from his couch. Absolute madman engineering!",
+    "Pepper Reddick: HAA protocol activated, Cotton! The analytics engine is running hotter than a Canton summer!"
   ]
 }
 
@@ -466,7 +468,7 @@ export function renderHome() {
       <span style="font-weight:700;color:var(--text-muted);width:20px">${i + 1}</span>
       <div class="roster-avatar" style="background:${e.player.avatarColor}">${e.player.name.split(' ').map(n=>n[0]).join('')}</div>
       <div style="flex:1"><div class="roster-name">${e.player.name}</div><div class="roster-role">${e.team?.name || ''}</div></div>
-      <div style="text-align:right"><div style="font-family:var(--font-display);font-weight:800;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%</div><div style="font-size:var(--text-xs);color:var(--text-muted)">accuracy</div></div>
+      <div style="text-align:right"><div style="font-family:var(--font-display);font-weight:800;color:var(--pink-400)">${(e.puttingPct*100).toFixed(0)}%${hasAnySyntheticData(e.player.id) ? '<span style="color:var(--gold-400);font-size:9px">*</span>' : ''}</div><div style="font-size:var(--text-xs);color:var(--text-muted)">accuracy</div></div>
     </div>`).join('')
 
   // ─── Dynamic Logged-in / Captain / Guest Dashboard ───
