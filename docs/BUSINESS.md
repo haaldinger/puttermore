@@ -49,7 +49,7 @@ graph TD
     App --> AUTH[Auth & Access Control]
     
     SC --> Board[Dual SVG Interactive Boards]
-    SC --> Rules[Ball-Back / Island / Redemption / OT Logic]
+    SC --> Rules[Ball-Back / Island / Redemption Logic]
     SC --> Series[Best-of-3 Series Tracking]
     
     AN --> Heatmap[Cup Accuracy Heatmaps]
@@ -67,13 +67,13 @@ graph TD
 
 ### 1. Automated Scoring & Tournament Rules
 *   **Turn-Key Scorer Panel** — Interactive green-turf SVG boards designed for single-tap cup sinking under active bar lighting.
-*   **State-Aware Automation** — Core rules (Ball-Backs, Island Cup bonuses, Redemption clauses, Sudden-Death Overtime) are handled natively by the engine, removing rule disputes.
+*   **State-Aware Automation** — Core rules (Ball-Backs, Island Cup bonuses, and Redemption clauses) are handled natively by the engine, removing rule disputes.
 *   **Turn Rollbacks** — Built-in `Undo Turn` safeguarding matches from user input mistakes.
 *   **Best-of-3 Series** — Full series tracking with automatic game-to-game progression and points calculation.
 
 ### 2. High-Retention Interactive Features
 *   **🎬 Ocho Match Replay Simulator** — A virtual play-by-play simulator with linear timeline scrubbing, speed factors (1x, 2x, 4x), and active vector board tracking.
-*   **🎙️ Cotton & Pepper Banter System** — High-octane, contextual comments from comedic sportscasters Cotton McKnight and Pepper Reddick that adapt to specific play results (made putts, high-stakes redemption shots, overtime shootouts, and Baltimore-themed local jokes).
+*   **🎙️ Cotton & Pepper Banter System** — High-octane, contextual comments from comedic sportscasters Cotton McKnight and Pepper Reddick that adapt to specific play results (made putts, ball-back streaks, high-stakes redemption shots, and Baltimore-themed local jokes).
 *   **📖 Interactive Caddy Desk** — Interactive putting board tutorials offering customized caddy tips for each target cup, lowering the barrier to entry for beginner players.
 
 ### 3. Beautiful, Modern Interface

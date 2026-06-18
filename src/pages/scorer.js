@@ -385,19 +385,49 @@ export function renderScorer() {
       const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
       let selectorHtml = ''
       if (isStartOfGame) {
+        const homeIs3 = s.homeFullRoster && s.homeFullRoster.length >= 3
+        const awayIs3 = s.awayFullRoster && s.awayFullRoster.length >= 3
+        const homeReady = !homeIs3 || s.homePlayers.length === 2
+        const awayReady = !awayIs3 || s.awayPlayers.length === 2
+        const canStart = homeReady && awayReady
+
+        // For 3-player teams: show a tap-to-select lineup picker
+        const renderLineupPicker = (teamId, teamName, teamColor, fullRoster, activePlayers) => {
+          const activeIds = new Set(activePlayers.map(p => p.id))
+          const chipsHtml = fullRoster.map(p => {
+            const isActive = activeIds.has(p.id)
+            return `<button class="scorer-lineup-toggle" data-team-id="${teamId}" data-player-id="${p.id}"
+              style="display:flex;align-items:center;gap:6px;padding:6px 14px;font-size:11px;font-weight:700;border-radius:var(--radius-full);border:2px solid ${isActive ? teamColor : 'rgba(255,255,255,0.12)'};background:${isActive ? teamColor + '22' : 'rgba(255,255,255,0.04)'};color:${isActive ? teamColor : 'var(--text-muted)'};cursor:pointer;white-space:nowrap;transition:all 0.15s">
+              <span style="width:16px;height:16px;border-radius:50%;border:2px solid ${isActive ? teamColor : 'rgba(255,255,255,0.2)'};background:${isActive ? teamColor : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;color:#fff">${isActive ? '✓' : ''}</span>
+              ${p.name.split(' ')[0]}
+            </button>`
+          }).join('')
+          const statusLabel = activePlayers.length === 2
+            ? `<span style="font-size:9px;color:${teamColor};font-weight:800">✓ SET</span>`
+            : `<span style="font-size:9px;color:var(--gold-400);font-weight:700">Pick ${2 - activePlayers.length} more</span>`
+          return `
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);flex:1;min-width:150px">
+              <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-2)">
+                <span style="font-size:10px;color:${teamColor};font-weight:800;text-transform:uppercase;letter-spacing:0.05em">${teamName}</span>
+                ${statusLabel}
+              </div>
+              <div style="display:flex;flex-direction:column;gap:var(--space-1.5)">${chipsHtml}</div>
+            </div>
+          `
+        }
+
+        // For 2-player teams: show the existing order list
         const renderOrderList = (teamId, teamName, teamColor, players) => {
           const listHtml = players.map((p, idx) => {
-            const num = idx + 1
             const upBtn = idx > 0 ? `<button class="btn btn-secondary btn-xs scorer-move-player" data-team-id="${teamId}" data-player-id="${p.id}" data-dir="up" style="padding:1px 6px; font-size:9px; border-radius:var(--radius-sm)">↑</button>` : ''
             const downBtn = idx < players.length - 1 ? `<button class="btn btn-secondary btn-xs scorer-move-player" data-team-id="${teamId}" data-player-id="${p.id}" data-dir="down" style="padding:1px 6px; font-size:9px; border-radius:var(--radius-sm)">↓</button>` : ''
             return `
               <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:4px 10px; border-radius:var(--radius-md); gap:var(--space-2)">
-                <span style="font-size:var(--text-xs); font-weight:700; color:var(--text-secondary)">${num}. <strong style="color:#fff; margin-left:2px">${p.name.split(' ')[0]}</strong></span>
+                <span style="font-size:var(--text-xs); font-weight:700; color:var(--text-secondary)">${idx + 1}. <strong style="color:#fff; margin-left:2px">${p.name.split(' ')[0]}</strong></span>
                 <div style="display:flex; gap:3px">${upBtn}${downBtn}</div>
               </div>
             `
           }).join('')
-
           return `
             <div style="display:flex; flex-direction:column; gap:var(--space-1.5); flex:1; min-width:140px">
               <span style="font-size:10px; color:${teamColor}; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; text-align:center">${teamName} Order</span>
@@ -406,19 +436,24 @@ export function renderScorer() {
           `
         }
 
-        const homeOrderHtml = renderOrderList('home', s.homeName, s.homeColor, s.homePlayers)
-        const awayOrderHtml = renderOrderList('away', s.awayName, s.awayColor, s.awayPlayers)
+        const homeHtml = homeIs3
+          ? renderLineupPicker('home', s.homeName, s.homeColor, s.homeFullRoster, s.homePlayers)
+          : renderOrderList('home', s.homeName, s.homeColor, s.homePlayers)
+        const awayHtml = awayIs3
+          ? renderLineupPicker('away', s.awayName, s.awayColor, s.awayFullRoster, s.awayPlayers)
+          : renderOrderList('away', s.awayName, s.awayColor, s.awayPlayers)
 
         selectorHtml = `
           <div style="margin-top:var(--space-4); padding-top:var(--space-3); border-top:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3)">
-            <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2)">
-              <span style="font-size:var(--text-xs); color:var(--text-secondary); font-weight:600">Which team goes first?</span>
-              <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6'}">${s.homeName}</button>
-              <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6'}">${s.awayName}</button>
+            ${(homeIs3 || awayIs3) ? `<span style="font-size:var(--text-xs);color:${canStart ? 'var(--text-secondary)' : 'var(--gold-400)'};font-weight:700">${canStart ? '✓ Lineups set — pick who goes first' : '🏌️ Tap 2 players per team to set the lineup'}</span>` : ''}
+            <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); flex-wrap:wrap">
+              <span style="font-size:var(--text-xs); color:${canStart ? 'var(--text-secondary)' : 'rgba(255,255,255,0.25)'}; font-weight:600">Which team goes first?</span>
+              <button class="btn btn-secondary btn-sm" id="scorer-start-home" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${canStart ? (s.currentTeam === 'home' ? `background:${s.homeColor}20; border-color:${s.homeColor}; color:${s.homeColor}` : 'opacity:0.6') : 'opacity:0.2; pointer-events:none'}">${s.homeName}</button>
+              <button class="btn btn-secondary btn-sm" id="scorer-start-away" style="border-radius:var(--radius-full); font-size:10px; padding:2px 8px; font-weight:800; ${canStart ? (s.currentTeam === 'away' ? `background:${s.awayColor}20; border-color:${s.awayColor}; color:${s.awayColor}` : 'opacity:0.6') : 'opacity:0.2; pointer-events:none'}">${s.awayName}</button>
             </div>
-            <div style="display:flex; justify-content:center; gap:var(--space-4); width:100%; max-width:400px; flex-wrap:wrap">
-              ${homeOrderHtml}
-              ${awayOrderHtml}
+            <div style="display:flex; justify-content:center; gap:var(--space-4); width:100%; max-width:440px; flex-wrap:wrap">
+              ${homeHtml}
+              ${awayHtml}
             </div>
           </div>
         `
@@ -1062,20 +1097,48 @@ export function handleScorerEvents(e) {
     return true
   }
   if (target.closest('#scorer-start-home') && scorerState) {
-    const isStartOfGame = scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0
-    if (isStartOfGame) {
-      scorerState.currentTeam = 'home'
-      scorerState.currentPutterIdx = 0
+    const s = scorerState
+    const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
+    const homeReady = !s.homeFullRoster || s.homeFullRoster.length < 3 || s.homePlayers.length === 2
+    const awayReady = !s.awayFullRoster || s.awayFullRoster.length < 3 || s.awayPlayers.length === 2
+    if (isStartOfGame && homeReady && awayReady) {
+      s.currentTeam = 'home'
+      s.currentPutterIdx = 0
       return true
     }
   }
   if (target.closest('#scorer-start-away') && scorerState) {
-    const isStartOfGame = scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0
-    if (isStartOfGame) {
-      scorerState.currentTeam = 'away'
-      scorerState.currentPutterIdx = 0
+    const s = scorerState
+    const isStartOfGame = s.turns.length === 0 && s.currentTurnPutts.length === 0
+    const homeReady = !s.homeFullRoster || s.homeFullRoster.length < 3 || s.homePlayers.length === 2
+    const awayReady = !s.awayFullRoster || s.awayFullRoster.length < 3 || s.awayPlayers.length === 2
+    if (isStartOfGame && homeReady && awayReady) {
+      s.currentTeam = 'away'
+      s.currentPutterIdx = 0
       return true
     }
+  }
+  // ─── Per-Game Lineup Selector (3-player teams) ───
+  if (target.closest('.scorer-lineup-toggle') && scorerState) {
+    const el = target.closest('.scorer-lineup-toggle')
+    const teamId = el.dataset.teamId
+    const playerId = el.dataset.playerId
+    const s = scorerState
+    const fullRoster = teamId === 'home' ? s.homeFullRoster : s.awayFullRoster
+    const activePlayers = teamId === 'home' ? s.homePlayers : s.awayPlayers
+    if (fullRoster && playerId) {
+      const activeIds = new Set(activePlayers.map(p => p.id))
+      if (activeIds.has(playerId)) {
+        activeIds.delete(playerId) // deselect
+      } else if (activeIds.size < 2) {
+        activeIds.add(playerId) // select (only if under 2)
+      }
+      // Rebuild in original roster order
+      const newActive = fullRoster.filter(p => activeIds.has(p.id))
+      if (teamId === 'home') s.homePlayers = newActive
+      else s.awayPlayers = newActive
+    }
+    return true
   }
   if (target.closest('.scorer-move-player') && scorerState && scorerState.turns.length === 0 && scorerState.currentTurnPutts.length === 0) {
     const el = target.closest('.scorer-move-player')
@@ -1158,14 +1221,19 @@ function startGame(matchId) {
   const match = getAllMatches().find(m => m.id === matchId)
   if (!match) return
   const ht = getTeam(match.homeTeamId), at = getTeam(match.awayTeamId)
+  const homeFullRoster = getTeamRoster(match.homeTeamId)
+  const awayFullRoster = getTeamRoster(match.awayTeamId)
 
   scorerState = {
     matchId,
     homeTeamId: match.homeTeamId, awayTeamId: match.awayTeamId,
     homeName: ht.name, awayName: at.name,
     homeColor: ht.color, awayColor: at.color,
-    homePlayers: getTeamRoster(match.homeTeamId),
-    awayPlayers: getTeamRoster(match.awayTeamId),
+    homeFullRoster,
+    awayFullRoster,
+    // For 3-player teams, start empty — captain picks 2 active players per game
+    homePlayers: homeFullRoster.length <= 2 ? homeFullRoster : [],
+    awayPlayers: awayFullRoster.length <= 2 ? awayFullRoster : [],
     homeBoardClaimed: [], awayBoardClaimed: [],
     homeBoardOpen: new Set(HOLES), awayBoardOpen: new Set(HOLES),
     currentTeam: 'home',
@@ -1524,17 +1592,10 @@ export function showToast(message, type = '') {
 }
 
 function getCurrentPutters(s, teamId) {
+  // homePlayers/awayPlayers are always the 2 active players for the current game
+  // (selected by the captain in the pre-game lineup picker for 3-player teams)
   const isHome = teamId === s.homeTeamId
-  const players = isHome ? s.homePlayers : s.awayPlayers
-  if (players.length <= 2) return players
-
-  const teamTurns = s.turns.filter(t => t.teamId === teamId)
-  const transitions = teamTurns.filter(t => !t.ballBack).length
-  
-  const seq = transitions % 3
-  if (seq === 0) return [players[0], players[1]]
-  if (seq === 1) return [players[0], players[2]]
-  return [players[1], players[2]]
+  return isHome ? s.homePlayers : s.awayPlayers
 }
 
 function buildGameResult(s) {
@@ -1588,6 +1649,9 @@ function startNextGame() {
   s.pendingIslandBonus = false
   s.islandPutterId = null
   s.islandHoleMade = null
+  // For 3-player teams, reset active lineup so captain picks again for the new game
+  if (s.homeFullRoster && s.homeFullRoster.length >= 3) s.homePlayers = []
+  if (s.awayFullRoster && s.awayFullRoster.length >= 3) s.awayPlayers = []
 
   const gameQuotes = [
     `Cotton McKnight: Game ${s.gameNumber} is underway! The boards are reset and the tension is THICK!`,

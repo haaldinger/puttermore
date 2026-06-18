@@ -96,14 +96,12 @@ A real-time tournament scorer optimized for fast-paced bar atmospheres:
 *   **Open Play Mode** — Captains can pick any opponent from their league and start a game immediately without a scheduled match — great for scrimmages and off-week practice.
 *   **Dual Vector Game Boards** — Displays separate green-turf SVG boards mapping the 6-cup pyramids (beer-pong style) of both teams.
 *   **Turn Roster Setup** — At game start, captains can reorder each team's player lineup to match the real rotation.
-*   **3-Player Rotation Engine** — Automatically alternates active putter pairings turn-by-turn for teams with 3-player rosters, guaranteeing balanced competitive play.
+*   **Per-Game Lineup Selector** — For teams with 3 players, the scoring captain selects exactly 2 active players before each game begins. The 3rd player sits out that game; the captain re-picks fresh before every new game in the series.
 *   **Interactive Cup Sinking** — Captains tap the **Made It** / **Miss** buttons to log each individual putt, and the board automatically removes the claimed cup.
 *   **🏝️ Island Cup Bonus** — When a cup becomes isolated (all surrounding cups are sunk), it becomes a golden "island" cup. Sinking an island awards a **free bonus cup pick** — the putter taps any remaining open cup to claim it instantly.
 *   **Automatic Game State Logic**:
     *   **🔥 Ball Backs** — Blazing fire-toast celebration when both teammates make their putts, awarding an extra turn.
-    *   **🚨 Redemption Round** — Initiates individual putt turns for the defending team when a board is cleared. Each made putt keeps the redemption alive; a miss ends it.
-    *   **⚡ Sudden-Death Overtime** — Middle/back cups pre-filled on both boards; play scopes strictly to the front 3 cups for sudden-death victory.
-    *   **Multi-Overtime Support** — Tracks and announces Double Overtime, Triple Overtime, etc. if multiple redemption rounds tie.
+    *   **🚨 Redemption Round** — Initiates individual putt turns for the defending team when a board is cleared. Each made putt keeps the redemption alive; a miss passes to the next player. When all players have missed, the original clearer wins. Even if the redemption team manages to clear the board, the team that cleared first is still declared the winner.
 *   **Best-of-3 Series Tracking** — The scorer tracks a full best-of-3 series, automatically moving between games and displaying the series score.
 *   **Flexible Board View Modes** — `Side by Side`, `Focused`, and `Stacked` (with stacked board Y-inverted so cups face each other).
 *   **Turn Rollbacks** — Built-in `Undo Turn` to step back one full turn in case of input errors.
@@ -120,9 +118,9 @@ An advanced, step-by-step match simulator that reconstructs any completed league
 ---
 
 ### 🎙️ ESPN8: The Ocho Live Broadcasting Engine
-*   **Global Marquee Ticker** — Continuous rolling ticker sliding across headers, switching contexts in Scorer Mode to show live match states (redemption warnings, overtime alerts, 1v1 shootout calls, ball-back streaks).
+*   **Global Marquee Ticker** — Continuous rolling ticker sliding across headers, switching contexts in Scorer Mode to show live match states (redemption warnings, ball-back streaks, and game-over banners).
 *   **Baltimore Cultural Lore & Humor** — Over 40 sportscaster quotes, local Baltimore easter eggs (Mr. Trash Wheel, Fells Point parking, Dundalk crab cakes, Berger Cookies, Old Bay), and golf banter.
-*   **Context-Aware Ticker Modes** — Automatically shifts between LIVE OCHO TICKER (home), OCHO SCORER DESK (pre-game), TENSE FINISH, REDEMPTION WATCH, OVERTIME alerts, and GAME OVER banners.
+*   **Context-Aware Ticker Modes** — Automatically shifts between LIVE OCHO TICKER (home), OCHO SCORER DESK (pre-game), TENSE FINISH, REDEMPTION WATCH, and GAME OVER banners.
 
 ---
 
