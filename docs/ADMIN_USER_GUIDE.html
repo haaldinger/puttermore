@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Puttermore — Admin User Guide & Operating Manual</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+    @page {
+      size: letter;
+      margin: 0.5in 0.5in 0.6in 0.5in;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.55;
+      font-size: 11.5pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover / Header Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #09090b 0%, #18181b 100%);
+      color: #ffffff;
+      padding: 28px 32px;
+      border-radius: 16px;
+      margin-bottom: 28px;
+      border: 1px solid #27272a;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-title-group h1 {
+      font-size: 26pt;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #e91e8b 0%, #fbbf24 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-subtitle {
+      font-size: 11pt;
+      color: #a1a1aa;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .header-tag {
+      background: rgba(233, 30, 139, 0.15);
+      border: 1px solid rgba(233, 30, 139, 0.4);
+      color: #f472b6;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-pink { background: rgba(233,30,139,0.12); color: #be185d; border: 1px solid rgba(233,30,139,0.3); }
+    .badge-gold { background: rgba(245,158,11,0.12); color: #b45309; border: 1px solid rgba(245,158,11,0.3); }
+    .badge-green { background: rgba(16,185,129,0.12); color: #047857; border: 1px solid rgba(16,185,129,0.3); }
+
+    h2 {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 8px;
+      margin-top: 26px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 12.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: #334155;
+    }
+
+    /* Executive Callout Card */
+    .summary-card {
+      background: #f8fafc;
+      border-left: 4px solid #e91e8b;
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 24px;
+      border-top: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .summary-card p {
+      margin: 0;
+      font-size: 11pt;
+      color: #475569;
+    }
+
+    /* Styled Tables */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 14px 0 20px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      page-break-inside: avoid;
+    }
+
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 9.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 10.5pt;
+      color: #334155;
+      background: #ffffff;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5pt;
+      background: #f1f5f9;
+      color: #be185d;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    ol, ul {
+      margin-top: 0;
+      margin-bottom: 14px;
+      padding-left: 22px;
+    }
+
+    li {
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    .step-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      page-break-inside: avoid;
+    }
+
+    .step-title {
+      font-weight: 800;
+      color: #0f172a;
+      font-size: 11pt;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer {
+      margin-top: 36px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 9pt;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Header Banner -->
+  <div class="header-banner">
+    <div class="header-title-group">
+      <h1>PUTTERMORE</h1>
+      <div class="header-subtitle">League Admin User Guide & Operating Manual</div>
+    </div>
+    <div class="header-tag">Mobtown Brewing Co.</div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="summary-card">
+    <p><strong>📌 Executive Summary:</strong> Welcome to <strong>Puttermore</strong>, the digital command center for the Mobtown Brewing Co. Wednesday Night Social Putting League (6:00 PM – 9:00 PM EST). This official operating manual provides step-by-step instructions for League Commissioners, Admins, and Desk Staff on managing rosters, running Wednesday match nights, recording scores on-the-fly, and rolling over future seasons.</p>
+  </div>
+
+  <!-- Section 1 -->
+  <h2>🔑 1. Logging In & Admin Roles</h2>
+  <p>To access admin controls, navigate to <strong><a href="https://puttermore.netlify.app" style="color:#e91e8b; text-decoration:none; font-weight:700">puttermore.netlify.app</a></strong> and click <strong>🔑 Login</strong> in the top navigation bar.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Profile Mode</th>
+        <th>Account Name</th>
+        <th>Usage & Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>👑 Official Commissioner</strong></td>
+        <td><code>J-MO Boh</code> / <code>Shane OldBay</code></td>
+        <td><strong>Official League Operations.</strong> All updates (teams, scores, standings) are saved live to the database for official league standings.</td>
+      </tr>
+      <tr>
+        <td><strong>🧪 Pre-Season Sandbox</strong></td>
+        <td><code>Demo Tester (Sandbox Admin)</code></td>
+        <td><strong>Safe Training & Testing.</strong> All changes remain strictly in your active browser session memory. Use this mode to practice scoring without affecting official league data.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 2 -->
+  <h2>👥 2. Pre-Season Setup (Teams & Rosters)</h2>
+  <p>In Mobtown Fall 2026, games are played in an <strong>ad-hoc format</strong>—meaning you do <strong>not</strong> need to build a rigid pre-scheduled matrix before the season starts. Your main pre-season job is registering teams and player rosters.</p>
+
+  <div class="step-box">
+    <div class="step-title">✨ Creating Teams</div>
+    <ol style="margin-bottom: 0;">
+      <li>Navigate to <strong>Admin Console &rarr; 👥 Rosters</strong>.</li>
+      <li>Under <strong>Create New Team</strong>, enter the <strong>Team Name</strong> (e.g. <em>Dundalk Putters</em>, <em>Mobtown Misfits</em>).</li>
+      <li>Pick a custom team accent color and click <strong>Create Team</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">👤 Registering Players & Assigning Captains</div>
+    <ol style="margin-bottom: 0;">
+      <li>Under <strong>Team Rosters</strong>, select the team from the team list.</li>
+      <li>Click <strong>+ Add Player</strong>, enter the player's full name, pick an avatar accent color, and tap <strong>Save Player</strong>.</li>
+      <li><strong>Assign Captain:</strong> Click the <strong>🧢 Captain</strong> badge next to a player's name to designate them as Team Captain.</li>
+      <li><strong>Remove Player:</strong> Click the <strong>❌ Remove</strong> icon if a player drops out of the roster.</li>
+    </ol>
+  </div>
+
+  <!-- Section 3 -->
+  <h2>⚡ 3. Wednesday Match Night Operations</h2>
+  <p>On Wednesday match nights (6:00 PM – 9:00 PM at Mobtown), teams walk up to the 6-cup turf board and challenge each other on-the-fly.</p>
+
+  <div class="step-box">
+    <div class="step-title">⚡ Recording a Match Score (3-Step Quick Console)</div>
+    <p style="font-size: 10pt; color: #64748b; margin-bottom: 8px;">When two teams finish playing a Best-of-3 series:</p>
+    <ol style="margin-bottom: 8px;">
+      <li>Open <strong>Admin Console &rarr; ⚡ Score Console</strong>.</li>
+      <li><strong>Step 1 (Pick 2 Teams):</strong> Select <strong>Home Team (Team 1)</strong> and <strong>Away Team (Team 2)</strong>.</li>
+      <li><strong>Step 2 (Enter Scores):</strong> Enter cups sunk for Game 1, Game 2, and optional Game 3 (leave Game 3 blank if a team won 2-0).</li>
+      <li><strong>Step 3 (Publish):</strong> Click <strong>🏆 Complete & Update Standings</strong>.</li>
+    </ol>
+  </div>
+
+  <h3 style="margin-top: 14px;">Standings Points Calculation Rules:</h3>
+  <ul>
+    <li><span class="badge badge-green">2 Points</span> <strong>Series Winner (2-0 or 2-1):</strong> Earns 2 points in league standings.</li>
+    <li><span class="badge badge-gold">1 Point</span> <strong>Game 3 Loser (1-2):</strong> Earns 1 point (Game-3 / Overtime bonus point).</li>
+    <li><span class="badge badge-pink">0 Points</span> <strong>Sweep Loser (0-2):</strong> Earns 0 points.</li>
+  </ul>
+
+  <div class="step-box">
+    <div class="step-title">✏️ Recalling or Editing a Match Score</div>
+    <p style="margin: 0; font-size: 10.5pt; color: #334155;">If an incorrect score was submitted by mistake, open <strong>Admin Console &rarr; 📅 Matches</strong> tab. Click <strong>✏️ Edit Score</strong> to modify game numbers, or <strong>🗑️ Delete / Recall</strong> to remove the match and recalculate standings automatically.</p>
+  </div>
+
+  <!-- Section 4 -->
+  <h2>⚙️ 4. Season Rollover & Future Seasons</h2>
+  <p>Puttermore natively supports ongoing future seasons (e.g., <em>Fall 2026</em>, <em>Winter 2026</em>, <em>Spring 2027</em>).</p>
+  <div class="step-box">
+    <div class="step-title">🏆 Launching a New Season</div>
+    <ol style="margin-bottom: 0;">
+      <li>Open <strong>Admin Console &rarr; ⚙️ Settings &rarr; Season Rollover Console</strong>.</li>
+      <li>Under <strong>Launch New Season</strong>, enter Season Name (e.g. <em>Winter 2026 Mobtown Season</em>), Duration (e.g. <em>6 Weeks</em>), and Start Date.</li>
+      <li>Click <strong>🏆 Launch New Season</strong>. The app switches to the new active season with 0 matches recorded while preserving team rosters.</li>
+    </ol>
+  </div>
+
+  <!-- Section 5 -->
+  <h2>❓ 5. Frequently Asked Questions (FAQ)</h2>
+  <div class="step-box" style="margin-bottom: 8px;">
+    <strong>Q: What if a team forfeits on match night?</strong>
+    <p style="margin-top: 4px; margin-bottom: 0;"><strong>A:</strong> Go to <strong>Admin Console &rarr; ⚡ Score Console</strong>, select the two teams, enter <code>6-0, 6-0</code> for the team that attended, and click Publish.</p>
+  </div>
+
+  <div class="step-box" style="margin-bottom: 8px;">
+    <strong>Q: How does the countdown banner on the home page work?</strong>
+    <p style="margin-top: 4px; margin-bottom: 0;"><strong>A:</strong> The countdown clock automatically ticks down to Wednesday, September 2nd, 2026 at 6:00 PM EST. When opening time arrives, it automatically transitions from <code>⏳ COUNTDOWN TO OPENING NIGHT</code> to <code>🟢 SEASON IN PROGRESS</code>.</p>
+  </div>
+
+  <div class="step-box">
+    <strong>Q: How can new admins practice without messing up live data?</strong>
+    <p style="margin-top: 4px; margin-bottom: 0;"><strong>A:</strong> Always log in under <strong>🧪 Demo Tester (Sandbox Admin)</strong> mode. Sandbox mode suppresses database write calls and keeps your test scores strictly in your local browser session memory.</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Puttermore v1.0 · Mobtown Brewing Co. Social Putting League Guide · Engineered by HAA
+  </div>
+
+</body>
+</html>
