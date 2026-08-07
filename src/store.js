@@ -33,6 +33,22 @@ function loadState() {
   return null
 }
 
+const LOGIN_KEY = 'puttermore_logged_in_player_id'
+
+export function getLoggedInUser() {
+  const playerId = localStorage.getItem(LOGIN_KEY)
+  if (!playerId || !_state) return null
+  return _state.players.find(p => p.id === playerId) || null
+}
+
+export function setLoggedInUser(playerId) {
+  if (playerId) {
+    localStorage.setItem(LOGIN_KEY, playerId)
+  } else {
+    localStorage.removeItem(LOGIN_KEY)
+  }
+}
+
 export function isSandboxSession() {
   const user = getLoggedInUser()
   return user ? user.isSandbox === true : false
@@ -1244,22 +1260,6 @@ export function resetStore() {
   _state = getDefaultState()
   syncExportedArrays()
   saveState()
-}
-
-const LOGIN_KEY = 'puttermore_logged_in_player_id'
-
-export function getLoggedInUser() {
-  const playerId = localStorage.getItem(LOGIN_KEY)
-  if (!playerId) return null
-  return _state.players.find(p => p.id === playerId) || null
-}
-
-export function setLoggedInUser(playerId) {
-  if (playerId) {
-    localStorage.setItem(LOGIN_KEY, playerId)
-  } else {
-    localStorage.removeItem(LOGIN_KEY)
-  }
 }
 
 export async function logout() {

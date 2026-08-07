@@ -419,8 +419,9 @@ export function getWeeklyMvp(weekNum) {
 export function renderHome() {
   const season = getActiveSeason()
   const allLeagues = getAllLeagues()
+  const selectedLeagueId = getSelectedLeague()
   const league = getLeague(selectedLeagueId)
-  const venue = getVenue(league.venueId)
+  const venue = getVenue(league ? league.venueId : 'v1')
   const standings = getStandings(selectedLeagueId).slice(0, 5)
   const recent = getRecentResults(selectedLeagueId, 20)
   const upcoming = getUpcomingMatches(selectedLeagueId, 3)
@@ -984,7 +985,7 @@ export function renderHome() {
   const activeSeasonObj = getActiveSeason()
   const seasonStartDateStr = activeSeasonObj?.startDate || '2026-09-02'
   const seasonTargetTime = new Date(`${seasonStartDateStr}T18:00:00-04:00`)
-  const isSeasonLive = getCurrentDate() >= seasonTargetTime || activeSeasonObj.status === 'active'
+  const isSeasonLive = getCurrentDate() >= seasonTargetTime
 
   const seasonOpeningCountdownHtml = `
     <div class="card card-glass text-center animate-in" style="padding: var(--space-6); background: linear-gradient(135deg, rgba(233,30,139,0.06), rgba(251,191,36,0.04)); border: 1.5px solid rgba(233,30,139,0.3); margin-bottom: var(--space-6); box-shadow: 0 10px 30px rgba(233,30,139,0.15); border-radius: var(--radius-2xl)">
