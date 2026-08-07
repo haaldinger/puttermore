@@ -2,7 +2,7 @@ import { players as seedPlayers, teams as seedTeams, seasons as seedSeasons, mat
 import { supabase } from './supabase.js'
 
 const STORE_KEY = 'puttermore_store'
-const STORE_VERSION = 10
+const STORE_VERSION = 11
 
 let _state = null
 

@@ -178,80 +178,9 @@ function simulateSeries(homeTeamId, awayTeamId, seedOffset) {
 
 // ─── Schedule Builder for Mobtown Fall 2026 (6 Weeks, Multi-Matchup Support) ───
 function buildFall2026Schedule(leagueId, leagueTeams, venueId, dates) {
-  const tIds = leagueTeams.map(t => t.id)
-  
-  // 6-week schedule across 7 teams. 
-  // Each week has 3-4 matchups scheduled between 6:00 PM and 9:00 PM at Mobtown.
-  const rawSchedule = [
-    // Week 1: Sept 2, 2026
-    { week: 1, home: 't1', away: 't2' },
-    { week: 1, home: 't3', away: 't4' },
-    { week: 1, home: 't5', away: 't6' },
-
-    // Week 2: Sept 9, 2026
-    { week: 2, home: 't2', away: 't3' },
-    { week: 2, home: 't4', away: 't5' },
-    { week: 2, home: 't6', away: 't7' },
-
-    // Week 3: Sept 16, 2026
-    { week: 3, home: 't1', away: 't3' },
-    { week: 3, home: 't2', away: 't5' },
-    { week: 3, home: 't4', away: 't6' },
-
-    // Week 4: Sept 23, 2026
-    { week: 4, home: 't1', away: 't4' },
-    { week: 4, home: 't2', away: 't6' },
-    { week: 4, home: 't3', away: 't5' },
-
-    // Week 5: Sept 30, 2026
-    { week: 5, home: 't1', away: 't5' },
-    { week: 5, home: 't2', away: 't7' },
-    { week: 5, home: 't3', away: 't6' },
-
-    // Week 6: Oct 7, 2026
-    { week: 6, home: 't1', away: 't6' },
-    { week: 6, home: 't2', away: 't4' },
-    { week: 6, home: 't5', away: 't7' },
-  ]
-
-  return rawSchedule.map((m, idx) => {
-    const weekIdx = m.week - 1
-    const isCompleted = false // Ready for Admin score entry in Fall 2026
-
-    const base = {
-      id: `${leagueId}-fall26-m${idx}`,
-      leagueId,
-      seasonId: 's2',
-      weekNumber: m.week,
-      date: dates[weekIdx] || '2026-09-02',
-      venueId,
-      homeTeamId: m.home,
-      awayTeamId: m.away,
-    }
-
-    if (isCompleted) {
-      const series = simulateSeries(m.home, m.away, 100 + idx * 23)
-      return {
-        ...base,
-        status: 'completed',
-        games: series.games,
-        seriesScore: series.seriesScore,
-        winnerId: series.winnerId,
-        homePoints: series.homePoints,
-        awayPoints: series.awayPoints,
-      }
-    } else {
-      return {
-        ...base,
-        status: 'scheduled',
-        games: [],
-        seriesScore: { home: 0, away: 0 },
-        winnerId: null,
-        homePoints: 0,
-        awayPoints: 0,
-      }
-    }
-  })
+  // Pre-season Fall 2026 starts with 0 pre-scheduled games.
+  // All games are created ad-hoc on the fly on Wednesday match nights by Admins!
+  return []
 }
 
 const leagueDates = {

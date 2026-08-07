@@ -253,8 +253,18 @@ export function renderSchedule() {
 
   if (filteredMatches.length === 0) {
     weeksHtml = `
-      <div class="card card-glass text-center animate-in" style="padding: var(--space-8); margin-top: var(--space-4)">
-        <p class="text-muted">No matches scheduled for the selected team in this league.</p>
+      <div class="card card-glass text-center animate-in" style="padding: var(--space-8); border: 1.5px dashed rgba(251,191,36,0.3); background: rgba(251,191,36,0.02); margin-top: var(--space-4); border-radius: var(--radius-2xl)">
+        <div style="font-size: var(--text-3xl); margin-bottom: var(--space-3)">🎯</div>
+        <h3 style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); color: var(--gold-400); margin-bottom: var(--space-2)">
+          AD-HOC MATCH FORMAT (FALL 2026)
+        </h3>
+        <p class="text-secondary" style="max-width: 480px; margin: 0 auto var(--space-4); font-size: var(--text-xs); line-height: 1.6">
+          Mobtown Fall 2026 matches are created <strong>on-the-fly live on Wednesday match nights</strong> (6:00–9:00 PM)! As teams step up to the board, League Admins input and publish scores to update the live standings instantly.
+        </p>
+        <div style="display:flex; justify-content:center; gap:var(--space-3); flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" data-nav="admin">⚡ Open Admin Score Console</button>
+          <button class="btn btn-secondary btn-sm" data-nav="teams">👥 View Mobtown Teams</button>
+        </div>
       </div>
     `
   }
