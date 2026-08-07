@@ -1,6 +1,5 @@
-import { getActiveSeason, getAllSeasons, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead, hasAnySyntheticData, getPlayerSyntheticGameCount, isOverrideGame } from '../data.js'
+import { getActiveSeason, getAllSeasons, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead, hasAnySyntheticData, getPlayerSyntheticGameCount, isOverrideGame, getSelectedLeague } from '../data.js'
 import { renderBoard } from '../board.js'
-import { getSelectedLeague } from './home.js'
 import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter, createMatch, updateMatchTeams, updateMatchWeek, deleteMatch, quickScoreMatch, getSettings, updateSettings, isLiveScoringEnabled, recallMatch, createTeam, updateTeam, deleteTeam, createSeason, setActiveSeasonId, isSandboxSession } from '../store.js'
 import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
 

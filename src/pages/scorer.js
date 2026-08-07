@@ -1,8 +1,7 @@
-import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getLeagueTeams, getHoleShortName } from '../data.js'
+import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getLeagueTeams, getHoleShortName, getSelectedLeague, setSelectedLeague } from '../data.js'
 import { renderSingleBoard, isIslandCup, getIslandCups } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
 import { saveMatch, getLoggedInUser, createMatch, quickScoreMatch, isLiveScoringEnabled } from '../store.js'
-import { getSelectedLeague, setSelectedLeague } from './home.js'
 
 let scorerState = null
 let scorerHistory = []

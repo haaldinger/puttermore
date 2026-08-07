@@ -4,6 +4,10 @@
  */
 import { players, teams, seasons, matches, venues, leagues } from './store.js'
 
+let selectedLeagueId = 'l1'
+export function getSelectedLeague() { return selectedLeagueId }
+export function setSelectedLeague(id) { selectedLeagueId = id }
+
 export function getPlayer(id) { return players.find(p => p.id === id) }
 export function getTeam(id) { return teams.find(t => t.id === id) }
 export function getSeason(id) { return seasons.find(s => s.id === id) }

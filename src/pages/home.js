@@ -1,11 +1,6 @@
-import { getActiveSeason, getStandings, getRecentResults, getUpcomingMatches, getLeaderboard, getTeam, getAllLeagues, getLeague, getVenue, getPlayerStats, getPlayerTeam, getTeamRoster, getPlayer, getAllPlayers, getAllMatches, hasAnySyntheticData } from '../data.js'
+import { getActiveSeason, getStandings, getRecentResults, getUpcomingMatches, getLeaderboard, getTeam, getAllLeagues, getLeague, getVenue, getPlayerStats, getPlayerTeam, getTeamRoster, getPlayer, getAllPlayers, getAllMatches, hasAnySyntheticData, getSelectedLeague, setSelectedLeague } from '../data.js'
 import { getLoggedInUser } from '../store.js'
 import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
-
-let selectedLeagueId = 'l1' // Mobtown only
-
-export function getSelectedLeague() { return selectedLeagueId }
-export function setSelectedLeague(id) { selectedLeagueId = id }
 
 let comparedPlayerIds = []
 export function getComparedPlayerIds() { return comparedPlayerIds }

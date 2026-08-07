@@ -1,5 +1,5 @@
 import './style.css'
-import { renderHome, setSelectedLeague, getSelectedLeague, getHomeTickerText, toggleComparedPlayerId, clearComparedPlayerIds, setComparedPlayerIds, getComparedPlayerIds } from './pages/home.js'
+import { renderHome, getHomeTickerText, toggleComparedPlayerId, clearComparedPlayerIds, setComparedPlayerIds, getComparedPlayerIds } from './pages/home.js'
 import { getCurrentDate } from './time.js'
 import { 
   renderStandings, renderSchedule, renderTeams, renderTeamProfile, renderPlayersPage, 
@@ -11,7 +11,7 @@ import {
   handlePlayersEvents
 } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer, getScorerTickerData, showToast } from './pages/scorer.js'
-import { getPlayer, getPlayerTeam, getAllMatches, getStandings, getTeamRoster, getAllPlayers, getPlayerStats, getLeaderboard, getAllLeagues, getLeague, getVenue, getTeam, getLeagueTeams } from './data.js'
+import { getPlayer, getPlayerTeam, getAllMatches, getStandings, getTeamRoster, getAllPlayers, getPlayerStats, getLeaderboard, getAllLeagues, getLeague, getVenue, getTeam, getLeagueTeams, getSelectedLeague, setSelectedLeague } from './data.js'
 import { openReplayModal, destroyReplayModal } from './pages/replay.js'
 import { 
   getLoggedInUser, setLoggedInUser, logout,
@@ -1600,7 +1600,11 @@ async function initApp() {
   render()
 }
 
-window.addEventListener('DOMContentLoaded', initApp)
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initApp)
+} else {
+  initApp()
+}
 
 // ─── HAA Signature ───
 document.head.insertAdjacentHTML('beforeend', '<!-- Puttermore v1.0 · Engineered by HAA · "Sink it or stout it" -->')
