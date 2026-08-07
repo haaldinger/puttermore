@@ -981,10 +981,59 @@ export function renderHome() {
         <div style="font-size:var(--text-xs); color:var(--text-secondary); line-height:1.4">
           All scorecards are officially verified and locked into the division standings. Tap any completed matchup below to audit the full play-by-play turn charts and trace double sinks.
         </div>
-        ${recapMvpHtml}
       </div>
     `
   }
+
+  // Dynamic Season Opening Countdown Banner
+  const activeSeasonObj = getActiveSeason()
+  const seasonStartDateStr = activeSeasonObj?.startDate || '2026-09-02'
+  const seasonTargetTime = new Date(`${seasonStartDateStr}T18:00:00-04:00`)
+  const isSeasonLive = getCurrentDate() >= seasonTargetTime || activeSeasonObj.status === 'active'
+
+  const seasonOpeningCountdownHtml = `
+    <div class="card card-glass text-center animate-in" style="padding: var(--space-6); background: linear-gradient(135deg, rgba(233,30,139,0.06), rgba(251,191,36,0.04)); border: 1.5px solid rgba(233,30,139,0.3); margin-bottom: var(--space-6); box-shadow: 0 10px 30px rgba(233,30,139,0.15); border-radius: var(--radius-2xl)">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-3)">
+        <div style="text-align:left">
+          <span class="badge badge-pink" style="font-size:10px; font-weight:800; letter-spacing:0.05em">📍 MOBTOWN BREWING CO. · WEDNESDAYS 6:00–9:00 PM</span>
+          <h2 style="font-family: var(--font-display); font-weight: 900; font-size: var(--text-xl); color: #fff; margin-top: 4px">
+            🏆 ${activeSeasonObj.name.toUpperCase()} SEASON OPENING
+          </h2>
+        </div>
+        <span class="badge ${isSeasonLive ? 'badge-win' : 'badge-gold'}" style="font-size:10px">
+          ${isSeasonLive ? '🟢 SEASON IN PROGRESS' : '⏳ COUNTDOWN TO OPENING NIGHT'}
+        </span>
+      </div>
+
+      <div style="font-size:var(--text-xs); color:var(--text-secondary); margin-bottom: var(--space-4)">
+        ${isSeasonLive ? 'Wednesday match night is live! View schedules or record scores below.' : `Opening night matches begin Wednesday, ${activeSeasonObj.startDate} at 6:00 PM EST:`}
+      </div>
+
+      <div class="countdown-timer-display" data-countdown-target="${seasonTargetTime.toISOString()}" style="display:flex; justify-content:center; gap:var(--space-3); margin-bottom: var(--space-4)">
+        <div class="countdown-unit" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-xl); padding:var(--space-3) var(--space-4); min-width:64px; text-align:center">
+          <div class="countdown-number" id="countdown-days" style="font-family:var(--font-mono); font-weight:900; font-size:var(--text-xl); color:#fff">00</div>
+          <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Days</div>
+        </div>
+        <div class="countdown-unit" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-xl); padding:var(--space-3) var(--space-4); min-width:64px; text-align:center">
+          <div class="countdown-number" id="countdown-hours" style="font-family:var(--font-mono); font-weight:900; font-size:var(--text-xl); color:var(--pink-400)">00</div>
+          <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Hours</div>
+        </div>
+        <div class="countdown-unit" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-xl); padding:var(--space-3) var(--space-4); min-width:64px; text-align:center">
+          <div class="countdown-number" id="countdown-mins" style="font-family:var(--font-mono); font-weight:900; font-size:var(--text-xl); color:var(--gold-400)">00</div>
+          <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Mins</div>
+        </div>
+        <div class="countdown-unit" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-xl); padding:var(--space-3) var(--space-4); min-width:64px; text-align:center">
+          <div class="countdown-number" id="countdown-secs" style="font-family:var(--font-mono); font-weight:900; font-size:var(--text-xl); color:var(--green-400)">00</div>
+          <div style="font-size:8px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px">Secs</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:var(--space-3); flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" data-nav="admin">⚡ Create Matchups & Record Scores</button>
+        <button class="btn btn-secondary btn-sm" data-nav="standings">📅 View Season Schedule</button>
+      </div>
+    </div>
+  `
 
   return `
     <section class="hero">
@@ -1017,6 +1066,7 @@ export function renderHome() {
       </div>
     </section>
     <div class="container" style="margin-top: var(--space-4)">
+      ${seasonOpeningCountdownHtml}
       ${beerPairingHtml}
       ${commentatorsHtml}
       ${phaseHypeWidgetHtml}

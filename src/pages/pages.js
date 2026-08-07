@@ -1,7 +1,7 @@
-import { getActiveSeason, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead, hasAnySyntheticData, getPlayerSyntheticGameCount, isOverrideGame } from '../data.js'
+import { getActiveSeason, getAllSeasons, getStandings, getAllMatches, getTeam, getTeamRoster, getTeamMatches, getPlayerStats, getPlayer, getAllPlayers, getAllLeagues, getLeague, getVenue, getLeagueTeams, getTeamAdvancedStats, getHoleShortName, getAllTeams, getHeadToHead, hasAnySyntheticData, getPlayerSyntheticGameCount, isOverrideGame } from '../data.js'
 import { renderBoard } from '../board.js'
 import { getSelectedLeague } from './home.js'
-import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter, createMatch, updateMatchTeams, updateMatchWeek, deleteMatch, quickScoreMatch } from '../store.js'
+import { getLoggedInUser, setLoggedInUser, logout, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain, updatePlayerPutter, createMatch, updateMatchTeams, updateMatchWeek, deleteMatch, quickScoreMatch, getSettings, updateSettings, isLiveScoringEnabled, recallMatch, createTeam, updateTeam, deleteTeam, createSeason, setActiveSeasonId, isSandboxSession } from '../store.js'
 import { getCurrentDate, getTimeState, getWeekNumber } from '../time.js'
 
 // ─── Putter SVG Renderer ───
@@ -1560,6 +1560,43 @@ export function renderLoginPage() {
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
   const hasSupabase = !!(supabaseUrl && supabaseAnonKey)
 
+  const adminCardHtml = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); margin-bottom:var(--space-6)" class="grid-2">
+      <!-- 👑 Real League Commissioners -->
+      <div class="card animate-in" style="padding: var(--space-4); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.03)">
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: #fbbf24; margin-bottom: 2px">
+          👑 LEAGUE COMMISSIONERS (REAL DATA PERSISTED)
+        </div>
+        <p style="font-size: 10px; color: var(--text-muted); margin-bottom: var(--space-3)">
+          Official admin sign-in. All team setups, match schedules, & score submissions persist to the official league database.
+        </p>
+        <div style="display: flex; gap: var(--space-2); flex-wrap: wrap">
+          <button class="btn btn-secondary btn-sm" data-login-as="p1" style="border-color: #fbbf2440; font-size:11px">
+            👑 J-MO Boh
+          </button>
+          <button class="btn btn-secondary btn-sm" data-login-as="p3" style="border-color: #fbbf2440; font-size:11px">
+            👑 Shane OldBay
+          </button>
+        </div>
+      </div>
+
+      <!-- 🧪 Pre-Season Sandbox Tester -->
+      <div class="card animate-in" style="padding: var(--space-4); border-color: rgba(34,211,238,0.3); background: rgba(34,211,238,0.03)">
+        <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-xs); color: var(--cyan-400); margin-bottom: 2px">
+          🧪 PRE-SEASON TESTER (SESSION SANDBOX MODE)
+        </div>
+        <p style="font-size: 10px; color: var(--text-muted); margin-bottom: var(--space-3)">
+          Test scores, matchups, & admin controls safely. Changes exist in this active browser session only and will NOT affect official data!
+        </p>
+        <div>
+          <button class="btn btn-secondary btn-sm" data-login-as="p_sandbox" style="border-color: var(--cyan-400)40; font-size:11px; color:var(--cyan-400); font-weight:700">
+            🧪 Demo Tester (Sandbox Admin)
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+
   const loginFormHtml = hasSupabase ? `
     <div class="card card-glass animate-in" style="padding: var(--space-4); border-color: rgba(255,255,255,0.08); margin-bottom: var(--space-6); max-width: 480px; margin-left: auto; margin-right: auto; background: rgba(255,255,255,0.01)">
       <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm); color: var(--pink-400); margin-bottom: var(--space-2)">🚀 SECURE LEAGUE SIGN-IN</div>
@@ -1608,7 +1645,7 @@ export function renderLoginPage() {
         <p class="text-secondary" style="max-width: 440px; margin: 0 auto; line-height: 1.5">
           ${hasSupabase 
             ? 'Sign in securely using your email address, or explore other team rosters below.'
-            : 'Select any player card to authenticate instantly. Test role-specific dashboards, captain administrative scoring, and 3-player turn rotations!'}
+            : 'Select any player or admin card to authenticate instantly. Test role-specific dashboards, commissioner score input, and player profiles!'}
         </p>
       </div>
 
@@ -1616,10 +1653,12 @@ export function renderLoginPage() {
         <div class="card card-glass animate-in text-center" style="padding: var(--space-4); border-color: var(--pink-400)40; margin-bottom: var(--space-6); background: rgba(233,30,139,0.02)">
           <div style="font-size: var(--text-xs); color: var(--text-muted)">CURRENT SESSION</div>
           <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-base); color: #fff; margin-top: 2px">
-            Logged in as <span class="gradient-text">${loggedIn.name}</span>
+            Logged in as <span class="gradient-text">${loggedIn.name}</span> ${loggedIn.isAdmin ? (loggedIn.isSandbox ? '🧪 (Sandbox Admin)' : '👑 (Admin)') : ''}
           </div>
           <button class="btn btn-secondary btn-sm" id="logout-btn" style="margin-top: var(--space-3)">🚪 Logout Session</button>
         </div>` : ''}
+
+      ${adminCardHtml}
 
       ${loginFormHtml}
 
@@ -1632,10 +1671,11 @@ export function renderLoginPage() {
 }
 
 // ─── Module State for Admin Console & Putter Gallery ───
-let activeAdminTab = 'review'
+let activeAdminTab = 'score'
 let activeRosterTeamId = 't1'
 let editingMatchId = null
 let editingPlayerId = null
+let adminSelectedScoreWeek = 1
 
 export function getActiveAdminTab() { return activeAdminTab }
 export function setActiveAdminTab(tab) { activeAdminTab = tab }
@@ -1648,6 +1688,9 @@ export function setEditingMatchId(matchId) { editingMatchId = matchId }
 
 export function getEditingPlayerId() { return editingPlayerId }
 export function setEditingPlayerId(playerId) { editingPlayerId = playerId }
+
+export function getAdminSelectedScoreWeek() { return adminSelectedScoreWeek }
+export function setAdminSelectedScoreWeek(w) { adminSelectedScoreWeek = w }
 
 // ─── Putter Gallery Page ───
 export function renderPutterGallery() {
@@ -1733,20 +1776,330 @@ export function renderAdminPage() {
     </div></div>`
   }
 
+  const isSandbox = isSandboxSession()
+
+  const sandboxNoticeBannerHtml = isSandbox ? `
+    <div class="card animate-in" style="padding: var(--space-4); border-color: var(--cyan-400); background: rgba(34,211,238,0.06); margin-bottom: var(--space-5); border-radius: var(--radius-xl)">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <div>
+          <div style="font-family: var(--font-display); font-weight: 900; font-size: var(--text-sm); color: var(--cyan-400)">
+            🧪 SANDBOX DEMO ADMIN MODE ACTIVE
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px">
+            Testing in temporary browser session memory. Test scores, matchups, & changes exist in this browser tab only and will NOT touch official league data. Real Admins (J-MO Boh & Shane OldBay) can log in to manage official Fall 2026 data!
+          </div>
+        </div>
+        <span class="badge" style="background:rgba(34,211,238,0.15); color:var(--cyan-400); font-weight:800; border:1px solid rgba(34,211,238,0.3); font-size:10px">
+          SESSION MEMORY ONLY
+        </span>
+      </div>
+    </div>
+  ` : ''
+
   // Render sub-tabs header
   const tabsHtml = `
-    <div class="view-toggle animate-in" style="margin-bottom: var(--space-6)">
-      <button class="view-toggle-btn ${activeAdminTab === 'review' ? 'active' : ''}" data-admin-tab="review">📋 Game Review</button>
+    ${sandboxNoticeBannerHtml}
+    <div class="view-toggle animate-in" style="margin-bottom: var(--space-6); flex-wrap: wrap; gap: 6px">
+      <button class="view-toggle-btn ${activeAdminTab === 'score' ? 'active' : ''}" data-admin-tab="score">⚡ Score Console</button>
       <button class="view-toggle-btn ${activeAdminTab === 'matches' ? 'active' : ''}" data-admin-tab="matches">📅 Matches</button>
-      <button class="view-toggle-btn ${activeAdminTab === 'roster' ? 'active' : ''}" data-admin-tab="roster">👥 Roster Controls</button>
-      <button class="view-toggle-btn ${activeAdminTab === 'analytics' ? 'active' : ''}" data-admin-tab="analytics">📊 Cup Analytics</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'review' ? 'active' : ''}" data-admin-tab="review">📋 Review Queue</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'settings' ? 'active' : ''}" data-admin-tab="settings">⚙️ Settings</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'roster' ? 'active' : ''}" data-admin-tab="roster">👥 Rosters</button>
+      <button class="view-toggle-btn ${activeAdminTab === 'analytics' ? 'active' : ''}" data-admin-tab="analytics">📊 Analytics</button>
     </div>
   `
 
   let tabContent = ''
 
+  // 0. ADMIN SCORE CONSOLE TAB
+  if (activeAdminTab === 'score') {
+    const season = getActiveSeason()
+    const allMatches = getAllMatches().filter(m => m.leagueId === 'l1')
+    const weekMatches = allMatches.filter(m => m.weekNumber === adminSelectedScoreWeek)
+    const allTeams = getLeagueTeams('l1')
+
+    // 3-Step Record Score Flow Wizard
+    const recordScoreWizardHtml = `
+      <div class="card animate-in" style="padding: var(--space-6); border-color: var(--pink-400); background: rgba(233,30,139,0.02); border-radius: var(--radius-xl); margin-bottom: var(--space-6)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--space-5); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: var(--space-4); flex-wrap:wrap; gap:8px">
+          <div style="font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); color: #fff; display: flex; align-items: center; gap: 8px">
+            ⚡ RECORD MATCH SCORE
+          </div>
+          <div style="display:flex; gap: 6px; font-size: 10px; font-weight: 700; flex-wrap:wrap">
+            <span class="badge badge-pink">1. Pick 2 Teams</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="badge badge-gold">2. Enter Best-of-3</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="badge badge-win">3. Complete Standings</span>
+          </div>
+        </div>
+
+        <!-- Step 1: Pick 2 Teams -->
+        <div style="background: rgba(0,0,0,0.25); padding: var(--space-4); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.05); margin-bottom: var(--space-5)">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3)">
+            <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--pink-400); font-weight:700">
+              Step 1: Pick 2 Teams
+            </div>
+            <span class="badge badge-pink" style="font-size:9px">📅 Auto-Detected: Week ${adminSelectedScoreWeek}</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-4)">
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Home Team (Team 1)</label>
+              <select id="quick-flow-home" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)">
+                <option value="">-- Select Team 1 --</option>
+                ${allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Away Team (Team 2)</label>
+              <select id="quick-flow-away" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)">
+                <option value="">-- Select Team 2 --</option>
+                ${allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Best-of-3 Score Entry -->
+        <div style="background: rgba(0,0,0,0.25); padding: var(--space-4); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.05); margin-bottom: var(--space-5)">
+          <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--gold-400); margin-bottom:var(--space-3); font-weight:700">
+            Step 2: Enter Best-of-3 Series Game Scores (Cups Sunk)
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-4)">
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Game 1 Score</label>
+              <div style="display:flex; gap:4px">
+                <input type="number" min="0" max="6" id="quick-flow-g1-h" value="6" placeholder="T1" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:6px; text-align:center; font-weight:700" />
+                <span style="color:var(--text-muted)">-</span>
+                <input type="number" min="0" max="6" id="quick-flow-g1-a" value="4" placeholder="T2" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:6px; text-align:center; font-weight:700" />
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Game 2 Score</label>
+              <div style="display:flex; gap:4px">
+                <input type="number" min="0" max="6" id="quick-flow-g2-h" value="6" placeholder="T1" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:6px; text-align:center; font-weight:700" />
+                <span style="color:var(--text-muted)">-</span>
+                <input type="number" min="0" max="6" id="quick-flow-g2-a" value="3" placeholder="T2" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:6px; text-align:center; font-weight:700" />
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Game 3 (Optional)</label>
+              <div style="display:flex; gap:4px">
+                <input type="number" min="0" max="6" id="quick-flow-g3-h" placeholder="T1" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:6px; text-align:center; font-weight:700" />
+                <span style="color:var(--text-muted)">-</span>
+                <input type="number" min="0" max="6" id="quick-flow-g3-a" placeholder="T2" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:6px; text-align:center; font-weight:700" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div style="display:flex; flex-wrap:wrap; gap:6px">
+            <button class="btn btn-ghost btn-sm" id="quick-flow-preset-2-0-h" style="font-size:10px">⚡ 2–0 Team 1 Sweep</button>
+            <button class="btn btn-ghost btn-sm" id="quick-flow-preset-2-0-a" style="font-size:10px">⚡ 2–0 Team 2 Sweep</button>
+            <button class="btn btn-ghost btn-sm" id="quick-flow-preset-2-1-h" style="font-size:10px">⚡ 2–1 Team 1 Win</button>
+            <button class="btn btn-ghost btn-sm" id="quick-flow-preset-2-1-a" style="font-size:10px">⚡ 2–1 Team 2 Win</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Complete & Update Standings -->
+        <div style="display:flex; justify-content:flex-end">
+          <button class="btn btn-primary" id="quick-flow-submit-btn" style="padding: 10px 24px; font-weight: 800; font-size: var(--text-sm)">
+            🏆 Complete & Update Standings 🚀
+          </button>
+        </div>
+      </div>
+    `
+
+    // Week navigation chips
+    const weekChipsHtml = Array.from({ length: season.weeks }, (_, i) => i + 1).map(w => `
+      <button class="btn btn-sm ${adminSelectedScoreWeek === w ? 'btn-primary' : 'btn-secondary'}" data-admin-score-week="${w}" style="padding: 6px 14px; font-size: 11px">
+        Week ${w}
+      </button>
+    `).join('')
+
+    const matchCardsHtml = weekMatches.map(m => {
+      const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
+      const isCompleted = m.status === 'completed'
+      const g1 = m.games?.[0]?.finalScore || { home: 6, away: 4 }
+      const g2 = m.games?.[1]?.finalScore || { home: 6, away: 3 }
+      const g3 = m.games?.[2]?.finalScore || { home: 6, away: 5 }
+
+      return `
+        <div class="card animate-in" style="padding: var(--space-5); margin-bottom: var(--space-4); border-color: ${isCompleted ? 'rgba(34,197,94,0.3)' : 'var(--border-card)'}; background: ${isCompleted ? 'rgba(34,197,94,0.02)' : 'var(--bg-card)'}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3)">
+            <span style="font-size:11px; font-weight:700; color:var(--pink-400)">WEEK ${m.weekNumber} MATCHUP</span>
+            <span class="badge ${isCompleted ? 'badge-win' : 'badge-gold'}" style="font-size:9px">
+              ${isCompleted ? '✅ PUBLISHED' : '⏳ READY FOR SCORES'}
+            </span>
+          </div>
+
+          <div class="match-teams" style="margin-bottom: var(--space-4)">
+            <div class="match-team" style="font-weight: 700"><span class="team-dot" style="background:${ht.color}"></span> ${ht.name}</div>
+            <div class="match-score" style="font-size: var(--text-lg); font-weight: 800">
+              ${isCompleted ? `${m.seriesScore?.home || 0} – ${m.seriesScore?.away || 0}` : 'vs'}
+            </div>
+            <div class="match-team away" style="font-weight: 700">${at.name}<span class="team-dot" style="background:${at.color}"></span></div>
+          </div>
+
+          <!-- Score Input Form -->
+          <div style="background: rgba(0,0,0,0.25); padding: var(--space-4); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.05)">
+            <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); margin-bottom:var(--space-3); font-weight:700">
+              Best-of-3 Series Game Scores (Cups Sunk per Game)
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-4)">
+              <div>
+                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Game 1 (${ht.name.split(' ')[0]} vs ${at.name.split(' ')[0]})</label>
+                <div style="display:flex; gap:4px">
+                  <input type="number" min="0" max="6" id="score-g1-h-${m.id}" value="${g1.home}" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:4px 8px; text-align:center; font-weight:700" />
+                  <span style="color:var(--text-muted)">-</span>
+                  <input type="number" min="0" max="6" id="score-g1-a-${m.id}" value="${g1.away}" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:4px 8px; text-align:center; font-weight:700" />
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Game 2 (${ht.name.split(' ')[0]} vs ${at.name.split(' ')[0]})</label>
+                <div style="display:flex; gap:4px">
+                  <input type="number" min="0" max="6" id="score-g2-h-${m.id}" value="${g2.home}" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:4px 8px; text-align:center; font-weight:700" />
+                  <span style="color:var(--text-muted)">-</span>
+                  <input type="number" min="0" max="6" id="score-g2-a-${m.id}" value="${g2.away}" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:4px 8px; text-align:center; font-weight:700" />
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Game 3 (If Needed)</label>
+                <div style="display:flex; gap:4px">
+                  <input type="number" min="0" max="6" id="score-g3-h-${m.id}" value="${m.games?.length >= 3 ? g3.home : ''}" placeholder="H" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:4px 8px; text-align:center; font-weight:700" />
+                  <span style="color:var(--text-muted)">-</span>
+                  <input type="number" min="0" max="6" id="score-g3-a-${m.id}" value="${m.games?.length >= 3 ? g3.away : ''}" placeholder="A" style="width:50%; background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:4px; padding:4px 8px; text-align:center; font-weight:700" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Fast Series Presets -->
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:var(--space-4)">
+              <button class="btn btn-ghost btn-sm" data-preset-score="${m.id}" data-preset-type="2-0-home" style="font-size:10px; padding:4px 8px">⚡ 2–0 ${ht.name.split(' ')[0]} Sweep</button>
+              <button class="btn btn-ghost btn-sm" data-preset-score="${m.id}" data-preset-type="2-0-away" style="font-size:10px; padding:4px 8px">⚡ 2–0 ${at.name.split(' ')[0]} Sweep</button>
+              <button class="btn btn-ghost btn-sm" data-preset-score="${m.id}" data-preset-type="2-1-home" style="font-size:10px; padding:4px 8px">⚡ 2–1 ${ht.name.split(' ')[0]} Win</button>
+              <button class="btn btn-ghost btn-sm" data-preset-score="${m.id}" data-preset-type="2-1-away" style="font-size:10px; padding:4px 8px">⚡ 2–1 ${at.name.split(' ')[0]} Win</button>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              ${isCompleted ? `<button class="btn btn-secondary btn-sm" data-admin-recall-match="${m.id}" style="color:var(--red-400); border-color:rgba(239,68,68,0.25); font-size:10px">↩️ Recall Submission</button>` : '<span></span>'}
+              <button class="btn btn-primary btn-sm" data-admin-save-score="${m.id}">
+                ${isCompleted ? '💾 Update Scores & Recalculate' : '🚀 Save & Publish Score'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `
+    }).join('')
+
+    const ontheflyCardHtml = `
+      <div class="card animate-in" style="padding: var(--space-5); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.03); margin-top: var(--space-4); border-radius: var(--radius-xl)">
+        <div style="font-family:var(--font-display); font-weight:800; color:var(--green-400); margin-bottom:var(--space-2); font-size:var(--text-sm)">
+          ➕ Create Matchup On-the-Fly (Week ${adminSelectedScoreWeek})
+        </div>
+        <p style="font-size:11px; color:var(--text-secondary); margin-bottom:var(--space-4)">
+          Pair any two teams on the fly for Week ${adminSelectedScoreWeek}. The new matchup will immediately appear below ready for score entry!
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-3); align-items: flex-end">
+          <div>
+            <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Home Team</label>
+            <select id="onthefly-home-team" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)">
+              <option value="">-- Select Home Team --</option>
+              ${allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Away Team</label>
+            <select id="onthefly-away-team" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)">
+              <option value="">-- Select Away Team --</option>
+              ${allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <button class="btn btn-primary btn-sm" id="admin-create-onthefly-match-btn" style="white-space:nowrap; height:36px">
+            ➕ Create Matchup
+          </button>
+        </div>
+      </div>
+    `
+
+    // Generated Recap Text for social media / SMS
+    const completedWeekMatches = weekMatches.filter(m => m.status === 'completed')
+    const standingsPodium = getStandings('l1').slice(0, 3)
+
+    let recapFormattedText = `🍻 MOBTOWN PUTTERMORE — WEEK ${adminSelectedScoreWeek} RECAP 🍻\n`
+    recapFormattedText += `📍 Mobtown Brewing Company · Wednesday 6-9 PM\n\n`
+    if (completedWeekMatches.length > 0) {
+      recapFormattedText += `MATCH RESULTS:\n`
+      completedWeekMatches.forEach(m => {
+        const ht = getTeam(m.homeTeamId), at = getTeam(m.awayTeamId)
+        const winner = m.winnerId === ht.id ? ht : at
+        const loser = m.winnerId === ht.id ? at : ht
+        const wScore = m.winnerId === ht.id ? m.seriesScore?.home : m.seriesScore?.away
+        const lScore = m.winnerId === ht.id ? m.seriesScore?.away : m.seriesScore?.home
+        recapFormattedText += `🏆 ${winner.name} def. ${loser.name} (${wScore}–${lScore})\n`
+      })
+      recapFormattedText += `\n📊 STANDINGS PODIUM:\n`
+      standingsPodium.forEach((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'
+        recapFormattedText += `${medal} ${s.team.name} — ${s.points} pts (${s.wins}-${s.losses})\n`
+      })
+    } else {
+      recapFormattedText += `Match scores pending for Week ${adminSelectedScoreWeek}! Matches start at 6:00 PM.`
+    }
+    recapFormattedText += `\nSee full match replays & putter stats live at puttermore.netlify.app 🏌️‍♂️`
+
+    const socialRecapCardHtml = `
+      <div class="card animate-in" style="padding: var(--space-5); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.03); margin-top: var(--space-6); border-radius: var(--radius-xl)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3); flex-wrap:wrap; gap:8px">
+          <div style="font-family:var(--font-display); font-weight:800; color:var(--gold-400); font-size:var(--text-sm)">
+            📢 Match Night Social & SMS Recap (Week ${adminSelectedScoreWeek})
+          </div>
+          <button class="btn btn-secondary btn-sm" id="admin-copy-recap-btn" style="font-size:10px; font-weight:700">
+            📋 Copy Recap for Group Chat & Socials
+          </button>
+        </div>
+        <textarea id="admin-recap-textarea" readonly style="width:100%; height:110px; background:rgba(0,0,0,0.3); border:1px solid var(--border-card); color:var(--text-secondary); border-radius:var(--radius-md); padding:8px 12px; font-size:11px; font-family:monospace; resize:none">${recapFormattedText}</textarea>
+      </div>
+    `
+
+    tabContent = `
+      <div class="flex flex-col gap-4 animate-in">
+        ${recordScoreWizardHtml}
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:var(--space-4)">
+          <div>
+            <h4 style="font-family:var(--font-display); font-weight:800; color:#fff">📅 Scheduled Week ${adminSelectedScoreWeek} Matchups</h4>
+            <p class="text-secondary" style="font-size:var(--text-xs)">Alternatively, update scores directly on pre-scheduled matches for this week below.</p>
+          </div>
+          <div style="display:flex; gap:4px">
+            ${weekChipsHtml}
+          </div>
+        </div>
+
+        ${weekMatches.length === 0 ? `
+          <div class="card card-glass text-center" style="padding:var(--space-8)">
+            <p class="text-muted">No matches currently scheduled for Week ${adminSelectedScoreWeek}. Create one using the wizard above!</p>
+          </div>
+        ` : matchCardsHtml}
+
+        ${socialRecapCardHtml}
+      </div>
+    `
+  }
+
   // 1. GAME REVIEW TAB
-  if (activeAdminTab === 'review') {
+  else if (activeAdminTab === 'review') {
     const pendingMatches = getAllMatches().filter(m => m.status === 'pending_review')
     
     if (pendingMatches.length === 0) {
@@ -1801,6 +2154,113 @@ export function renderAdminPage() {
         </div>
       `
     }
+  }
+
+  // 1.8 SETTINGS TAB
+  else if (activeAdminTab === 'settings') {
+    const liveScoringOn = isLiveScoringEnabled()
+
+    const activeSeason = getActiveSeason()
+    const allSeasons = getAllSeasons()
+
+    const seasonManagementCardHtml = `
+      <div class="card animate-in" style="padding: var(--space-6); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.02); border-radius: var(--radius-xl); margin-top: var(--space-5)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4); flex-wrap:wrap; gap:8px">
+          <div>
+            <h3 style="font-family:var(--font-display); font-weight:800; color:#fff; margin-bottom:4px">
+              🏆 Season Management & Season Rollover
+            </h3>
+            <p class="text-secondary" style="font-size:var(--text-xs)">
+              Easily manage current and future seasons (Fall 2026, Winter 2026, Spring 2027), or launch a new season with auto-generated round-robin schedules.
+            </p>
+          </div>
+          <span class="badge badge-gold" style="font-size:11px">
+            ACTIVE: ${activeSeason.name}
+          </span>
+        </div>
+
+        <!-- Active Season Switcher -->
+        <div style="background:rgba(0,0,0,0.25); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.05); margin-bottom:var(--space-5)">
+          <div style="font-size:10px; font-weight:700; color:var(--gold-400); text-transform:uppercase; margin-bottom:var(--space-2)">
+            Active Season Switcher
+          </div>
+          <div style="display:flex; gap:var(--space-3); align-items:center; flex-wrap:wrap">
+            <select id="admin-active-season-select" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; font-size:var(--text-xs); flex:1; min-width:220px">
+              ${allSeasons.map(s => `
+                <option value="${s.id}" ${s.id === activeSeason.id ? 'selected' : ''}>
+                  ${s.name} (${s.weeks} Weeks · ${s.startDate} to ${s.endDate}) ${s.id === activeSeason.id ? '🟢 Active' : '🏁 Completed'}
+                </option>
+              `).join('')}
+            </select>
+            <button class="btn btn-secondary btn-sm" id="admin-switch-season-btn" style="white-space:nowrap">Switch Active Season</button>
+          </div>
+        </div>
+
+        <!-- Create New Season Form (Rollover) -->
+        <div style="background:rgba(0,0,0,0.25); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.05)">
+          <div style="font-size:10px; font-weight:700; color:var(--pink-400); text-transform:uppercase; margin-bottom:var(--space-3)">
+            ➕ Launch New Season / Season Rollover (e.g. Winter 2026, Spring 2027)
+          </div>
+
+          <form id="admin-create-season-form" style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:var(--space-3); align-items:flex-end">
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Season Name</label>
+              <input type="text" id="new-season-name" placeholder="e.g. Winter 2026" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)" required />
+            </div>
+
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Weeks</label>
+              <input type="number" id="new-season-weeks" value="6" min="1" max="12" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)" required />
+            </div>
+
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Start Date</label>
+              <input type="date" id="new-season-start" value="2026-10-14" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap; height:34px">
+              🏆 Launch New Season
+            </button>
+          </form>
+        </div>
+      </div>
+    `
+
+    tabContent = `
+      <div class="flex flex-col gap-4 animate-in">
+        <div class="card animate-in" style="padding: var(--space-6); border-color: ${liveScoringOn ? 'var(--pink-400)' : 'var(--green-400)'}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-4)">
+            <div>
+              <h3 style="font-family:var(--font-display); font-weight:800; color:#fff; margin-bottom:4px">
+                ⚡ Live Contestant Scoring Flag
+              </h3>
+              <p class="text-secondary" style="font-size:var(--text-xs)">
+                Controls whether captains and players can access interactive live shot-by-shot scoring or if scoring is strictly managed by Admins.
+              </p>
+            </div>
+            <span class="badge ${liveScoringOn ? 'badge-pink' : 'badge-win'}" style="font-size:11px">
+              ${liveScoringOn ? '🟢 LIVE SCORING ENABLED' : '🔒 ADMIN SCORING MODE'}
+            </span>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.2); padding:var(--space-4); border-radius:var(--radius-lg); margin-bottom:var(--space-6); font-size:var(--text-xs); color:var(--text-secondary); line-height:1.6">
+            ${liveScoringOn ? `
+              <strong style="color:var(--pink-400)">LIVE SCORING IS ACTIVE:</strong> Team Captains can launch shot-by-shot interactive boards and log individual putts during match nights.
+            ` : `
+              <strong style="color:var(--green-400)">ADMIN ONLY MODE ACTIVE (Fall 2026 Default):</strong> Contestants see an informational status card on the Scorer tab. League Admins input Wednesday night scores via the <strong>⚡ Score Console</strong> tab. This eliminates phone distraction and keeps contestant focus on the beer and putting!
+            `}
+          </div>
+
+          <div style="display:flex; justify-content:flex-end">
+            <button class="btn ${liveScoringOn ? 'btn-secondary' : 'btn-primary'}" id="admin-toggle-live-scoring-btn">
+              ${liveScoringOn ? '🔒 Switch to Admin Only Scoring Mode' : '⚡ Enable Captain Live Scoring'}
+            </button>
+          </div>
+        </div>
+
+        ${seasonManagementCardHtml}
+      </div>
+    `
   }
 
   // 1.5 MATCH MANAGEMENT TAB
@@ -1998,29 +2458,65 @@ export function renderAdminPage() {
       `
     }).join('')
 
+    const allLeagueTeams = getLeagueTeams('l1')
+
     tabContent = `
       <div class="animate-in" style="display: flex; flex-direction: column; gap: var(--space-5)">
+        <!-- ➕ Create Brand New Team Card -->
+        <div class="card animate-in" style="padding: var(--space-5); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.03); border-radius: var(--radius-xl)">
+          <div style="font-family:var(--font-display); font-weight:800; color:var(--green-400); margin-bottom:var(--space-2); font-size:var(--text-sm)">
+            ➕ Create Brand New Team (Mobtown League)
+          </div>
+          <p style="font-size:11px; color:var(--text-secondary); margin-bottom:var(--space-4)">
+            Add a new team to the Mobtown Brewing Co roster throughout the season. Once created, register players below!
+          </p>
+
+          <form id="admin-create-team-form" style="display:grid; grid-template-columns: 2fr 1fr auto; gap:var(--space-3); align-items:flex-end">
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Team Name</label>
+              <input type="text" id="create-team-name" placeholder="e.g. Mobtown Misfits" style="background:var(--bg-input); border:1px solid var(--border-card); color:#fff; border-radius:var(--radius-md); padding:8px 12px; width:100%; font-size:var(--text-xs)" required />
+            </div>
+
+            <div>
+              <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px">Badge Swatch Color</label>
+              <input type="color" id="create-team-color" value="#22c55e" style="width:100%; height:34px; padding:0; border:1px solid var(--border-card); background:transparent; cursor:pointer; border-radius:var(--radius-md)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap; height:34px">
+              ➕ Create Team
+            </button>
+          </form>
+        </div>
+
         <div class="card card-glass" style="position: relative; z-index: 10; padding: var(--space-4); overflow: visible">
           <div class="flex flex-col sm-row justify-between items-center gap-3" style="position: relative">
-            <span style="font-family: var(--font-display); font-weight: 800; color: #fff">Select Team to Manage:</span>
-            
-            <div class="custom-select-container" style="position: relative; width: 100%; max-width: 240px">
-              <button id="custom-team-select-trigger" class="btn btn-secondary" style="width: 100%; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); color: #fff; font-size: var(--text-sm); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px">
-                <span style="display: flex; align-items: center; gap: 8px">
-                  <span class="team-dot" style="background:${activeTeam.color}"></span>
-                  ${activeTeam.name}
-                </span>
-                <span style="font-size: 10px; opacity: 0.7">▼</span>
-              </button>
+            <div style="display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap">
+              <span style="font-family: var(--font-display); font-weight: 800; color: #fff">Select Team to Manage:</span>
               
-              <div id="custom-team-select-options" class="card card-glass dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 100; max-height: 250px; overflow-y: auto; padding: 4px; background: rgba(15,15,15,0.98); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: var(--radius-md)">
-                ${getStandings('l1').map(s => `
-                  <div class="custom-select-option ${s.team.id === activeRosterTeamId ? 'active' : ''}" data-value="${s.team.id}" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 600; color: ${s.team.id === activeRosterTeamId ? '#fff' : 'var(--text-secondary)'}; background: ${s.team.id === activeRosterTeamId ? 'rgba(233,30,139,0.15)' : 'transparent'}; transition: all var(--duration-fast)">
-                    <span class="team-dot" style="background:${s.team.color}"></span>
-                    ${s.team.name}
-                  </div>
-                `).join('')}
+              <div class="custom-select-container" style="position: relative; width: 220px">
+                <button id="custom-team-select-trigger" class="btn btn-secondary" style="width: 100%; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-card); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); color: #fff; font-size: var(--text-sm); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px">
+                  <span style="display: flex; align-items: center; gap: 8px">
+                    <span class="team-dot" style="background:${activeTeam.color}"></span>
+                    ${activeTeam.name}
+                  </span>
+                  <span style="font-size: 10px; opacity: 0.7">▼</span>
+                </button>
+                
+                <div id="custom-team-select-options" class="card card-glass dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 100; max-height: 250px; overflow-y: auto; padding: 4px; background: rgba(15,15,15,0.98); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: var(--radius-md)">
+                  ${allLeagueTeams.map(t => `
+                    <div class="custom-select-option ${t.id === activeRosterTeamId ? 'active' : ''}" data-value="${t.id}" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 600; color: ${t.id === activeRosterTeamId ? '#fff' : 'var(--text-secondary)'}; background: ${t.id === activeRosterTeamId ? 'rgba(233,30,139,0.15)' : 'transparent'}; transition: all var(--duration-fast)">
+                      <span class="team-dot" style="background:${t.color}"></span>
+                      ${t.name}
+                    </div>
+                  `).join('')}
+                </div>
               </div>
+            </div>
+
+            <!-- Team Edit & Delete Actions -->
+            <div style="display:flex; gap:8px">
+              <button class="btn btn-secondary btn-sm" id="admin-edit-team-btn" data-team-id="${activeTeam.id}" style="font-size:11px">✏️ Rename / Edit Color</button>
+              <button class="btn btn-ghost btn-sm" id="admin-delete-team-btn" data-team-id="${activeTeam.id}" style="color:var(--red-400); font-size:11px">❌ Delete Team</button>
             </div>
             
           </div>

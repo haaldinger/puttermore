@@ -4,144 +4,100 @@
 
 ---
 
-## Project Overview
+## 🍺 Active Season Overview: Fall 2026 at Mobtown Brewing Co.
 
 A high-performance, mobile-first single-page web application (SPA) custom-built for **Puttermore's social putting league**. The platform delivers a premium, real-time data console for players, captains, and spectators to track live scores, visualize match replays, analyze statistics, and follow the season.
 
-The application focuses on the active **Mobtown League** hosted at **Mobtown Brewing Co.** on Wednesday nights, featuring **7 competitive teams** and **14 active players** playing a **Best-of-3 series format** with fully independent standings, schedules, custom clubs, and dynamic league-wide analytics.
+The application focuses on the active **Mobtown League** hosted at **Mobtown Brewing Company** (4615 Victorious Way, Baltimore, MD) on Wednesday nights from 6:00 PM to 9:00 PM.
 
-**Current Active Season**: Summer 2026 (7 weeks, round-robin, 3 matches/week)
+*   **Active Season**: **Fall 2026** (September 2nd – October 7th, 2026 · 6 Weeks)
+*   **Venue**: Mobtown Brewing Company (Wednesdays 6–9 PM)
+*   **Format**: Best-of-3 Series (6 cups/game, 2-player team rotation)
+*   **League Structure**: 7 competitive teams playing a clean round-robin schedule (3 matches/week, 1 bye/week)
+*   **Scoring Mode**: Admin Administered Scoring Mode (Feature Flag Controlled)
 
 ---
 
-## 🔑 Role-Based Access (Supabase Magic Link Auth)
+## 🔑 Role-Based Access & Admin Quick Sign-In
 
-Puttermore features a fluid, frictionless passwordless login model powered by **Supabase Magic Links**. Access is determined by authenticated session tier:
+Puttermore features a fluid, passwordless login model powered by **Supabase Magic Links** with elevated admin quick-access:
 
-*   **Spectators / Guests** — Default access. Can view live standings, caddy guides, putter galleries, and follow active matches in `🔒 SPECTATOR MODE` (scoring forms locked).
+*   **Spectators / Guests** — Default access. View live standings, caddy guides, putter galleries, and follow active matches in spectator mode.
 *   **League Players** — Authenticated session. Unlocks a personalized home dashboard displaying team records, accuracy stats, next matchups, and personal putter customizers.
-*   **Team Captains** — Elevated session. In addition to player features, captains receive a glowing **🧢 CAPTAIN DECK ACTIVE** banner and can start official scoring sessions via the Live Scorer — both scheduled match scoring and ad-hoc **Open Play** games.
-*   **League Admins (J-MO Boh & Shane OldBay)** — Commissioner privileges. Accesses the gold **👑 Admin Console** navbar menus to manage scores, rosters, match scheduling, and league-wide analytics.
+*   **Team Captains** — Elevated session. Can start official scoring sessions via the Live Scorer when live scoring is enabled.
+*   **League Admins (J-MO Boh 👑 & Shane OldBay 👑)** — Commissioner privileges. 1-click quick login buttons on the login page grant instant access to the gold **👑 Admin Console** to record scores, manage schedules, adjust rosters, and generate social recaps.
 
-> When Supabase credentials are missing (local dev fallback), the app accepts profile card clicks on the login page to simulate any player session.
+> When Supabase credentials are missing (local dev fallback), the app accepts profile card clicks on the login page or 1-click Admin buttons to simulate any player/admin session.
+
+---
+
+## ⚡ Admin Fast Score Input & Recall Console
+
+To streamline match night management for Fall 2026, scoring features a dedicated **Admin Fast Score Console**:
+
+1.  **🔒 Live Scoring Feature Flag Toggle**:
+    *   `settings.enableLiveScoring` toggle switch in Admin Settings.
+    *   When set to `OFF` (default for Fall 2026), non-admin contestants see an informational **"🏛️ Admin Administered Scoring Mode"** banner on the Scorer tab. Standings, stats, schedules, and replays remain 100% dynamic.
+
+2.  **⚡ 3-Step Match Score Entry**:
+    *   **Auto-Detected Match Week**: The app automatically identifies the active week based on calendar date and completion status.
+    *   **Step 1: Pick 2 Teams**: Select Home Team and Away Team.
+    *   **Step 2: Enter Best-of-3 Scores**: Input game cups sunk or tap 1-click series presets (`⚡ 2–0 Home Sweep`, `⚡ 2–0 Away Sweep`, `⚡ 2–1 Home Win`, `⚡ 2–1 Away Win`).
+    *   **Step 3: Complete & Update Standings**: 1-tap save that creates the matchup on the fly if needed, commits series scores, and immediately updates standings, team records, and stats.
+
+3.  **↩️ Recall Submission & Edit Controls**:
+    *   **Recall Submission**: 1-click reset on any completed match to set status back to `scheduled`, clear series scores, and recalculate standings.
+    *   **Edit Score**: Inline game score adjustment allowing admins to tweak past scores and recalculate standings live.
+
+4.  **📢 1-Click Match Night Social & SMS Recap**:
+    *   Automatically generates a clean text summary of Wednesday night's results and Top Standings Podium.
+    *   **`📋 Copy Recap for Group Chat & Socials`** button copies formatted text for Instagram, GroupMe, SMS, or Slack.
 
 ---
 
 ## 🚀 Core Features & Capabilities
 
 ### 🏠 Home Dashboard
-The visual landing page provides a comprehensive snapshot of the season with slick animations:
 *   **Personal Player Dashboard** — Renders a personalized glass statistics panel for logged-in players, tracking records, accuracy ratios, next opponent details, and recent team outcomes.
-*   **Week-at-a-Glance Results** — Displays results from the most recent completed week, with scores and clickable match cards leading to per-game shot logs.
-*   **Live Standings Podium** — Clean podium leaderboard showing the top performing teams sorted by points (Win=2pts, Game 3 Loss=1pt, 0-2 Loss=0pts).
+*   **Live Standings Podium** — Clean podium leaderboard showing top teams sorted by points (Win=2pts, Game 3 Loss=1pt, 0-2 Sweep Loss=0pts).
 *   **Top Putters Banner** — Highlights elite individuals of the Mobtown league sorted by putting percentage.
-*   **Rivalry Radar** — Personalized head-to-head stats panel comparing your performance against selected rivals.
-
----
-
-### 👑 Commissioner Admin Console
-League Admins (**J-MO Boh** & **Shane OldBay**) have access to a full-featured admin console divided into four tabs:
-
-1.  **📋 Game Review (Verify & Publish Queue)**:
-    *   Lists all matches recorded by captains (default `'pending_review'` status safeguards standings from unverified submissions).
-    *   **Approve & Publish**: Commits the scores, instantly recalculating standings, player stats, and schedules.
-
-2.  **📅 Matches (Schedule Manager)**:
-    *   View all scheduled and completed matches organized by week.
-    *   **Create New Match**: Add ad-hoc matches between any two league teams for any week.
-    *   **Edit Teams / Week**: Adjust matchups and week numbers for scheduled matches.
-    *   **Delete Match**: Remove a scheduled match from the schedule.
-
-3.  **👥 Roster Controls (Roster Management Hub)**:
-    *   Select any Mobtown team via a dropdown to list its active roster.
-    *   **Make Captain**: Shifts the team captain badge, dynamically swapping scoring permissions.
-    *   **✏️ Edit Player**: Modify a player's name and avatar color inline.
-    *   **❌ Remove Player**: Deletes a player from the team and player database.
-    *   **Register New Player**: Form to register a player on a team, auto-seeded with default putter credentials.
-
-4.  **📊 Cup Analytics (League Intelligence Console)**:
-    *   **Efficiency Index** displaying average turns to victory across the league.
-    *   **Double-Sink Ratio** tracking total ball backs relative to total match turns.
-    *   **SVG Cup Success Rates** horizontal bar chart compiling attempts vs sinks per cup position to reveal which cups are easiest/hardest across the entire league.
+*   **Rivalry Radar** — Personalized head-to-head stats panel comparing performance against selected rivals.
 
 ---
 
 ### 🏌️‍♂️ Player Custom Putters & Public Putter Gallery
-*   **Profile Putter Cards** — Player profiles feature a custom putter block displaying their club name, personal description, and a stylized type badge.
-*   **22 Photorealistic PGA-Grade Styles** — Ultra-realistic product photos representing bespoke elite golf clubs:
-    *   *Vintage Hickory Wood 🪵* · *Sleek Blade 🗡️* · *Heavy Mallet 🔨* · *24k Gold Collector's 🏆* · *Neon Cyberpunk 💫* · *Matte Black Stealth 🕶️* · *Verdigris Copper 🏺* · *Formula 1 Carbon 🏎️* · *Glacier Sapphire ❄️* · *Damascus Steel 🌊* · *Steampunk Brass ⚙️* · *3D Printed Titanium 🖨️* · *NASA Space Grade 🚀* · *Iced-Out Diamond 💎* · *CNC Obsidian Glass* · *Brushed Platinum* · *Carved Bamboo* · *Imperial Ruby* · *Imperial Emerald* · *Aerospace Titanium* · *Antique Bronze* · *Baltic Amber*
-*   **📷 Interactive File Uploader** — Inline drag-and-drop or file selector using a local browser `FileReader` stream to read players' actual putter pictures. Saves them as Base64 strings in the state store, syncing custom photos across all profiles, lightboxes, and the public gallery.
-*   **🔍 Product Photo Lightbox Overlay** — Tapping any putter thumbnail launches a premium overlay with deep drop-shadows and glassmorphism filters, supporting hardware-accelerated **1.8x hover zoom tracking** to let players inspect fine details. Includes **← / →  navigation arrows** to cycle through all players without closing the lightbox.
-*   **🏌️‍♂️ Public Putter Gallery** — Dedicated directory mapping all 14 players and their custom clubs, equipped with a **real-time query search** that filters putters instantly as you type.
+*   **Profile Putter Cards** — Custom putter block displaying club name, personal description, and type badge.
+*   **22 Photorealistic PGA-Grade Styles** — Vintage Hickory Wood, Sleek Blade, Heavy Mallet, 24k Gold Collector's, Neon Cyberpunk, Matte Black Stealth, etc.
+*   **📷 Interactive File Uploader** — Drag-and-drop or file selector using browser `FileReader` stream to upload personal putter pictures.
+*   **🔍 Product Photo Lightbox Overlay** — Glassmorphism lightbox with 1.8x hover zoom and ← / → arrow navigation.
+*   **🏌️‍♂️ Public Putter Gallery** — Real-time searchable directory mapping all players and custom putters.
 
 ---
 
-### 📊 Rivalry Radar & Analytics Dashboard
-*   **Rivalry Controller Bar & Modal** — Fully redesigned competitive dashboard featuring multi-competitor selector chips and an advanced selection modal with search filters and team-based grouping.
-*   **User-Centric Comparison Deltas** — Dynamic badge metrics color-code statistical performance relative to your active player baseline (green pill for leading a rival, red pill for trailing, gray pill for ties).
-*   **Actionable Competitor Chips** — Direct-dismissal chips with active click-handlers to remove rivals on the fly directly from the home screen.
-*   **Rivalry Scouting Report Charts** — 3 relative-scaling horizontal bar charts comparing player stats (Accuracy, Sinks, and Double-Sink ball backs) wrapped in Cotton & Pepper's broadcast commentary inside a highly responsive `.grid-3` layout.
+### 🎬 Mobile-Optimized Ocho Simulator & Replay
+*   **Single-Board Dynamic Viewport** — Responsive isolated display of active targeted board on mobile screens (`<768px`).
+*   **Scrubber Slider** — Jump instantly to any shot throughout the game.
+*   **🎙️ Cotton & Pepper Dialogue** — Customized speech bubbles for sportscasters Cotton McKnight and Pepper Reddick.
 
 ---
 
-### 🎬 Mobile-Optimized Ocho Simulator
-*   **Single-Board Dynamic Layout** — Completely redesigned viewport scaling for screens under `768px` wide. Instead of showing two squished boards, the simulator dynamically isolates and displays **exactly one active targeted board** at a time.
-*   **Viewport & State Integration** — Seamlessly swaps board colors, shooter credentials, and cup status in real time as teams trade turns, offering a premium playback experience on mobile and tablet devices.
-
----
-
-### 🎯 Live Touch Scorer
-A real-time tournament scorer optimized for fast-paced bar atmospheres:
-*   **Scoring Mode Selection** — Before starting, captains choose between **Live Score (shot-by-shot)** for full putt tracking with rich replay data, or **Quick Score (final scores only)** for fast entry with estimated stats.
-*   **Open Play Mode** — Captains can pick any opponent from their league and start a game immediately without a scheduled match — great for scrimmages and off-week practice.
-*   **Dual Vector Game Boards** — Displays separate green-turf SVG boards mapping the 6-cup pyramids (beer-pong style) of both teams.
-*   **Turn Roster Setup** — At game start, captains can reorder each team's player lineup to match the real rotation.
-*   **Per-Game Lineup Selector** — For teams with 3 players, the scoring captain selects exactly 2 active players before each game begins. The 3rd player sits out that game; the captain re-picks fresh before every new game in the series.
-*   **Interactive Cup Sinking** — Captains tap the **Made It** / **Miss** buttons to log each individual putt, and the board automatically removes the claimed cup.
-*   **🏝️ Island Cup Bonus** — When a cup becomes isolated (all surrounding cups are sunk), it becomes a golden "island" cup. Sinking an island awards a **free bonus cup pick** — the putter taps any remaining open cup to claim it instantly.
-*   **Automatic Game State Logic**:
-    *   **🔥 Ball Backs** — Blazing fire-toast celebration when both teammates make their putts, awarding an extra turn.
-    *   **🚨 Redemption Round** — Initiates individual putt turns for the defending team when a board is cleared. Each made putt keeps the redemption alive; a miss passes to the next player. When all players have missed, the original clearer wins. Even if the redemption team manages to clear the board, the team that cleared first is still declared the winner.
-*   **Best-of-3 Series Tracking** — The scorer tracks a full best-of-3 series, automatically moving between games and displaying the series score.
-*   **Flexible Board View Modes** — `Side by Side`, `Focused`, and `Stacked` (with stacked board Y-inverted so cups face each other).
-*   **Turn Rollbacks** — Built-in `Undo Turn` to step back one full turn in case of input errors.
-*   **Abandon to Quick Score** — Mid-game, captains can abandon shot-by-shot tracking and fall back to Quick Score entry.
-
----
-
-### 🎬 Ocho Simulator Desk (Interactive Match Replay)
-An advanced, step-by-step match simulator that reconstructs any completed league game:
-*   **Scrubber Slider** to jump instantly to any shot throughout the game.
-*   **Interactive Controls**: Play / Pause, Step Forward/Back, Reset, and speed factors (**1x**, **2x**, **4x**).
-*   **🎙️ Cotton & Pepper Dialogue** — Customized speech bubbles for sportscasters Cotton McKnight and Pepper Reddick, delivering comedic context-aware play-by-play sportscasting.
-
----
-
-### 🎙️ ESPN8: The Ocho Live Broadcasting Engine
-*   **Global Marquee Ticker** — Continuous rolling ticker sliding across headers, switching contexts in Scorer Mode to show live match states (redemption warnings, ball-back streaks, and game-over banners).
-*   **Baltimore Cultural Lore & Humor** — Over 40 sportscaster quotes, local Baltimore easter eggs (Mr. Trash Wheel, Fells Point parking, Dundalk crab cakes, Berger Cookies, Old Bay), and golf banter.
-*   **Context-Aware Ticker Modes** — Automatically shifts between LIVE OCHO TICKER (home), OCHO SCORER DESK (pre-game), TENSE FINISH, REDEMPTION WATCH, and GAME OVER banners.
-
----
-
-## Game Rules (As Implemented)
+## 🏆 Game Rules (As Implemented)
 
 1.  **Pyramid Setup** — Each board starts with **6 cups** arranged in a pyramid (3 back, 2 middle, 1 front).
-2.  **Turn Rotation** — Teams alternate turns. **2 players putt per turn**. Teams with 3 players automatically cycle pairings (P1+P2 → P1+P3 → P2+P3) turn-by-turn.
-3.  **🔥 Ball Back** — If both teammates sink their putts in the same turn, they trigger a Ball Back, get their balls returned, and go again.
-4.  **🏝️ Island Cup Bonus** — When a cup becomes isolated from all other remaining cups, it's marked as an "island." Sinking an island awards a free bonus cup — the putter claims any open cup of their choice.
-5.  **🏆 Instant Win** — If both teammates sink the last cup on the same turn (ball back + board cleared), they win outright. No redemption round.
-6.  **🚨 Redemption Round** — If a team clears the opponent's board *without* a ball back, the opponent gets redemption: each player putts in succession, shooting until they miss. A miss passes to the next player. When all players have missed, the original clearer wins. Even if the redemption team manages to clear the board, the team that cleared first is still declared the winner.
-7.  **Best-of-3 Series** — Matches consist of up to 3 games. First team to win 2 games wins the series. **Points**: Win = 2pts, Lose in Game 3 = 1pt, 0–2 sweep loss = 0pts.
+2.  **Turn Rotation** — Teams alternate turns. **2 players putt per turn**. Teams with 3 players automatically cycle pairings (P1+P2 → P1+P3 → P2+P3).
+3.  **🔥 Ball Back** — If both teammates sink their putts in the same turn, they get their balls returned and shoot again.
+4.  **🏝️ Island Cup Bonus** — Sinking an isolated "island" cup awards a free bonus cup pick.
+5.  **🏆 Instant Win** — Both teammates sinking the last cup on the same turn (ball back + clear) wins outright.
+6.  **🚨 Redemption Round** — Clearing without a ball back triggers redemption for the defending team.
+7.  **Best-of-3 Series** — Matches consist of up to 3 games. **Points**: Win = 2pts, Game 3 Loss = 1pt, 0–2 Sweep Loss = 0pts.
 
 ---
 
 ## 🛠️ Technology Stack & Architecture
 
-*   **Core**: Vanilla HTML5 structure and dynamic Vanilla ES6 JavaScript logic.
-*   **Styling**: Premium, responsive Vanilla CSS featuring CSS Custom Properties, flex/grid layouts, glassmorphic filters, and high-performance keyframe animations.
-*   **Bundler**: High-performance [Vite](https://vite.dev/) development server and asset compiler (`vite@^6.0.0`).
-*   **Database / Auth**: [Supabase](https://supabase.com/) (`@supabase/supabase-js@^2.108.2`) — PostgreSQL backend with Supabase Realtime, Magic Link email authentication, and Row Level Security.
-*   **State Management**: Dual-mode store — **Remote-first** from Supabase (when `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` are set), with automatic fallback to `localStorage`-backed reactive store (`STORE_VERSION: 9`).
-*   **Deployment**: [Netlify](https://netlify.com) (configured via `.netlify/` and `netlify-coding-rules` MCP).
-*   **Seeding**: Deterministic seeded random number generator (`seededRng`) produces fully reproducible round-robin schedules, simulated game histories, and per-putt turn data from seed constants.
+*   **Core**: Vanilla HTML5 & ES6 JavaScript logic.
+*   **Styling**: Modern Vanilla CSS with HSL design system, glassmorphism, and hardware-accelerated CSS animations.
+*   **Bundler**: [Vite](https://vite.dev/) (`vite@^6.0.0`).
+*   **Database / Auth**: [Supabase](https://supabase.com/) (`@supabase/supabase-js@^2.108.2`) with Magic Link email auth.
+*   **State Management**: Dual-mode store (`STORE_VERSION: 10`) with `localStorage` reactive state and Supabase sync.
+*   **Deployment**: [Netlify](https://netlify.com).

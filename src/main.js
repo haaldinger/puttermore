@@ -7,6 +7,7 @@ import {
   renderLoginPage, renderPutterGallery, renderAdminPage,
   getActiveAdminTab, setActiveAdminTab, getActiveRosterTeamId, setActiveRosterTeamId,
   getEditingMatchId, setEditingMatchId, getEditingPlayerId, setEditingPlayerId,
+  getAdminSelectedScoreWeek, setAdminSelectedScoreWeek,
   handlePlayersEvents
 } from './pages/pages.js'
 import { renderScorer, handleScorerEvents, initScorer, getScorerTickerData, showToast } from './pages/scorer.js'
@@ -15,7 +16,9 @@ import { openReplayModal, destroyReplayModal } from './pages/replay.js'
 import { 
   getLoggedInUser, setLoggedInUser, logout,
   updatePlayerPutter, approveMatch, updateMatch, addPlayer, removePlayer, updatePlayer, assignCaptain,
-  createMatch, deleteMatch, quickScoreMatch, resetAllStats,
+  createMatch, deleteMatch, quickScoreMatch, resetAllStats, recallMatch,
+  createTeam, updateTeam, deleteTeam, createSeason, setActiveSeasonId,
+  getSettings, updateSettings, isLiveScoringEnabled,
   saveSnapshot, initializeRemoteStore, getSessionUser, loginWithEmail
 } from './store.js'
 import { supabase } from './supabase.js'
@@ -936,6 +939,216 @@ document.addEventListener('click', (e) => {
     return
   }
 
+  // Admin Score Console: Week selection
+  const scoreWeekBtn = e.target.closest('[data-admin-score-week]')
+  if (scoreWeekBtn) {
+    setAdminSelectedScoreWeek(parseInt(scoreWeekBtn.dataset.adminScoreWeek))
+    render()
+    return
+  }
+
+  // Admin Score Console: Preset Buttons
+  const presetBtn = e.target.closest('[data-preset-score]')
+  if (presetBtn) {
+    const matchId = presetBtn.dataset.presetScore
+    const type = presetBtn.dataset.presetType
+    const g1h = document.getElementById(`score-g1-h-${matchId}`)
+    const g1a = document.getElementById(`score-g1-a-${matchId}`)
+    const g2h = document.getElementById(`score-g2-h-${matchId}`)
+    const g2a = document.getElementById(`score-g2-a-${matchId}`)
+    const g3h = document.getElementById(`score-g3-h-${matchId}`)
+    const g3a = document.getElementById(`score-g3-a-${matchId}`)
+
+    if (type === '2-0-home') {
+      if (g1h) g1h.value = 6; if (g1a) g1a.value = 4
+      if (g2h) g2h.value = 6; if (g2a) g2a.value = 3
+      if (g3h) g3h.value = ''; if (g3a) g3a.value = ''
+    } else if (type === '2-0-away') {
+      if (g1h) g1h.value = 4; if (g1a) g1a.value = 6
+      if (g2h) g2h.value = 3; if (g2a) g2a.value = 6
+      if (g3h) g3h.value = ''; if (g3a) g3a.value = ''
+    } else if (type === '2-1-home') {
+      if (g1h) g1h.value = 6; if (g1a) g1a.value = 4
+      if (g2h) g2h.value = 3; if (g2a) g2a.value = 6
+      if (g3h) g3h.value = 6; if (g3a) g3a.value = 5
+    } else if (type === '2-1-away') {
+      if (g1h) g1h.value = 4; if (g1a) g1a.value = 6
+      if (g2h) g2h.value = 6; if (g2a) g2a.value = 3
+      if (g3h) g3h.value = 4; if (g3a) g3a.value = 6
+    }
+    showToast('⚡ Preset scores filled! Click Save & Publish when ready.')
+    return
+  }
+
+  // Admin Score Console: Direct Save & Publish
+  const adminSaveScoreBtn = e.target.closest('[data-admin-save-score]')
+  if (adminSaveScoreBtn) {
+    const matchId = adminSaveScoreBtn.dataset.adminSaveScore
+    const g1h = parseInt(document.getElementById(`score-g1-h-${matchId}`)?.value || 0)
+    const g1a = parseInt(document.getElementById(`score-g1-a-${matchId}`)?.value || 0)
+    const g2h = parseInt(document.getElementById(`score-g2-h-${matchId}`)?.value || 0)
+    const g2a = parseInt(document.getElementById(`score-g2-a-${matchId}`)?.value || 0)
+    const g3hVal = document.getElementById(`score-g3-h-${matchId}`)?.value
+    const g3aVal = document.getElementById(`score-g3-a-${matchId}`)?.value
+
+    const gameScores = [
+      { home: g1h, away: g1a },
+      { home: g2h, away: g2a },
+    ]
+
+    if (g3hVal !== '' && g3aVal !== '' && g3hVal !== undefined && g3aVal !== undefined) {
+      const g3h = parseInt(g3hVal)
+      const g3a = parseInt(g3aVal)
+      if (!isNaN(g3h) && !isNaN(g3a)) {
+        gameScores.push({ home: g3h, away: g3a })
+      }
+    }
+
+    quickScoreMatch(matchId, gameScores, 'override', 'completed')
+    showToast('🏆 Match score published & standings updated!')
+    render()
+    return
+  }
+
+  // Admin Settings: Toggle Live Scoring Flag
+  const toggleLiveBtn = e.target.closest('#admin-toggle-live-scoring-btn')
+  if (toggleLiveBtn) {
+    const current = isLiveScoringEnabled()
+    updateSettings({ enableLiveScoring: !current })
+    showToast(!current ? '⚡ Live contestant scoring enabled!' : '🔒 Admin-only scoring mode active!')
+    render()
+    return
+  }
+
+  // Admin Switch Active Season
+  const switchSeasonBtn = e.target.closest('#admin-switch-season-btn')
+  if (switchSeasonBtn) {
+    const seasonId = document.getElementById('admin-active-season-select')?.value
+    if (seasonId) {
+      setActiveSeasonId(seasonId)
+      showToast('🏆 Active season switched!')
+      render()
+    }
+    return
+  }
+
+  // Admin Recall Submission / Reset Match
+  const recallMatchBtn = e.target.closest('[data-admin-recall-match]')
+  if (recallMatchBtn) {
+    const matchId = recallMatchBtn.dataset.adminRecallMatch
+    recallMatch(matchId)
+    showToast('↩️ Submission recalled! Match reset to scheduled status.')
+    render()
+    return
+  }
+
+  // Admin Copy Social Recap
+  const copyRecapBtn = e.target.closest('#admin-copy-recap-btn')
+  if (copyRecapBtn) {
+    const txt = document.getElementById('admin-recap-textarea')?.value
+    if (txt) {
+      navigator.clipboard.writeText(txt)
+      showToast('📋 Social recap copied to clipboard! Ready to paste into Group Chat / Instagram.')
+    }
+    return
+  }
+
+  // Wizard Presets
+  if (e.target.closest('#quick-flow-preset-2-0-h')) {
+    document.getElementById('quick-flow-g1-h').value = 6
+    document.getElementById('quick-flow-g1-a').value = 4
+    document.getElementById('quick-flow-g2-h').value = 6
+    document.getElementById('quick-flow-g2-a').value = 3
+    document.getElementById('quick-flow-g3-h').value = ''
+    document.getElementById('quick-flow-g3-a').value = ''
+    showToast('⚡ Preset 2–0 Team 1 Sweep applied!')
+    return
+  }
+  if (e.target.closest('#quick-flow-preset-2-0-a')) {
+    document.getElementById('quick-flow-g1-h').value = 4
+    document.getElementById('quick-flow-g1-a').value = 6
+    document.getElementById('quick-flow-g2-h').value = 3
+    document.getElementById('quick-flow-g2-a').value = 6
+    document.getElementById('quick-flow-g3-h').value = ''
+    document.getElementById('quick-flow-g3-a').value = ''
+    showToast('⚡ Preset 2–0 Team 2 Sweep applied!')
+    return
+  }
+  if (e.target.closest('#quick-flow-preset-2-1-h')) {
+    document.getElementById('quick-flow-g1-h').value = 6
+    document.getElementById('quick-flow-g1-a').value = 4
+    document.getElementById('quick-flow-g2-h').value = 3
+    document.getElementById('quick-flow-g2-a').value = 6
+    document.getElementById('quick-flow-g3-h').value = 6
+    document.getElementById('quick-flow-g3-a').value = 5
+    showToast('⚡ Preset 2–1 Team 1 Win applied!')
+    return
+  }
+  if (e.target.closest('#quick-flow-preset-2-1-a')) {
+    document.getElementById('quick-flow-g1-h').value = 4
+    document.getElementById('quick-flow-g1-a').value = 6
+    document.getElementById('quick-flow-g2-h').value = 6
+    document.getElementById('quick-flow-g2-a').value = 3
+    document.getElementById('quick-flow-g3-h').value = 4
+    document.getElementById('quick-flow-g3-a').value = 6
+    showToast('⚡ Preset 2–1 Team 2 Win applied!')
+    return
+  }
+
+  // Wizard Complete & Update Standings Button
+  const submitWizardBtn = e.target.closest('#quick-flow-submit-btn')
+  if (submitWizardBtn) {
+    const week = getAdminSelectedScoreWeek() || 1
+    const homeId = document.getElementById('quick-flow-home')?.value
+    const awayId = document.getElementById('quick-flow-away')?.value
+
+    if (!homeId || !awayId) {
+      showToast('⚠️ Step 1 Incomplete: Please select both Team 1 and Team 2')
+      return
+    }
+    if (homeId === awayId) {
+      showToast('⚠️ Step 1 Incomplete: Team 1 and Team 2 must be different')
+      return
+    }
+
+    const g1h = parseInt(document.getElementById('quick-flow-g1-h')?.value || 0)
+    const g1a = parseInt(document.getElementById('quick-flow-g1-a')?.value || 0)
+    const g2h = parseInt(document.getElementById('quick-flow-g2-h')?.value || 0)
+    const g2a = parseInt(document.getElementById('quick-flow-g2-a')?.value || 0)
+    const g3hVal = document.getElementById('quick-flow-g3-h')?.value
+    const g3aVal = document.getElementById('quick-flow-g3-a')?.value
+
+    const gameScores = [
+      { home: g1h, away: g1a },
+      { home: g2h, away: g2a },
+    ]
+
+    if (g3hVal !== '' && g3aVal !== '' && g3hVal !== undefined && g3aVal !== undefined) {
+      const g3h = parseInt(g3hVal)
+      const g3a = parseInt(g3aVal)
+      if (!isNaN(g3h) && !isNaN(g3a)) {
+        gameScores.push({ home: g3h, away: g3a })
+      }
+    }
+
+    // Find existing match or create one on the fly
+    let match = getAllMatches().find(m => 
+      m.leagueId === 'l1' && 
+      m.weekNumber === week && 
+      ((m.homeTeamId === homeId && m.awayTeamId === awayId) || (m.homeTeamId === awayId && m.awayTeamId === homeId))
+    )
+
+    if (!match) {
+      match = createMatch('l1', week, homeId, awayId)
+    }
+
+    quickScoreMatch(match.id, gameScores, 'override', 'completed')
+    showToast('🏆 Match complete! Standings updated live.')
+    setAdminSelectedScoreWeek(week)
+    render()
+    return
+  }
+
   // Admin match score edit toggle
   const editScoreBtn = e.target.closest('[data-edit-score-btn]')
   if (editScoreBtn) {
@@ -1013,6 +1226,38 @@ document.addEventListener('click', (e) => {
     setEditingPlayerId(null)
     showToast('👥 Player details updated!')
     render()
+    return
+  }
+
+  // Admin Edit Team
+  const editTeamBtn = e.target.closest('#admin-edit-team-btn')
+  if (editTeamBtn) {
+    const teamId = editTeamBtn.dataset.teamId
+    const team = getTeam(teamId)
+    const newName = prompt('Enter new team name:', team.name)
+    if (newName !== null && newName.trim() !== '') {
+      const newColor = prompt('Enter color hex swatch (e.g. #22c55e):', team.color) || team.color
+      updateTeam(teamId, { name: newName.trim(), color: newColor.trim() })
+      showToast('✏️ Team details updated!')
+      render()
+    }
+    return
+  }
+
+  // Admin Delete Team
+  const deleteTeamBtn = e.target.closest('#admin-delete-team-btn')
+  if (deleteTeamBtn) {
+    const teamId = deleteTeamBtn.dataset.teamId
+    const team = getTeam(teamId)
+    if (confirm(`Are you sure you want to delete team "${team.name}"? This will remove all scheduled matches for this team.`)) {
+      deleteTeam(teamId)
+      const remainingTeams = getLeagueTeams('l1')
+      if (remainingTeams.length > 0) {
+        setActiveRosterTeamId(remainingTeams[0].id)
+      }
+      showToast(`❌ Team "${team.name}" deleted.`)
+      render()
+    }
     return
   }
 
@@ -1206,6 +1451,37 @@ document.addEventListener('submit', (e) => {
     updatePlayerPutter(playerId, name, desc, type, imgData)
     showToast('🏌️‍♂️ Custom putter settings saved!')
     render()
+  }
+
+  // Create New Season submission (Rollover)
+  if (e.target.id === 'admin-create-season-form') {
+    e.preventDefault()
+    const name = document.getElementById('new-season-name')?.value
+    const weeks = document.getElementById('new-season-weeks')?.value
+    const startDate = document.getElementById('new-season-start')?.value
+
+    if (!name) { showToast('⚠️ Please enter a season name'); return }
+    createSeason({ name, weeks, startDate, autoSchedule: true, makeActive: true }).then(newSeason => {
+      showToast(`🏆 ${newSeason.name} launched! Round-robin schedule auto-generated.`)
+      render()
+    })
+    return
+  }
+
+  // Create New Team submission
+  if (e.target.id === 'admin-create-team-form') {
+    e.preventDefault()
+    const name = document.getElementById('create-team-name')?.value
+    const color = document.getElementById('create-team-color')?.value
+    if (!name) { showToast('⚠️ Please enter a team name'); return }
+    createTeam(name, color, 'l1').then(newTeam => {
+      if (newTeam) {
+        setActiveRosterTeamId(newTeam.id)
+        showToast(`✨ Team "${name}" created! Register players below.`)
+        render()
+      }
+    })
+    return
   }
 
   // Register New Player submission
@@ -1568,3 +1844,41 @@ function generateSessionReport() {
     showToast('⚠️ Pop-up blocked — allow pop-ups and try again')
   }
 }
+
+// ─── Home Page Countdown Timer Ticker ───
+function updateHomeCountdown() {
+  const container = document.querySelector('[data-countdown-target]')
+  if (!container) return
+
+  const targetStr = container.dataset.countdownTarget
+  if (!targetStr) return
+
+  const target = new Date(targetStr).getTime()
+  const now = new Date().getTime()
+  const diff = target - now
+
+  const daysEl = document.getElementById('countdown-days')
+  const hoursEl = document.getElementById('countdown-hours')
+  const minsEl = document.getElementById('countdown-mins')
+  const secsEl = document.getElementById('countdown-secs')
+
+  if (diff <= 0) {
+    if (daysEl) daysEl.textContent = '00'
+    if (hoursEl) hoursEl.textContent = '00'
+    if (minsEl) minsEl.textContent = '00'
+    if (secsEl) secsEl.textContent = '00'
+    return
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const secs = Math.floor((diff % (1000 * 60)) / 1000)
+
+  if (daysEl) daysEl.textContent = String(days).padStart(2, '0')
+  if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0')
+  if (minsEl) minsEl.textContent = String(mins).padStart(2, '0')
+  if (secsEl) secsEl.textContent = String(secs).padStart(2, '0')
+}
+
+setInterval(updateHomeCountdown, 1000)

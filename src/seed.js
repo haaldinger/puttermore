@@ -5,19 +5,22 @@
  */
 
 export const venues = [
-  { id: 'v1', name: 'Mobtown Brewing Co.', shortName: 'Mobtown', address: '3600 O\'Donnell St, Baltimore, MD 21224', color: '#e91e8b', status: 'active' }
+  { id: 'v1', name: 'Mobtown Brewing Co.', shortName: 'Mobtown', address: '3600 O\'Donnell St, Baltimore, MD 21224', color: '#e91e8b', status: 'active', hours: 'Wednesdays 6:00 PM – 9:00 PM' }
 ]
 
 export const seasons = [
-  { id: 's1', name: 'Summer 2026', weeks: 7, startDate: '2026-05-07', endDate: '2026-06-18', maxTeamsPerLeague: 7, status: 'active' }
+  { id: 's2', name: 'Fall 2026', weeks: 6, startDate: '2026-09-02', endDate: '2026-10-07', maxTeamsPerLeague: 7, status: 'active' },
+  { id: 's1', name: 'Summer 2026', weeks: 7, startDate: '2026-05-07', endDate: '2026-06-18', maxTeamsPerLeague: 7, status: 'completed' }
 ]
 
 export const leagues = [
-  { id: 'l1', name: 'Mobtown League', seasonId: 's1', venueId: 'v1', day: 'Wednesday', status: 'active' }
+  { id: 'l1', name: 'Mobtown Fall League', seasonId: 's2', venueId: 'v1', day: 'Wednesday (6–9 PM)', status: 'active' }
 ]
 
-// ─── Players (14 total: 2 per team, 7 teams) ───
+// ─── Players (15 total) ───
 export const players = [
+  // Sandbox Test Admin (Session-only testing)
+  { id: 'p_sandbox', name: 'Demo Tester (Sandbox Admin)', avatarColor: '#22d3ee', isAdmin: true, isSandbox: true, putterName: 'Sandbox Sizzler', putterDesc: 'Test putter for pre-season trial runs. Changes exist in active browser session only.', putterType: 'neon' },
   // Team 1 — Pocket Putters
   { id: 'p1', name: 'J-MO Boh', avatarColor: '#e91e8b', isAdmin: true, putterName: 'The Boh-Tender', putterDesc: 'Sinks putts like a bartender slides cold stouts on a Saturday night. Perfectly balanced and heavy.', putterType: 'classic' },
   { id: 'p2', name: 'Darren Fitz', avatarColor: '#f472b6', putterName: 'The Fitz-Whipper', putterDesc: 'Ultra-light composite shaft that flexes just right. Designed for speed on concrete bar floors.', putterType: 'blade' },
@@ -173,89 +176,90 @@ function simulateSeries(homeTeamId, awayTeamId, seedOffset) {
   return { games, seriesScore, winnerId: seriesWinnerId, homePoints, awayPoints }
 }
 
-// ─── Round-Robin Schedule for 7 teams (3 matches/week, 1 bye) ───
-// Circle method: fix team[0], rotate others. 7 rounds = full round-robin.
-function buildRoundRobinSchedule(leagueId, leagueTeams, venueId, dates) {
+// ─── Schedule Builder for Mobtown Fall 2026 (6 Weeks, Multi-Matchup Support) ───
+function buildFall2026Schedule(leagueId, leagueTeams, venueId, dates) {
   const tIds = leagueTeams.map(t => t.id)
-  const n = tIds.length // 7
+  
+  // 6-week schedule across 7 teams. 
+  // Each week has 3-4 matchups scheduled between 6:00 PM and 9:00 PM at Mobtown.
+  const rawSchedule = [
+    // Week 1: Sept 2, 2026
+    { week: 1, home: 't1', away: 't2' },
+    { week: 1, home: 't3', away: 't4' },
+    { week: 1, home: 't5', away: 't6' },
 
-  // For odd number of teams, add a "BYE" placeholder
-  const ids = [...tIds]
-  if (n % 2 !== 0) ids.push('BYE')
-  const total = ids.length // 8
+    // Week 2: Sept 9, 2026
+    { week: 2, home: 't2', away: 't3' },
+    { week: 2, home: 't4', away: 't5' },
+    { week: 2, home: 't6', away: 't7' },
 
-  const rounds = []
-  const fixed = ids[0]
-  let rotating = ids.slice(1) // 7 entries including BYE
+    // Week 3: Sept 16, 2026
+    { week: 3, home: 't1', away: 't3' },
+    { week: 3, home: 't2', away: 't5' },
+    { week: 3, home: 't4', away: 't6' },
 
-  for (let round = 0; round < total - 1; round++) { // 7 rounds
-    const roundPairs = []
-    const all = [fixed, ...rotating]
-    for (let i = 0; i < total / 2; i++) {
-      const home = all[i]
-      const away = all[total - 1 - i]
-      if (home !== 'BYE' && away !== 'BYE') {
-        roundPairs.push([home, away])
+    // Week 4: Sept 23, 2026
+    { week: 4, home: 't1', away: 't4' },
+    { week: 4, home: 't2', away: 't6' },
+    { week: 4, home: 't3', away: 't5' },
+
+    // Week 5: Sept 30, 2026
+    { week: 5, home: 't1', away: 't5' },
+    { week: 5, home: 't2', away: 't7' },
+    { week: 5, home: 't3', away: 't6' },
+
+    // Week 6: Oct 7, 2026
+    { week: 6, home: 't1', away: 't6' },
+    { week: 6, home: 't2', away: 't4' },
+    { week: 6, home: 't5', away: 't7' },
+  ]
+
+  return rawSchedule.map((m, idx) => {
+    const weekIdx = m.week - 1
+    const isCompleted = false // Ready for Admin score entry in Fall 2026
+
+    const base = {
+      id: `${leagueId}-fall26-m${idx}`,
+      leagueId,
+      seasonId: 's2',
+      weekNumber: m.week,
+      date: dates[weekIdx] || '2026-09-02',
+      venueId,
+      homeTeamId: m.home,
+      awayTeamId: m.away,
+    }
+
+    if (isCompleted) {
+      const series = simulateSeries(m.home, m.away, 100 + idx * 23)
+      return {
+        ...base,
+        status: 'completed',
+        games: series.games,
+        seriesScore: series.seriesScore,
+        winnerId: series.winnerId,
+        homePoints: series.homePoints,
+        awayPoints: series.awayPoints,
+      }
+    } else {
+      return {
+        ...base,
+        status: 'scheduled',
+        games: [],
+        seriesScore: { home: 0, away: 0 },
+        winnerId: null,
+        homePoints: 0,
+        awayPoints: 0,
       }
     }
-    rounds.push(roundPairs)
-    // Rotate: last element moves to front
-    rotating = [rotating[rotating.length - 1], ...rotating.slice(0, rotating.length - 1)]
-  }
-
-  const results = []
-  let idx = 0
-
-  rounds.forEach((weekPairs, weekIdx) => {
-    const week = weekIdx + 1
-    // Mark first 3 weeks as completed for demo data
-    const isCompleted = week <= 3
-
-    weekPairs.forEach((pair) => {
-      const homeId = pair[0]
-      const awayId = pair[1]
-      const id = `${leagueId}-m${idx}`
-      const base = {
-        id, leagueId, seasonId: 's1', weekNumber: week,
-        date: dates[weekIdx] || '',
-        venueId, homeTeamId: homeId, awayTeamId: awayId,
-      }
-
-      if (isCompleted) {
-        const series = simulateSeries(homeId, awayId, 42 + idx * 17)
-        results.push({
-          ...base,
-          status: 'completed',
-          games: series.games,
-          seriesScore: series.seriesScore,
-          winnerId: series.winnerId,
-          homePoints: series.homePoints,
-          awayPoints: series.awayPoints,
-        })
-      } else {
-        results.push({
-          ...base,
-          status: 'scheduled',
-          games: [],
-          seriesScore: { home: 0, away: 0 },
-          winnerId: null,
-          homePoints: 0,
-          awayPoints: 0,
-        })
-      }
-      idx++
-    })
   })
-
-  return results
 }
 
 const leagueDates = {
-  l1: ['2026-05-07', '2026-05-14', '2026-05-21', '2026-05-28', '2026-06-04', '2026-06-11', '2026-06-18'] // Wednesdays
+  l1: ['2026-09-02', '2026-09-09', '2026-09-16', '2026-09-23', '2026-09-30', '2026-10-07'] // Wednesdays 6-9 PM
 }
 
 const mobtownTeams = teams.filter(t => t.leagueId === 'l1')
 
 export const matches = [
-  ...buildRoundRobinSchedule('l1', mobtownTeams, 'v1', leagueDates.l1)
+  ...buildFall2026Schedule('l1', mobtownTeams, 'v1', leagueDates.l1)
 ]

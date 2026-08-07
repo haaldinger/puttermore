@@ -63,11 +63,10 @@ export function getWeekNumber() {
   // Compare as flat ISO string comparison
   const yyyymmdd = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-  if (yyyymmdd <= '2026-05-07') return 1;
-  if (yyyymmdd <= '2026-05-14') return 2;
-  if (yyyymmdd <= '2026-05-21') return 3;
-  if (yyyymmdd <= '2026-05-28') return 4;
-  if (yyyymmdd <= '2026-06-04') return 5;
-  if (yyyymmdd <= '2026-06-11') return 6;
-  return 7;
+  if (yyyymmdd <= '2026-09-02') return 1;
+  if (yyyymmdd <= '2026-09-09') return 2;
+  if (yyyymmdd <= '2026-09-16') return 3;
+  if (yyyymmdd <= '2026-09-23') return 4;
+  if (yyyymmdd <= '2026-09-30') return 5;
+  return 6;
 }

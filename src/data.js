@@ -7,13 +7,16 @@ import { players, teams, seasons, matches, venues, leagues } from './store.js'
 export function getPlayer(id) { return players.find(p => p.id === id) }
 export function getTeam(id) { return teams.find(t => t.id === id) }
 export function getSeason(id) { return seasons.find(s => s.id === id) }
+export function getAllSeasons() { return seasons }
 export function getVenue(id) { return venues.find(v => v.id === id) }
 export function getLeague(id) { return leagues.find(l => l.id === id) }
 export function getAllPlayers() { return players }
 export function getAllTeams() { return teams }
 export function getAllMatches() { return matches }
 export function getAllLeagues() { return leagues }
-export function getActiveSeason() { return seasons.find(s => s.status === 'active') || seasons[0] }
+export function getActiveSeason() {
+  return seasons.find(s => s.status === 'active') || seasons[0]
+}
 
 export function getLeagueTeams(leagueId) {
   return teams.filter(t => t.leagueId === leagueId)

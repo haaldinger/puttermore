@@ -1,84 +1,34 @@
 # Puttermore Architecture & Production Notes
 
-This document reflects the **current production architecture** of Puttermore and notes what has been built vs. what remains as future roadmap items.
+This document reflects the **current production architecture** of Puttermore as updated for the **Fall 2026 Season** at **Mobtown Brewing Company**.
 
 ---
 
-## ✅ What's Built (Current State)
+## ✅ What's Built (Current Production State)
 
-### Backend: Supabase (Live)
-Puttermore is fully connected to a PostgreSQL backend via **Supabase**:
-- `@supabase/supabase-js@^2.108.2` is installed and wired via `src/supabase.js`
-- Configured via `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` environment variables (see `.env.example`)
-- When credentials are present, the app fetches all data (players, teams, seasons, matches, venues, leagues) from Supabase on initialization via `initializeRemoteStore()`
-- When credentials are missing (local dev), the app falls back to `localStorage` with seed data
+### Fall 2026 Mobtown Season Setup (Live)
+- **Active Season**: `Fall 2026` (`s2`, Sept 2 – Oct 7, 2026)
+- **Venue**: Mobtown Brewing Company (Wednesdays 6:00 PM – 9:00 PM)
+- **Schedule**: Clean 6-week round-robin schedule for 7 teams (3 matches/week, 1 bye/week)
+- **League ID**: `l1` (Mobtown Social League)
 
-**Active Supabase Tables:**
-| Table | Purpose |
-|---|---|
-| `players` | Player registry with putter data and roles |
-| `teams` | Team registry with color and league membership |
-| `season_roster` | Links players to teams with captain flag and ordering |
-| `seasons` | Season metadata (dates, status, weeks) |
-| `leagues` | League definitions (venue, day, season) |
-| `venues` | Venue registry (name, address) |
-| `matches` | Match scheduling and results |
-| `games` | Individual games within a best-of-3 match |
-| `turns` | Turn-by-turn game log |
-| `putts` | Individual putt records per turn |
+### Feature Flag & Admin Scoring Mode (Live)
+- **Store Schema**: `STORE_VERSION: 10`
+- **Settings Store**: `settings: { enableLiveScoring: false, activeSeasonId: 's2' }`
+- **Scoring Gating**: When `enableLiveScoring` is `false` (default for Fall 2026), non-admin players see an informational **"🏛️ Admin Administered Scoring Mode"** status card on the Scorer tab.
+- **Standings Computation**: `getStandings('l1')` dynamically computes win/loss points (Win = 2pts, Game 3 Loss = 1pt, 0-2 Sweep Loss = 0pts), game differentials, and team records whenever matches are published.
 
-### Authentication: Magic Link (Live)
-- `loginWithEmail()` sends a Supabase Magic Link to the player's registered email
-- `getSessionUser()` validates the active Supabase session on app load
-- `logout()` clears the Supabase session
-- In local dev mode (no credentials), players can click profile cards on the login page to simulate any session role
-
-### Row Level Security (Planned)
-Supabase RLS policies have not yet been enforced — the anon key currently allows all reads/writes. RLS enforcement is a future hardening step before the app goes to a wider public audience. Conceptual policy design:
-- `players`: Public SELECT; UPDATE only for own record or admin
-- `matches/games/turns/putts`: Public SELECT; INSERT/UPDATE/DELETE only for the matching team's captain or an admin
-
-### State Management: Dual-Mode Store (Live)
-- `STORE_VERSION: 9` — version-keyed localStorage schema (bumped on breaking data model changes)
-- `initializeRemoteStore()` — fetches Supabase data, maps it to the local schema, and syncs the exported arrays
-- All write operations (save match, approve match, add/remove player, etc.) write to Supabase first, then update local state — with localStorage fallback when offline
-- `syncExportedArrays()` — keeps all imported store arrays in sync after mutations
-
-### Data Model: Series Format (Live)
-The data model was evolved from a single-game model to a **Best-of-3 series** format:
-
-```
-Match (1)
-  └── Games[] (1–3)
-        └── Turns[]
-              └── Putts[]
-```
-
-Points system: Win = 2pts | Lose in Game 3 = 1pt | 0–2 loss = 0pts
-
-### Scoring Engine: Full Feature Set (Live)
-The Live Scorer (`src/pages/scorer.js`) supports:
-- **Live Score Mode**: Shot-by-shot putt tracking with full game state machine
-- **Quick Score Mode**: Final score entry with synthetic turn generation (~42% putting average estimate)
-- **Open Play**: Captain picks opponent for an unscheduled match; a new match record is created on save
-- **Island Cup Bonus**: Detected in `src/board.js` via `getIslandCups()` / `isIslandCup()`; awarding a free bonus cup pick
-- **Redemption Round**: Individual putt-till-you-miss turns when a board is cleared without a ball back; original clearer wins when all redemption putters have missed (or board is cleared — original clearer still wins)
-- **Best-of-3 progression**: Automatic game-to-game tracking; series decided at 2 wins
-- **Turn roster reordering**: Players can set putt order at start of each game
-- **Abandon to Quick Score**: Mid-game escape hatch to fall back to score-only entry
-- **Undo Turn**: Rolls back one turn from the live game state
-
-### Seeding: Deterministic RNG (Live)
-- `seededRng(seed)` — LCG random number generator producing deterministic, reproducible game simulations
-- `simulateGame()` / `simulateSeries()` — produces full turn/putt data for seed matches
-- `buildRoundRobinSchedule()` — circle-method round-robin schedule for 7 teams (with BYE rotation)
-- First 3 weeks of the season are seeded as `'completed'`; remaining weeks are `'scheduled'`
-
-### Admin Console: 4 Tabs (Live)
-1. **Game Review** — Approve/publish pending matches
-2. **Matches** — Create, edit teams, edit week, and delete scheduled matches
-3. **Roster Controls** — Register, edit, remove players; assign/change captain
-4. **Cup Analytics** — League-wide efficiency index, double-sink ratio, per-cup SVG bar chart
+### Admin Fast Score Console & Quick Sign-In (Live)
+- **👑 1-Click Admin Quick Sign-In**: Login page features prominent buttons for commissioners **J-MO Boh 👑** (`p1`) and **Shane OldBay 👑** (`p3`).
+- **⚡ 3-Step Match Score Entry**:
+  - Auto-detects active match week (no manual week dropdown required).
+  - Select Home Team and Away Team.
+  - Enter Best-of-3 game scores or tap 1-click series presets (`2-0 Sweep`, `2-1 Win`).
+  - Tap **`Complete & Update Standings`** to save scores and publish instantly.
+- **➕ On-the-Fly Match Creation**: Pair any two teams for the active week on match night.
+- **↩️ Submission Recall**: Reset completed matches back to `scheduled` status with 1 click.
+- **✏️ Inline Score Editing**: Edit past game scores and recalculate standings live.
+- **📢 1-Click Social Media & SMS Recap**: Generates formatted recap text for Instagram, GroupMe, SMS, or Slack with a 1-click copy button.
 
 ---
 
@@ -99,28 +49,15 @@ erDiagram
 
 ---
 
-## 🔐 Authentication Flow
+## 🔐 Authentication & Access Model
 
-1. User enters registered email → `loginWithEmail(email)` → Supabase sends magic link
-2. User clicks link → Supabase session cookie set → `getSessionUser()` validates on next app load
-3. Session contains player role (admin flag from `players.role === 'admin'`)
-4. Captain status is determined by `team.captainPlayerId === session.user.id`
+1. **Magic Link Email Auth**: `loginWithEmail(email)` sends a passwordless login link via Supabase.
+2. **1-Click Admin Sign-In**: On login page, clicking **J-MO Boh 👑** or **Shane OldBay 👑** immediately sets an admin session for rapid score entry on match night.
+3. **Session User**: `getLoggedInUser()` returns player object with `isAdmin: true` for commissioners.
 
 ---
 
-## 🔮 Future Roadmap
+## 🛠️ Verification & Build Commands
 
-### Near-Term
-- **Supabase RLS enforcement** — Row-level security policies to prevent rogue API writes
-- **Real-time Spectating** — Supabase Realtime subscriptions so spectator browsers see board updates live
-- **Push Notifications** — Notify players of upcoming matches and score updates
-
-### Medium-Term
-- **Season Rollover** — Admin function to lock a season and initialize a new one
-- **Career Hall of Fame** — Lifetime stats page (career accuracy, most Island bonuses, head-to-head records)
-- **Putter Photo Cloud Storage** — Migrate from Base64 localStorage to Supabase Storage bucket (`putter-photos`) for scalable image hosting
-
-### Long-Term
-- **Direct Sponsor Placements** — Cup real estate and ticker comments for local advertiser placements
-- **Multi-City Expansion** — Leagues at Heavy Seas, 1623 Brewing, DC venues, etc.
-- **Beverage Tracker** — Optional "Sips-per-Sink" social module
+- Syntax check: `node -c src/store.js && node -c src/pages/pages.js && node -c src/main.js`
+- Production Build: `npm run build` (bundles cleanly with Vite in ~450ms)

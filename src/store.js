@@ -2,13 +2,17 @@ import { players as seedPlayers, teams as seedTeams, seasons as seedSeasons, mat
 import { supabase } from './supabase.js'
 
 const STORE_KEY = 'puttermore_store'
-const STORE_VERSION = 9
+const STORE_VERSION = 10
 
 let _state = null
 
 function getDefaultState() {
   return {
     version: STORE_VERSION,
+    settings: {
+      enableLiveScoring: false, // Default: Admin-administered scoring mode
+      activeSeasonId: 's2',
+    },
     players: JSON.parse(JSON.stringify(seedPlayers)),
     teams: JSON.parse(JSON.stringify(seedTeams)),
     seasons: JSON.parse(JSON.stringify(seedSeasons)),
@@ -29,7 +33,13 @@ function loadState() {
   return null
 }
 
+export function isSandboxSession() {
+  const user = getLoggedInUser()
+  return user ? user.isSandbox === true : false
+}
+
 function saveState() {
+  if (isSandboxSession()) return // Sandbox mode: changes exist only in active browser memory!
   try { localStorage.setItem(STORE_KEY, JSON.stringify(_state)) }
   catch (e) { console.warn('Store save failed:', e) }
 }
@@ -349,6 +359,24 @@ export async function approveMatch(matchId) {
   return match
 }
 
+// Recalls / resets a submitted or completed match back to scheduled status
+export function recallMatch(matchId) {
+  const match = _state.matches.find(m => m.id === matchId)
+  if (!match) return null
+
+  match.status = 'scheduled'
+  match.games = []
+  match.seriesScore = { home: 0, away: 0 }
+  match.winnerId = null
+  match.homePoints = 0
+  match.awayPoints = 0
+  match.submittedByPlayerName = undefined
+  match.banterLog = undefined
+
+  saveState()
+  return match
+}
+
 export async function updateMatch(matchId, updates) {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
@@ -509,6 +537,207 @@ export async function createMatch(leagueId, weekNumber, homeTeamId, awayTeamId) 
   }
 
   return newMatch
+}
+
+export async function createTeam(name, color, leagueId = 'l1') {
+  const teamId = 't_' + Date.now()
+  const newTeam = {
+    id: teamId,
+    name: name || 'New Putting Team',
+    color: color || '#22c55e',
+    leagueId: leagueId,
+    captainPlayerId: null,
+    roster: []
+  }
+
+  _state.teams.push(newTeam)
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { data, error } = await supabase.from('teams').insert({
+        name: newTeam.name,
+        color: newTeam.color,
+        league_id: leagueId
+      }).select().single()
+
+      if (error) throw error
+      newTeam.id = data.id
+      syncExportedArrays()
+    } catch (e) {
+      console.error('Failed to create team on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
+  return newTeam
+}
+
+export async function updateTeam(teamId, updates) {
+  const team = _state.teams.find(t => t.id === teamId)
+  if (!team) return null
+
+  if (updates.name) team.name = updates.name
+  if (updates.color) team.color = updates.color
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('teams').update({
+        name: team.name,
+        color: team.color
+      }).eq('id', teamId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to update team on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
+  return team
+}
+
+export async function deleteTeam(teamId) {
+  const idx = _state.teams.findIndex(t => t.id === teamId)
+  if (idx === -1) return false
+
+  _state.teams.splice(idx, 1)
+
+  // Remove matches involving this team
+  _state.matches = _state.matches.filter(m => m.homeTeamId !== teamId && m.awayTeamId !== teamId)
+
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { error } = await supabase.from('teams').delete().eq('id', teamId)
+      if (error) throw error
+    } catch (e) {
+      console.error('Failed to delete team on Supabase:', e)
+      return false
+    }
+  } else {
+    saveState()
+  }
+
+  return true
+}
+
+export async function createSeason({ name, weeks = 6, startDate, autoSchedule = true, makeActive = true }) {
+  const seasonId = 's_' + Date.now()
+  
+  if (makeActive) {
+    _state.seasons.forEach(s => {
+      s.status = 'completed'
+    })
+  }
+
+  const start = startDate ? new Date(startDate) : new Date()
+  const end = new Date(start.getTime() + (parseInt(weeks) * 7 * 24 * 60 * 60 * 1000))
+
+  const newSeason = {
+    id: seasonId,
+    name: name || 'Winter 2026',
+    weeks: parseInt(weeks) || 6,
+    startDate: start.toISOString().split('T')[0],
+    endDate: end.toISOString().split('T')[0],
+    maxTeamsPerLeague: 7,
+    status: makeActive ? 'active' : 'upcoming'
+  }
+
+  _state.seasons.push(newSeason)
+  if (makeActive) {
+    _state.settings.activeSeasonId = seasonId
+  }
+
+  // Auto-generate round-robin schedule for all active teams for the new season
+  if (autoSchedule) {
+    const teams = _state.teams.filter(t => t.leagueId === 'l1')
+    const teamIds = teams.map(t => t.id)
+    
+    for (let w = 1; w <= newSeason.weeks; w++) {
+      const matchCount = Math.floor(teamIds.length / 2)
+      for (let i = 0; i < matchCount; i++) {
+        const homeIdx = (w + i) % teamIds.length
+        const awayIdx = (w + teamIds.length - 1 - i) % teamIds.length
+        if (homeIdx !== awayIdx) {
+          const homeTeamId = teamIds[homeIdx]
+          const awayTeamId = teamIds[awayIdx]
+          const matchDate = new Date(start.getTime() + (w - 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          _state.matches.push({
+            id: `m_${seasonId}_w${w}_${i+1}`,
+            leagueId: 'l1',
+            seasonId: seasonId,
+            weekNumber: w,
+            date: matchDate,
+            venueId: 'v1',
+            homeTeamId,
+            awayTeamId,
+            status: 'scheduled',
+            games: [],
+            seriesScore: { home: 0, away: 0 },
+            homePoints: 0,
+            awayPoints: 0
+          })
+        }
+      }
+    }
+  }
+
+  syncExportedArrays()
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const { data, error } = await supabase.from('seasons').insert({
+        name: newSeason.name,
+        weeks: newSeason.weeks,
+        start_date: newSeason.startDate,
+        end_date: newSeason.endDate,
+        status: newSeason.status
+      }).select().single()
+
+      if (error) throw error
+      newSeason.id = data.id
+      if (makeActive) {
+        _state.settings.activeSeasonId = data.id
+      }
+      syncExportedArrays()
+    } catch (e) {
+      console.error('Failed to create season on Supabase:', e)
+    }
+  } else {
+    saveState()
+  }
+
+  return newSeason
+}
+
+export function setActiveSeasonId(seasonId) {
+  const season = _state.seasons.find(s => s.id === seasonId)
+  if (!season) return false
+
+  _state.seasons.forEach(s => {
+    s.status = s.id === seasonId ? 'active' : 'completed'
+  })
+  _state.settings.activeSeasonId = seasonId
+
+  syncExportedArrays()
+  saveState()
+  return true
 }
 
 export async function updateMatchTeams(matchId, homeTeamId, awayTeamId) {
@@ -705,8 +934,26 @@ function generateSyntheticTurns(homeTeamId, awayTeamId, homeScore, awayScore) {
   return turns
 }
 
+// ─── Settings Store ───
+export function getSettings() {
+  if (!_state.settings) {
+    _state.settings = { enableLiveScoring: false, activeSeasonId: 's2' }
+  }
+  return _state.settings
+}
+
+export function updateSettings(newSettings) {
+  _state.settings = { ...getSettings(), ...newSettings }
+  saveState()
+  return _state.settings
+}
+
+export function isLiveScoringEnabled() {
+  return getSettings().enableLiveScoring === true
+}
+
 // Quick score entry — captain or admin enters series results manually
-export function quickScoreMatch(matchId, gameScores, scoringMode = 'override') {
+export function quickScoreMatch(matchId, gameScores, scoringMode = 'override', statusOverride = 'pending_review') {
   const match = _state.matches.find(m => m.id === matchId)
   if (!match) return null
 
@@ -760,7 +1007,7 @@ export function quickScoreMatch(matchId, gameScores, scoringMode = 'override') {
   match.winnerId = winnerId
   match.homePoints = homePoints
   match.awayPoints = awayPoints
-  match.status = 'pending_review'
+  match.status = statusOverride
   match.scoringMode = scoringMode
 
   saveState()

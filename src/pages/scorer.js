@@ -1,7 +1,7 @@
 import { getAllMatches, getTeam, getTeamRoster, getPlayer, getLeague, getVenue, getAllLeagues, getAllTeams, getLeagueTeams, getHoleShortName } from '../data.js'
 import { renderSingleBoard, isIslandCup, getIslandCups } from '../board.js'
 import { HOLES, OT_HOLES } from '../seed.js'
-import { saveMatch, getLoggedInUser, createMatch, quickScoreMatch } from '../store.js'
+import { saveMatch, getLoggedInUser, createMatch, quickScoreMatch, isLiveScoringEnabled } from '../store.js'
 import { getSelectedLeague, setSelectedLeague } from './home.js'
 
 let scorerState = null
@@ -157,6 +157,34 @@ export function initScorer() {
 }
 
 export function renderScorer() {
+  const loggedIn = getLoggedInUser()
+
+  // Gate live scoring when flag is disabled for non-admins
+  if (!isLiveScoringEnabled() && (!loggedIn || !loggedIn.isAdmin)) {
+    return `
+      <div class="page container animate-in">
+        <div class="card card-glass text-center" style="padding: var(--space-10); margin-top: var(--space-4)">
+          <div style="font-size: 3rem; margin-bottom: var(--space-3)">🏛️</div>
+          <h2 style="font-family: var(--font-display); font-weight: 800; color: #fff; margin-bottom: var(--space-2)">
+            Admin Administered Scoring Mode
+          </h2>
+          <div class="badge badge-pink" style="margin-bottom: var(--space-4); display: inline-block; font-size: 11px">
+            Fall 2026 Season · Mobtown Brewing Co.
+          </div>
+          <p class="text-secondary" style="max-width: 520px; margin: 0 auto var(--space-6) auto; font-size: var(--text-sm); line-height: 1.6">
+            Live contestant scoring is currently paused to streamline match night at Mobtown Brewing Co. All Wednesday night scores are input by League Admins and immediately reflected across Live Standings, Team Profiles, and Ocho Match Replays.
+          </p>
+
+          <div class="flex flex-wrap justify-center gap-3" style="margin-top: var(--space-4)">
+            <button class="btn btn-primary" data-nav="standings">📊 View Live Standings</button>
+            <button class="btn btn-secondary" data-nav="schedule">📅 Fall 2026 Schedule</button>
+            <button class="btn btn-secondary" data-nav="putters">🏌️‍♂️ Putter Gallery</button>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
   // ─── Quick Score Entry Mode ───
   if (quickScoreState) {
     return renderQuickScoreEntry()
